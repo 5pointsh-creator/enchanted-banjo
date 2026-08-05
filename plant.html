@@ -63,7 +63,7 @@
      🌱 Plant a tree</button>
   <div id="plantHint" style="position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;
      background:rgba(60,200,120,.92);color:#fff;padding:9px 18px;border-radius:999px;font-size:14px;
-     display:none;pointer-events:none">Click a spot on the forest floor to plant your tree</div>
+     display:none;pointer-events:none">Click open ground to plant a new tree — or click a tree already standing to adopt it</div>
 
   <!-- plant form -->
   <div id="plantForm" style="position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
@@ -77,6 +77,8 @@
       <label style="font-size:12px;opacity:.75">Message</label>
       <textarea id="pMsg" maxlength="160" rows="3" placeholder="A few words in their memory or honour..."
         style="width:100%;margin:5px 0 12px;padding:10px;border-radius:9px;border:1px solid #4a2f6e;background:#0e0718;color:#efe6ff;font:inherit;resize:none"></textarea>
+      <label style="font-size:12px;opacity:.75">Choose a tree</label>
+      <div id="pTiers" style="display:flex;gap:8px;margin:8px 0 12px"></div>
       <label style="font-size:12px;opacity:.75">Tree colour</label>
       <div id="pColors" style="display:flex;gap:8px;margin:8px 0 16px"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
@@ -276,24 +278,52 @@ function wrap(g,text,x,y,maxW,lh){
   if(lines<5) g.fillText(line,x,yy);
 }
 
+// tree tiers: visibly different in the forest, each its own price point
+const TIERS = {
+  sapling: {price:5,  label:'Sapling', s:0.6, cones:2, lightI:2, lightR:10, extras:false},
+  spirit:  {price:10, label:'Spirit tree', s:1.0, cones:3, lightI:3, lightR:14, extras:false},
+  grand:   {price:20, label:'Grand tree', s:1.5, cones:4, lightI:6, lightR:22, extras:true},
+};
 function buildTree(data){
   const grp = new THREE.Group();
   const col = new THREE.Color(data.color);
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.30,5,6),
-    new THREE.MeshStandardMaterial({color:0x241a2e, roughness:1}));
-  trunk.position.y = 2.5; trunk.userData.idx = data.idx; grp.add(trunk); pickable.push(trunk);
-  // layered glowing canopy
-  for(let k=0;k<3;k++){
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.7-k*0.35, 2.4, 8),
-      new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.6, roughness:.8}));
-    cone.position.y = 4.6 + k*1.3;
-    cone.userData.idx = data.idx;
-    grp.add(cone); pickable.push(cone);
+  const tier = TIERS[data.tier] || TIERS.spirit;
+  let canopyTop = 6;
+
+  if(!data.adopt){
+    const s = tier.s;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16*s,0.30*s,5*s,6),
+      new THREE.MeshStandardMaterial({color:0x241a2e, roughness:1}));
+    trunk.position.y = 2.5*s; trunk.userData.idx = data.idx; grp.add(trunk); pickable.push(trunk);
+    for(let k=0;k<tier.cones;k++){
+      const cone = new THREE.Mesh(new THREE.ConeGeometry((1.7-k*0.32)*s, 2.4*s, 8),
+        new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.6, roughness:.8}));
+      cone.position.y = (4.6 + k*1.3)*s; cone.userData.idx = data.idx;
+      grp.add(cone); pickable.push(cone);
+    }
+    canopyTop = (4.6 + tier.cones*1.3)*s;
+    if(tier.extras){                                   // grand tree: blossoms + a hanging lantern
+      for(let bK=0;bK<7;bK++){
+        const bl = new THREE.Mesh(new THREE.SphereGeometry(0.18*s,8,8),
+          new THREE.MeshStandardMaterial({color:0xffd9f2, emissive:0xff9ad6, emissiveIntensity:1}));
+        const a=bK/7*6.283; bl.position.set(Math.cos(a)*1.4*s,(5.5+Math.sin(bK)*1.4)*s,Math.sin(a)*1.4*s);
+        bl.userData.idx=data.idx; grp.add(bl); pickable.push(bl);
+      }
+      const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.3*s,12,12),
+        new THREE.MeshBasicMaterial({color:0xffe6a0}));
+      lantern.position.set(0, 3.2*s, 1.0*s); grp.add(lantern);
+      const ll = new THREE.PointLight(0xffe0a0, 2.5, 9, 2); ll.position.copy(lantern.position); grp.add(ll);
+    }
   }
-  const light = new THREE.PointLight(col, 3, 14, 2); light.position.y=5.5; grp.add(light);
+
+  const light = new THREE.PointLight(col, tier.lightI, tier.lightR, 2);
+  light.position.y = canopyTop*0.8; grp.add(light);
+
   const plaque = makePlaque(data.name, data.msg, data.color);
-  plaque.position.set(0, 2.4, 1.6); plaque.userData.idx = data.idx;
+  plaque.scale.setScalar(data.adopt ? 1 : Math.min(1.2, Math.max(0.85, tier.s)));
+  plaque.position.set(0, data.adopt ? 3.0 : 2.4, 1.6); plaque.userData.idx = data.idx;
   grp.add(plaque); plantedPlaques.push(plaque); pickable.push(plaque);
+
   grp.position.set(data.x, 0, data.z);
   scene.add(grp);
   plantedTrees.push({grp, plaque, data});
@@ -309,7 +339,7 @@ function loadTrees(){
 }
 
 // ---------- plant flow UI ----------
-let plantMode=false, pendingPoint=null, chosenColor=TREE_COLORS[0];
+let plantMode=false, pendingPoint=null, pendingAdopt=false, chosenColor=TREE_COLORS[0], chosenTier='spirit';
 const plantBtn=document.getElementById('plantBtn'), plantHint=document.getElementById('plantHint');
 const plantForm=document.getElementById('plantForm'), reader=document.getElementById('reader');
 const swatches=document.getElementById('pColors');
@@ -319,17 +349,28 @@ TREE_COLORS.forEach((c,i)=>{
   s.onclick=()=>{chosenColor=c;[...swatches.children].forEach(x=>x.style.borderColor='transparent');s.style.borderColor='#fff';};
   swatches.appendChild(s);
 });
+// tier chooser
+const tiersBox=document.getElementById('pTiers');
+Object.entries(TIERS).forEach(([key,t])=>{
+  const b=document.createElement('button');
+  b.innerHTML=`${t.label}<br><b>$${t.price}</b>`;
+  b.style.cssText=`flex:1;cursor:pointer;font:inherit;font-size:12px;line-height:1.4;padding:8px 4px;border-radius:10px;
+     color:#efe6ff;background:#0e0718;border:2px solid ${key==='spirit'?'#7a3cff':'#3a2456'}`;
+  b.onclick=()=>{chosenTier=key;[...tiersBox.children].forEach(x=>x.style.borderColor='#3a2456');b.style.borderColor='#7a3cff';};
+  tiersBox.appendChild(b);
+});
 plantBtn.onclick=()=>{ plantMode=!plantMode; plantHint.style.display=plantMode?'block':'none';
   plantBtn.style.filter=plantMode?'brightness(1.3)':''; };
 
-document.getElementById('pCancel').onclick=()=>{ plantForm.style.display='none'; pendingPoint=null; };
+document.getElementById('pCancel').onclick=()=>{ plantForm.style.display='none'; pendingPoint=null; pendingAdopt=false; };
 document.getElementById('pPlant').onclick=()=>{
   const name=document.getElementById('pName').value.trim();
   const msg=document.getElementById('pMsg').value.trim();
   if(!pendingPoint) return;
-  const data={idx:plantedTrees.length, x:pendingPoint.x, z:pendingPoint.z, name, msg, color:chosenColor};
+  const data={idx:plantedTrees.length, x:pendingPoint.x, z:pendingPoint.z, name, msg,
+              color:chosenColor, tier:chosenTier, adopt:pendingAdopt};
   buildTree(data); saveTrees();
-  plantForm.style.display='none'; pendingPoint=null;
+  plantForm.style.display='none'; pendingPoint=null; pendingAdopt=false;
   plantMode=false; plantHint.style.display='none'; plantBtn.style.filter='';
   document.getElementById('pName').value=''; document.getElementById('pMsg').value='';
 };
@@ -346,9 +387,17 @@ canvas.addEventListener('click', e=>{
   raycaster.setFromCamera({x:rx,y:ry}, camera);
 
   if(plantMode){
-    const hit = raycaster.intersectObject(ground)[0];
-    if(hit){
-      let pt = hit.point.clone(); pt.y = 0;
+    // clicking a tree already standing in the forest = adopt that one
+    const adoptHit = raycaster.intersectObject(foliage)[0];
+    const groundHit = raycaster.intersectObject(ground)[0];
+    if(adoptHit && (!groundHit || adoptHit.distance < groundHit.distance)){
+      const m = new THREE.Matrix4(); foliage.getMatrixAt(adoptHit.instanceId, m);
+      const pos = new THREE.Vector3().setFromMatrixPosition(m);
+      pendingPoint = new THREE.Vector3(pos.x, 0, pos.z); pendingAdopt = true;
+      plantForm.style.display='flex'; return;
+    }
+    if(groundHit){
+      let pt = groundHit.point.clone(); pt.y = 0;
       const feet = new THREE.Vector3(camera.position.x, 0, camera.position.z);
       // keep the tree a sensible distance ahead so it stands in view, not on top of you
       if(pt.distanceTo(feet) < 9){
@@ -356,7 +405,7 @@ canvas.addEventListener('click', e=>{
         if(dir.lengthSq() < 0.001) dir = new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
         pt = feet.add(dir.normalize().multiplyScalar(11));
       }
-      pendingPoint = pt; plantForm.style.display='flex';
+      pendingPoint = pt; pendingAdopt = false; plantForm.style.display='flex';
     }
     return;
   }
