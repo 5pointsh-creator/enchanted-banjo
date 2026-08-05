@@ -3,3 +3,7 @@ node_modules/
 __pycache__/
 check.py
 shot.py
+live.py
+forest_test.py
+forest_play_test.py
+*.png
