@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Banjo Spirits — Forest Walkthrough</title>
+<style>
+  :root{ --glow:#b26bff; --cream:#efe6ff; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#07040c;font-family:"Segoe UI",system-ui,sans-serif;color:var(--cream)}
+  #c{display:block;width:100vw;height:100vh;touch-action:none}
+
+  .hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:14px 16px;
+       display:flex;justify-content:space-between;align-items:flex-start;z-index:5}
+  .title{font-size:15px;letter-spacing:.5px;opacity:.85;text-shadow:0 2px 8px #000}
+  .title b{background:linear-gradient(180deg,#e9d4ff,#9b5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .help{font-size:12px;opacity:.6;text-align:right;line-height:1.7;text-shadow:0 1px 4px #000}
+  kbd{background:#241436;border:1px solid #4a2f6e;border-radius:4px;padding:0 6px;font-size:11px;color:#d9c7ff}
+
+  /* start overlay */
+  #start{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;
+         align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;
+         background:radial-gradient(circle at 50% 40%,rgba(60,20,110,.5),rgba(7,4,12,.92))}
+  #start h1{font-size:clamp(26px,5vw,44px);background:linear-gradient(180deg,#e9d4ff,#9b5cff);
+            -webkit-background-clip:text;background-clip:text;color:transparent}
+  #start p{max-width:440px;opacity:.8;font-size:14px;line-height:1.6}
+  .btn{pointer-events:auto;cursor:pointer;background:linear-gradient(180deg,#7a3cff,#5322b0);
+       border:none;color:#fff;font:inherit;font-size:16px;padding:13px 30px;border-radius:14px;
+       box-shadow:0 0 24px rgba(140,80,255,.6)}
+  .btn:hover{filter:brightness(1.1)}
+
+  /* mobile move controls */
+  .pad{position:fixed;bottom:22px;z-index:8;display:none;pointer-events:auto;user-select:none}
+  .pad.left{left:22px} .pad.right{right:22px}
+  .pad button{width:58px;height:58px;margin:3px;border-radius:50%;border:1px solid #4a2f6e;
+       background:rgba(36,20,54,.7);color:#d9c7ff;font-size:20px;backdrop-filter:blur(3px)}
+  .row{display:flex;justify-content:center}
+  .banjo-prompt{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:8;
+       background:rgba(140,80,255,.9);padding:10px 20px;border-radius:999px;font-size:14px;
+       opacity:0;transition:opacity .3s;pointer-events:none;text-shadow:none}
+  @media (hover:none){ .pad{display:block} .help{display:none} }
+</style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="title">🪕 <b>Banjo Spirits</b></div>
+    <div class="help">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows — walk<br>
+      drag — look around<br>
+      <kbd>C</kbd> — shift the forest colours<br>
+      tap 🌱 Plant, then click the ground<br>
+      click any spirit tree to read it
+    </div>
+  </div>
+
+  <div class="banjo-prompt" id="prompt">Click the banjo to play 🎵</div>
+
+  <button id="plantBtn" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;
+     pointer-events:auto;cursor:pointer;border:1px solid #7a3cff;border-radius:14px;font:inherit;font-size:15px;
+     padding:12px 22px;color:#fff;background:linear-gradient(180deg,#3aa06a,#1e6b3f);box-shadow:0 0 18px rgba(60,200,120,.4)">
+     🌱 Plant a tree</button>
+  <div id="plantHint" style="position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;
+     background:rgba(60,200,120,.92);color:#fff;padding:9px 18px;border-radius:999px;font-size:14px;
+     display:none;pointer-events:none">Click a spot on the forest floor to plant your tree</div>
+
+  <!-- plant form -->
+  <div id="plantForm" style="position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
+     background:rgba(7,4,12,.75);backdrop-filter:blur(3px)">
+    <div style="background:#160c26;border:1px solid #4a2f6e;border-radius:16px;padding:22px;width:min(420px,92vw)">
+      <h3 style="margin-bottom:4px;font-size:18px;color:#e9d4ff">Plant a spirit tree 🌳</h3>
+      <p style="opacity:.6;font-size:13px;margin-bottom:14px">Dedicate this tree to someone - lost, or loved and still here.</p>
+      <label style="font-size:12px;opacity:.75">Name</label>
+      <input id="pName" maxlength="40" placeholder="e.g. Grandma Rose, or Buddy 🐾"
+        style="width:100%;margin:5px 0 12px;padding:10px;border-radius:9px;border:1px solid #4a2f6e;background:#0e0718;color:#efe6ff;font:inherit">
+      <label style="font-size:12px;opacity:.75">Message</label>
+      <textarea id="pMsg" maxlength="160" rows="3" placeholder="A few words in their memory or honour..."
+        style="width:100%;margin:5px 0 12px;padding:10px;border-radius:9px;border:1px solid #4a2f6e;background:#0e0718;color:#efe6ff;font:inherit;resize:none"></textarea>
+      <label style="font-size:12px;opacity:.75">Tree colour</label>
+      <div id="pColors" style="display:flex;gap:8px;margin:8px 0 16px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button id="pCancel" style="background:#241436;border:1px solid #4a2f6e;color:#d9c7ff;padding:10px 16px;border-radius:10px;font:inherit;cursor:pointer">Cancel</button>
+        <button id="pPlant" style="background:linear-gradient(180deg,#3aa06a,#1e6b3f);border:none;color:#fff;padding:10px 20px;border-radius:10px;font:inherit;cursor:pointer">Plant it 🌱</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- read dedication -->
+  <div id="reader" style="position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
+     background:rgba(7,4,12,.72);backdrop-filter:blur(3px)" >
+    <div style="background:#160c26;border:1px solid #4a2f6e;border-radius:16px;padding:26px 24px;width:min(420px,92vw);text-align:center">
+      <div id="rName" style="font-size:22px;font-weight:700;color:#e9d4ff;margin-bottom:10px"></div>
+      <div id="rMsg" style="font-size:15px;line-height:1.6;opacity:.9;white-space:pre-wrap"></div>
+      <button id="rClose" style="margin-top:20px;background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;padding:10px 22px;border-radius:11px;font:inherit;cursor:pointer">Close</button>
+    </div>
+  </div>
+
+  <div class="pad left">
+    <div class="row"><button data-move="f">▲</button></div>
+    <div class="row"><button data-move="l">◀</button><button data-move="b">▼</button><button data-move="r">▶</button></div>
+  </div>
+  <div class="pad right">
+    <div class="row"><button data-look="u">look</button></div>
+    <div class="row"><button data-color="1">🎨</button></div>
+  </div>
+
+  <div id="start">
+    <h1>Banjo Spirits</h1>
+    <p>Walk the misty forest, plant a spirit tree for someone you love or miss,
+       and leave a message glowing beside it. Reach the banjo in the clearing and play.</p>
+    <button class="btn" id="enter">Enter the forest ▸</button>
+    <p style="font-size:12px;opacity:.55">Desktop: WASD + mouse. Mobile: on-screen controls.</p>
+  </div>
+
+  <!-- playable banjo overlay is loaded from the same engine as the landing page -->
+  <div id="playLayer"></div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0714);
+scene.fog = new THREE.FogExp2(0x140a24, 0.028);
+
+const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 400);
+camera.position.set(0, 1.7, 18);
+
+// ---------- lighting ----------
+const hemi = new THREE.HemisphereLight(0x6a4aa0, 0x0a0812, 0.6); scene.add(hemi);
+const moon = new THREE.DirectionalLight(0x9d7bff, 0.5);
+moon.position.set(-8, 20, -6); scene.add(moon);
+const playerGlow = new THREE.PointLight(0xb26bff, 6, 22, 2);
+scene.add(playerGlow);
+
+// ---------- ground + path ----------
+const groundGeo = new THREE.PlaneGeometry(300, 400, 1, 1);
+const ground = new THREE.Mesh(groundGeo, new THREE.MeshStandardMaterial({color:0x161022, roughness:1}));
+ground.rotation.x = -Math.PI/2; scene.add(ground);
+const path = new THREE.Mesh(new THREE.PlaneGeometry(6, 400),
+  new THREE.MeshStandardMaterial({color:0x2a2340, roughness:1}));
+path.rotation.x = -Math.PI/2; path.position.y = 0.02; scene.add(path);
+
+// ---------- trees (instanced) ----------
+const TREES = 220;
+const trunkGeo = new THREE.CylinderGeometry(0.18, 0.32, 6, 6);
+const trunkMat = new THREE.MeshStandardMaterial({color:0x241a2e, roughness:1});
+const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, TREES);
+const foliageGeo = new THREE.ConeGeometry(1.7, 4.5, 7);
+const foliageMat = new THREE.MeshStandardMaterial({roughness:.9, emissive:0x1a0d33, emissiveIntensity:.35});
+const foliage = new THREE.InstancedMesh(foliageGeo, foliageMat, TREES);
+scene.add(trunks, foliage);
+
+const dummy = new THREE.Object3D();
+const baseHue = []; // per-tree hue offset for the colour animation
+const rand = (a,b)=> a + Math.random()*(b-a);
+for(let i=0;i<TREES;i++){
+  // keep a clear path corridor: |x| between 5 and 60, along z
+  let x = rand(5, 55) * (Math.random()<0.5?-1:1);
+  let z = rand(-160, 30);
+  const s = rand(0.7, 1.5);
+  // trunk
+  dummy.position.set(x, 3*s, z); dummy.scale.set(s, s, s); dummy.rotation.y=rand(0,6.28);
+  dummy.updateMatrix(); trunks.setMatrixAt(i, dummy.matrix);
+  // foliage (stacked look via taller cone on top of trunk)
+  dummy.position.set(x, 6*s, z); dummy.scale.set(s, s*rand(1,1.5), s);
+  dummy.updateMatrix(); foliage.setMatrixAt(i, dummy.matrix);
+  baseHue.push(Math.random());
+  foliage.setColorAt(i, new THREE.Color().setHSL(0.75, 0.5, 0.35));
+}
+trunks.instanceMatrix.needsUpdate = true;
+foliage.instanceMatrix.needsUpdate = true;
+
+// ---------- fireflies ----------
+const ffN = 260, ffPos = new Float32Array(ffN*3);
+for(let i=0;i<ffN;i++){ ffPos[i*3]=rand(-60,60); ffPos[i*3+1]=rand(0.5,9); ffPos[i*3+2]=rand(-160,30); }
+const ffGeo = new THREE.BufferGeometry();
+ffGeo.setAttribute('position', new THREE.BufferAttribute(ffPos,3));
+const fireflies = new THREE.Points(ffGeo, new THREE.PointsMaterial({color:0xd0a8ff, size:0.14, transparent:true, opacity:.9}));
+scene.add(fireflies);
+
+// ---------- the banjo billboard in the clearing ----------
+const tex = new THREE.TextureLoader().load('banjo.jpg');
+tex.colorSpace = THREE.SRGBColorSpace;
+const banjo = new THREE.Mesh(
+  new THREE.PlaneGeometry(6.4, 9.6),
+  new THREE.MeshBasicMaterial({map:tex, transparent:true})
+);
+const BANJO_POS = new THREE.Vector3(0, 5.6, -70);
+banjo.position.copy(BANJO_POS);
+scene.add(banjo);
+const halo = new THREE.PointLight(0xb26bff, 8, 30, 2);
+halo.position.set(0, 5.6, -68); scene.add(halo);
+const ring = new THREE.Mesh(new THREE.TorusGeometry(5.2, 0.12, 8, 48),
+  new THREE.MeshBasicMaterial({color:0xb26bff}));
+ring.position.copy(BANJO_POS); scene.add(ring);
+
+// ---------- controls ----------
+const keys = {};
+addEventListener('keydown', e=>{
+  keys[e.key.toLowerCase()] = true;
+  if(e.key.toLowerCase()==='c') shiftPalette();
+});
+addEventListener('keyup', e=> keys[e.key.toLowerCase()] = false);
+
+let yaw = 0, pitch = 0, dragging=false, px=0, py=0;
+canvas.addEventListener('mousedown', e=>{dragging=true;px=e.clientX;py=e.clientY;});
+addEventListener('mouseup', ()=>dragging=false);
+addEventListener('mousemove', e=>{
+  if(!dragging) return;
+  yaw   -= (e.clientX-px)*0.003; pitch -= (e.clientY-py)*0.003;
+  pitch = Math.max(-0.6, Math.min(0.6, pitch));
+  px=e.clientX; py=e.clientY;
+});
+// touch look
+canvas.addEventListener('touchstart', e=>{dragging=true;px=e.touches[0].clientX;py=e.touches[0].clientY;},{passive:true});
+canvas.addEventListener('touchmove', e=>{
+  if(!dragging) return; const t=e.touches[0];
+  yaw -= (t.clientX-px)*0.005; pitch -= (t.clientY-py)*0.005;
+  pitch = Math.max(-0.6, Math.min(0.6, pitch)); px=t.clientX; py=t.clientY;
+},{passive:true});
+canvas.addEventListener('touchend', ()=>dragging=false);
+// mobile move buttons
+const move = {f:false,b:false,l:false,r:false};
+document.querySelectorAll('[data-move]').forEach(btn=>{
+  const d=btn.dataset.move;
+  const on=e=>{e.preventDefault();move[d]=true;}, off=e=>{e.preventDefault();move[d]=false;};
+  btn.addEventListener('touchstart',on,{passive:false}); btn.addEventListener('touchend',off);
+  btn.addEventListener('mousedown',on); btn.addEventListener('mouseup',off);
+});
+document.querySelector('[data-color]').addEventListener('click', shiftPalette);
+
+// ---------- colour palette shifting ----------
+let paletteHue = 0.75;
+function shiftPalette(){
+  paletteHue = (paletteHue + 0.13) % 1;
+}
+
+// ---------- spirit trees (planted by visitors) ----------
+const plantedTrees = [];      // { group, plaque, data }
+const pickable = [];          // foliage meshes for click-to-read
+const plantedPlaques = [];    // planes to billboard toward camera
+const TREE_COLORS = ['#b26bff','#ff6ba0','#6bd0ff','#ffd36b','#7dff9e','#ff9d5c'];
+
+function makePlaque(name, msg, color){
+  const cv = document.createElement('canvas'); cv.width=512; cv.height=288;
+  const g = cv.getContext('2d');
+  g.fillStyle='rgba(14,7,24,0.9)'; roundRect(g,6,6,500,276,22); g.fill();
+  g.lineWidth=6; g.strokeStyle=color; roundRect(g,6,6,500,276,22); g.stroke();
+  g.textAlign='center'; g.fillStyle=color; g.font='bold 44px Segoe UI, sans-serif';
+  g.fillText(clip(name||'In memory',22), 256, 74);
+  g.fillStyle='#e9def8'; g.font='26px Segoe UI, sans-serif';
+  wrap(g, msg||'', 256, 128, 460, 34);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace=THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.36),
+    new THREE.MeshBasicMaterial({map:tx, transparent:true}));
+  return m;
+}
+function roundRect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function clip(s,n){return s.length>n?s.slice(0,n-1)+'…':s;}
+function wrap(g,text,x,y,maxW,lh){
+  const words=(text||'').split(/\s+/); let line='',yy=y,lines=0;
+  for(const w of words){
+    const test=line?line+' '+w:w;
+    if(g.measureText(test).width>maxW && line){ g.fillText(line,x,yy); line=w; yy+=lh; if(++lines>=4)break; }
+    else line=test;
+  }
+  if(lines<5) g.fillText(line,x,yy);
+}
+
+function buildTree(data){
+  const grp = new THREE.Group();
+  const col = new THREE.Color(data.color);
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.30,5,6),
+    new THREE.MeshStandardMaterial({color:0x241a2e, roughness:1}));
+  trunk.position.y = 2.5; trunk.userData.idx = data.idx; grp.add(trunk); pickable.push(trunk);
+  // layered glowing canopy
+  for(let k=0;k<3;k++){
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.7-k*0.35, 2.4, 8),
+      new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:0.6, roughness:.8}));
+    cone.position.y = 4.6 + k*1.3;
+    cone.userData.idx = data.idx;
+    grp.add(cone); pickable.push(cone);
+  }
+  const light = new THREE.PointLight(col, 3, 14, 2); light.position.y=5.5; grp.add(light);
+  const plaque = makePlaque(data.name, data.msg, data.color);
+  plaque.position.set(0, 2.4, 1.6); plaque.userData.idx = data.idx;
+  grp.add(plaque); plantedPlaques.push(plaque); pickable.push(plaque);
+  grp.position.set(data.x, 0, data.z);
+  scene.add(grp);
+  plantedTrees.push({grp, plaque, data});
+}
+
+function saveTrees(){
+  const arr = plantedTrees.map(t=>t.data);
+  try{ localStorage.setItem('banjoSpiritTrees', JSON.stringify(arr)); }catch(e){}
+}
+function loadTrees(){
+  let arr=[]; try{ arr=JSON.parse(localStorage.getItem('banjoSpiritTrees')||'[]'); }catch(e){}
+  arr.forEach(d=>{ d.idx = plantedTrees.length; buildTree(d); });
+}
+
+// ---------- plant flow UI ----------
+let plantMode=false, pendingPoint=null, chosenColor=TREE_COLORS[0];
+const plantBtn=document.getElementById('plantBtn'), plantHint=document.getElementById('plantHint');
+const plantForm=document.getElementById('plantForm'), reader=document.getElementById('reader');
+const swatches=document.getElementById('pColors');
+TREE_COLORS.forEach((c,i)=>{
+  const s=document.createElement('button');
+  s.style.cssText=`width:34px;height:34px;border-radius:50%;cursor:pointer;background:${c};border:3px solid ${i===0?'#fff':'transparent'}`;
+  s.onclick=()=>{chosenColor=c;[...swatches.children].forEach(x=>x.style.borderColor='transparent');s.style.borderColor='#fff';};
+  swatches.appendChild(s);
+});
+plantBtn.onclick=()=>{ plantMode=!plantMode; plantHint.style.display=plantMode?'block':'none';
+  plantBtn.style.filter=plantMode?'brightness(1.3)':''; };
+
+document.getElementById('pCancel').onclick=()=>{ plantForm.style.display='none'; pendingPoint=null; };
+document.getElementById('pPlant').onclick=()=>{
+  const name=document.getElementById('pName').value.trim();
+  const msg=document.getElementById('pMsg').value.trim();
+  if(!pendingPoint) return;
+  const data={idx:plantedTrees.length, x:pendingPoint.x, z:pendingPoint.z, name, msg, color:chosenColor};
+  buildTree(data); saveTrees();
+  plantForm.style.display='none'; pendingPoint=null;
+  plantMode=false; plantHint.style.display='none'; plantBtn.style.filter='';
+  document.getElementById('pName').value=''; document.getElementById('pMsg').value='';
+};
+document.getElementById('rClose').onclick=()=>reader.style.display='none';
+
+// ---------- click router: plant ground / read tree / play banjo ----------
+const raycaster = new THREE.Raycaster();
+const prompt = document.getElementById('prompt');
+let nearBanjo = false, downX=0, downY=0;
+canvas.addEventListener('pointerdown', e=>{ downX=e.clientX; downY=e.clientY; });
+canvas.addEventListener('click', e=>{
+  if(Math.hypot(e.clientX-downX, e.clientY-downY) > 6) return;  // was a look-drag, not a click
+  const rx=(e.clientX/innerWidth)*2-1, ry=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera({x:rx,y:ry}, camera);
+
+  if(plantMode){
+    const hit = raycaster.intersectObject(ground)[0];
+    if(hit){
+      let pt = hit.point.clone(); pt.y = 0;
+      const feet = new THREE.Vector3(camera.position.x, 0, camera.position.z);
+      // keep the tree a sensible distance ahead so it stands in view, not on top of you
+      if(pt.distanceTo(feet) < 9){
+        let dir = pt.clone().sub(feet).setY(0);
+        if(dir.lengthSq() < 0.001) dir = new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+        pt = feet.add(dir.normalize().multiplyScalar(11));
+      }
+      pendingPoint = pt; plantForm.style.display='flex';
+    }
+    return;
+  }
+  // read a planted tree
+  const th = raycaster.intersectObjects(pickable, false)[0];
+  if(th){
+    const t = plantedTrees[th.object.userData.idx];
+    if(t){ document.getElementById('rName').textContent=t.data.name||'In memory';
+      document.getElementById('rMsg').textContent=t.data.msg||''; reader.style.display='flex'; return; }
+  }
+  // play the banjo
+  if(raycaster.intersectObject(banjo).length && nearBanjo){ openBanjo(); }
+});
+
+loadTrees();  // restore any trees planted in a previous visit
+
+// ---------- movement + render loop ----------
+const clock = new THREE.Clock();
+let started = false;
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const t = clock.elapsedTime;
+
+  if(started){
+    const speed = 14*dt;
+    const fwd = (keys['w']||keys['arrowup']||move.f?1:0) - (keys['s']||keys['arrowdown']||move.b?1:0);
+    const strafe = (keys['d']||keys['arrowright']||move.r?1:0) - (keys['a']||keys['arrowleft']||move.l?1:0);
+    camera.position.x += (Math.sin(yaw)* -fwd + Math.cos(yaw)*strafe)*speed;
+    camera.position.z += (Math.cos(yaw)* -fwd - Math.sin(yaw)*strafe)*speed;
+    camera.position.x = Math.max(-58, Math.min(58, camera.position.x));
+    camera.position.z = Math.max(-150, Math.min(28, camera.position.z));
+  }
+  camera.rotation.set(pitch, yaw, 0, 'YXZ');
+  playerGlow.position.set(camera.position.x, 2.2, camera.position.z);
+
+  // trees drift through the colour wheel on their own (~40s full cycle),
+  // so it keeps changing with no input — the C key / 🎨 button just jumps ahead.
+  paletteHue = (paletteHue + dt*0.025) % 1;
+
+  // dramatic colour shift: vivid, saturated foliage that also glows in its own hue,
+  // plus the whole environment (fog + lighting) bathes in the current palette colour.
+  const col = new THREE.Color();
+  for(let i=0;i<TREES;i++){
+    const h = (paletteHue + baseHue[i]*0.30 + Math.sin(t*0.3+i)*0.03) % 1;
+    col.setHSL(h, 1.0, 0.55 + Math.sin(t+i)*0.08);
+    foliage.setColorAt(i, col);
+  }
+  foliage.instanceColor.needsUpdate = true;
+
+  const env = new THREE.Color().setHSL(paletteHue, 0.95, 0.5);
+  foliageMat.emissive.copy(env);                 // trees glow in the colour so it reads in the dark
+  foliageMat.emissiveIntensity = 0.85;
+  scene.fog.color.copy(env).multiplyScalar(0.28); // tinted mist
+  scene.background.copy(env).multiplyScalar(0.10);
+  hemi.color.copy(env);
+  playerGlow.color.copy(env);
+  moon.color.copy(new THREE.Color().setHSL((paletteHue+0.5)%1, 0.6, 0.6)); // complementary key light
+
+  ring.rotation.z = t*0.6; ring.rotation.x = Math.sin(t*0.4)*0.3;
+  halo.intensity = 7 + Math.sin(t*2)*2.5;
+  banjo.lookAt(camera.position.x, banjo.position.y, camera.position.z);
+  fireflies.rotation.y = t*0.02;
+
+  // planted-tree plaques always face the viewer
+  for(const p of plantedPlaques) p.lookAt(camera.position.x, p.getWorldPosition(new THREE.Vector3()).y, camera.position.z);
+
+  // proximity to banjo -> show prompt
+  const d = camera.position.distanceTo(BANJO_POS);
+  nearBanjo = d < 34;
+  prompt.style.opacity = (nearBanjo && !playMode) ? 1 : 0;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ---------- start ----------
+document.getElementById('enter').addEventListener('click', ()=>{
+  document.getElementById('start').style.display='none';
+  started = true;
+  initAudio();
+});
+
+/* =========================================================
+   Playable banjo overlay (same Karplus–Strong engine as the
+   landing page) — opens when you click the banjo in the forest
+   ========================================================= */
+let audioCtx=null, playMode=false;
+function initAudio(){ audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume(); }
+function pluck(freq, vol=0.9){
+  const a=audioCtx; if(!a) return; const sr=a.sampleRate;
+  const N=Math.max(2,Math.round(sr/freq)), len=Math.floor(sr*2.4);
+  const buf=a.createBuffer(1,len,sr), d=buf.getChannelData(0);
+  for(let i=0;i<N;i++) d[i]=Math.random()*2-1;
+  for(let i=N;i<len;i++) d[i]=0.996*0.5*(d[i-N]+d[i-N+1]);
+  const src=a.createBufferSource(); src.buffer=buf;
+  const g=a.createGain(); g.gain.setValueAtTime(vol,a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+2.2);
+  const lp=a.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=3400;
+  src.connect(lp).connect(g).connect(a.destination); src.start();
+}
+const NOTES=[196.00,246.94,293.66,392.00];
+const CHORDS={G:[196,246.94,293.66,392],C:[261.63,329.63,392,523.25],D:[293.66,369.99,440,587.33]};
+
+function openBanjo(){
+  if(playMode) return; playMode=true;
+  const layer=document.getElementById('playLayer');
+  layer.innerHTML=`
+    <div id="pov" style="position:fixed;inset:0;z-index:30;background:rgba(7,4,12,.82);
+         backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center">
+      <div style="position:relative;height:min(80vh,900px)">
+        <img src="banjo.jpg" style="height:100%;border-radius:10px" draggable="false">
+        <div id="pnote" style="position:absolute;top:12px;left:50%;transform:translateX(-50%);
+             background:rgba(140,80,255,.92);padding:6px 16px;border-radius:999px;font-weight:700;opacity:0;transition:.25s"></div>
+        <svg viewBox="0 0 1024 1536" preserveAspectRatio="xMidYMid meet"
+             style="position:absolute;inset:0;width:100%;height:100%">
+          <g stroke="#e9d4ff" stroke-width="3" filter="drop-shadow(0 0 4px #b26bff)">
+            <line class="pstr" data-i="0" x1="537" y1="441" x2="503" y2="958"/>
+            <line class="pstr" data-i="1" x1="524" y1="441" x2="492" y2="958"/>
+            <line class="pstr" data-i="2" x1="512" y1="441" x2="482" y2="958"/>
+            <line class="pstr" data-i="3" x1="500" y1="441" x2="471" y2="958"/>
+          </g>
+          <g stroke="transparent" stroke-width="46">
+            <line class="phit" data-i="0" x1="537" y1="441" x2="503" y2="958"/>
+            <line class="phit" data-i="1" x1="524" y1="441" x2="492" y2="958"/>
+            <line class="phit" data-i="2" x1="512" y1="441" x2="482" y2="958"/>
+            <line class="phit" data-i="3" x1="500" y1="441" x2="471" y2="958"/>
+          </g>
+        </svg>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+        <button class="pbtn" data-strum="1">Strum</button>
+        <button class="pbtn" data-c="G">G</button>
+        <button class="pbtn" data-c="C">C</button>
+        <button class="pbtn" data-c="D">D</button>
+        <button class="pbtn" id="closeB">✕ back to forest</button>
+      </div>
+      <div style="margin-top:10px;font-size:12px;opacity:.6">Keys A S D F · Space strum · G C D chords</div>
+    </div>`;
+  layer.querySelectorAll('.pbtn').forEach(b=>{
+    b.style.cssText='background:linear-gradient(180deg,#2a1740,#170b26);border:1px solid #7a3cff;color:#efe6ff;padding:10px 16px;border-radius:11px;font:inherit;cursor:pointer';
+  });
+  const note=layer.querySelector('#pnote'); let nt;
+  const flash=n=>{note.textContent=n;note.style.opacity=1;clearTimeout(nt);nt=setTimeout(()=>note.style.opacity=0,600);};
+  const vib=el=>{el.animate([{transform:'translateX(0)'},{transform:'translateX(3px)'},{transform:'translateX(-3px)'},{transform:'translateX(0)'}],{duration:200,iterations:2});};
+  const wires=[...layer.querySelectorAll('.pstr')];
+  const playStr=i=>{pluck(NOTES[i]);vib(wires[i]);flash(['G','B','D','G'][i]);};
+  layer.querySelectorAll('.phit').forEach(h=>{
+    const i=+h.dataset.i;
+    h.style.cursor='pointer';
+    h.addEventListener('mousedown',()=>playStr(i));
+    h.addEventListener('touchstart',e=>{e.preventDefault();playStr(i);},{passive:false});
+  });
+  const strum=()=>{[0,1,2,3].forEach((i,n)=>setTimeout(()=>playStr(i),n*70));flash('strum');};
+  const chord=c=>{CHORDS[c].forEach((f,n)=>setTimeout(()=>{pluck(f,.7);vib(wires[n]);},n*55));flash(c);};
+  layer.querySelectorAll('.pbtn').forEach(b=>b.addEventListener('click',()=>{
+    if(b.dataset.strum) strum(); else if(b.dataset.c) chord(b.dataset.c);
+  }));
+  layer.querySelector('#closeB').addEventListener('click',()=>{layer.innerHTML='';playMode=false;});
+  const kh=e=>{
+    if(!playMode){removeEventListener('keydown',kh);return;}
+    const k=e.key.toLowerCase();
+    if(k===' '){e.preventDefault();strum();} else if('asdf'.includes(k)) playStr('asdf'.indexOf(k));
+    else if('gcd'.includes(k)) chord(k.toUpperCase());
+    else if(k==='escape'){layer.innerHTML='';playMode=false;}
+  };
+  addEventListener('keydown',kh);
+}
+</script>
+</body>
+</html>
