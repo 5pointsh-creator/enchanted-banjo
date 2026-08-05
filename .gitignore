@@ -1,0 +1,5 @@
+node_modules/
+*.pyc
+__pycache__/
+check.py
+shot.py
