@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Enchanted Banjo — Forest Walkthrough</title>
+<title>Banjo Spirits — Forest Walkthrough</title>
 <style>
   :root{ --glow:#b26bff; --cream:#efe6ff; }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -45,7 +45,7 @@
   <canvas id="c"></canvas>
 
   <div class="hud">
-    <div class="title">🪕 <b>The Enchanted Forest</b></div>
+    <div class="title">🪕 <b>Banjo Spirits</b></div>
     <div class="help">
       <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows — walk<br>
       drag — look around<br>
@@ -66,7 +66,7 @@
   </div>
 
   <div id="start">
-    <h1>The Enchanted Forest</h1>
+    <h1>Banjo Spirits</h1>
     <p>Walk the misty path through a 3D forest of colour-shifting trees, and find the
        glowing banjo waiting in the clearing. Reach it, and play.</p>
     <button class="btn" id="enter">Enter the forest ▸</button>
@@ -234,6 +234,10 @@ function animate(){
   }
   camera.rotation.set(pitch, yaw, 0, 'YXZ');
   playerGlow.position.set(camera.position.x, 2.2, camera.position.z);
+
+  // trees drift through the colour wheel on their own (~40s full cycle),
+  // so it keeps changing with no input — the C key / 🎨 button just jumps ahead.
+  paletteHue = (paletteHue + dt*0.025) % 1;
 
   // colour-shifting foliage: each tree eases toward the current palette hue (+its own offset)
   const col = new THREE.Color();
