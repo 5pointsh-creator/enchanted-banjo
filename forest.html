@@ -95,7 +95,7 @@ const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 400)
 camera.position.set(0, 1.7, 18);
 
 // ---------- lighting ----------
-scene.add(new THREE.HemisphereLight(0x6a4aa0, 0x0a0812, 0.6));
+const hemi = new THREE.HemisphereLight(0x6a4aa0, 0x0a0812, 0.6); scene.add(hemi);
 const moon = new THREE.DirectionalLight(0x9d7bff, 0.5);
 moon.position.set(-8, 20, -6); scene.add(moon);
 const playerGlow = new THREE.PointLight(0xb26bff, 6, 22, 2);
@@ -239,14 +239,24 @@ function animate(){
   // so it keeps changing with no input — the C key / 🎨 button just jumps ahead.
   paletteHue = (paletteHue + dt*0.025) % 1;
 
-  // colour-shifting foliage: each tree eases toward the current palette hue (+its own offset)
+  // dramatic colour shift: vivid, saturated foliage that also glows in its own hue,
+  // plus the whole environment (fog + lighting) bathes in the current palette colour.
   const col = new THREE.Color();
   for(let i=0;i<TREES;i++){
-    const h = (paletteHue + baseHue[i]*0.18 + Math.sin(t*0.3+i)*0.02) % 1;
-    col.setHSL(h, 0.6, 0.42 + Math.sin(t+i)*0.05);
+    const h = (paletteHue + baseHue[i]*0.30 + Math.sin(t*0.3+i)*0.03) % 1;
+    col.setHSL(h, 1.0, 0.55 + Math.sin(t+i)*0.08);
     foliage.setColorAt(i, col);
   }
   foliage.instanceColor.needsUpdate = true;
+
+  const env = new THREE.Color().setHSL(paletteHue, 0.95, 0.5);
+  foliageMat.emissive.copy(env);                 // trees glow in the colour so it reads in the dark
+  foliageMat.emissiveIntensity = 0.85;
+  scene.fog.color.copy(env).multiplyScalar(0.28); // tinted mist
+  scene.background.copy(env).multiplyScalar(0.10);
+  hemi.color.copy(env);
+  playerGlow.color.copy(env);
+  moon.color.copy(new THREE.Color().setHSL((paletteHue+0.5)%1, 0.6, 0.6)); // complementary key light
 
   ring.rotation.z = t*0.6; ring.rotation.x = Math.sin(t*0.4)*0.3;
   halo.intensity = 7 + Math.sin(t*2)*2.5;
