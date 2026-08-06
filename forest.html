@@ -121,16 +121,18 @@ const trunks = new THREE.InstancedMesh(trunkGeo, trunkMat, TREES);
 const foliageGeo = new THREE.ConeGeometry(1.7, 4.5, 7);
 const foliageMat = new THREE.MeshStandardMaterial({roughness:.9, emissive:0x1a0d33, emissiveIntensity:.35});
 const foliage = new THREE.InstancedMesh(foliageGeo, foliageMat, TREES);
-scene.add(trunks, foliage);
+const stylisedGrp = new THREE.Group(); stylisedGrp.add(trunks, foliage); scene.add(stylisedGrp);
 
 const dummy = new THREE.Object3D();
 const baseHue = []; // per-tree hue offset for the colour animation
+const treePos = []; // remembered so the realistic trees sit in the same spots
 const rand = (a,b)=> a + Math.random()*(b-a);
 for(let i=0;i<TREES;i++){
   // keep a clear path corridor: |x| between 5 and 60, along z
   let x = rand(5, 55) * (Math.random()<0.5?-1:1);
   let z = rand(-160, 30);
   const s = rand(0.7, 1.5);
+  treePos.push({x, z, s});
   // trunk
   dummy.position.set(x, 3*s, z); dummy.scale.set(s, s, s); dummy.rotation.y=rand(0,6.28);
   dummy.updateMatrix(); trunks.setMatrixAt(i, dummy.matrix);
@@ -142,6 +144,49 @@ for(let i=0;i<TREES;i++){
 }
 trunks.instanceMatrix.needsUpdate = true;
 foliage.instanceMatrix.needsUpdate = true;
+
+// ---------- realistic bare-tree option (each visitor can toggle) ----------
+function bareTreeTexture(seed){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=400; const g=cv.getContext('2d');
+  let s=seed*9301+49297; const rnd=()=>{ s=(s*9301+49297)%233280; return s/233280; };
+  g.strokeStyle='#0e0b16'; g.lineCap='round';
+  function branch(x,y,ang,len,w){
+    if(len<8||w<0.6) return;
+    const nx=x+Math.cos(ang)*len, ny=y+Math.sin(ang)*len;
+    g.lineWidth=w; g.beginPath(); g.moveTo(x,y);
+    const mx=(x+nx)/2+(rnd()-0.5)*len*0.3, my=(y+ny)/2;
+    g.quadraticCurveTo(mx,my,nx,ny); g.stroke();
+    const n=2+(rnd()<0.4?1:0);
+    for(let i=0;i<n;i++) branch(nx,ny, ang-0.5+rnd()*1.0, len*(0.62+rnd()*0.2), w*0.68);
+  }
+  branch(128,392,-Math.PI/2+(rnd()-0.5)*0.3,78,13);
+  const grd=g.createRadialGradient(128,380,4,128,380,90);
+  grd.addColorStop(0,'rgba(150,110,200,0.10)'); grd.addColorStop(1,'rgba(150,110,200,0)');
+  g.fillStyle=grd; g.fillRect(0,300,256,100);
+  const tx=new THREE.CanvasTexture(cv); tx.colorSpace=THREE.SRGBColorSpace; return tx;
+}
+const bareTex=[bareTreeTexture(3),bareTreeTexture(11),bareTreeTexture(27)];
+const realGrp=new THREE.Group(); scene.add(realGrp);
+const realPlanes=[];
+treePos.forEach((p,i)=>{
+  const h=9*p.s, w=6*p.s;
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({map:bareTex[i%3],transparent:true,depthWrite:false}));
+  m.position.set(p.x,h/2,p.z); realGrp.add(m); realPlanes.push(m);
+});
+let treeStyle = 'simple'; try{ treeStyle = localStorage.getItem('bsTreeStyle') || 'simple'; }catch(e){}
+function applyTreeStyle(){
+  const real = treeStyle==='realistic';
+  realGrp.visible = real; stylisedGrp.visible = !real;
+  const btn=document.getElementById('treeToggle');
+  if(btn) btn.textContent = real ? '🌲 Trees: Realistic' : '🌲 Trees: Simple';
+}
+function flipTreeStyle(){ treeStyle = treeStyle==='realistic'?'simple':'realistic'; try{localStorage.setItem('bsTreeStyle',treeStyle);}catch(e){} applyTreeStyle(); }
+addEventListener('keydown', e=>{ if(e.key.toLowerCase()==='t') flipTreeStyle(); });
+(function(){ const b=document.createElement('button'); b.id='treeToggle';
+  b.style.cssText='position:fixed;left:16px;top:96px;z-index:8;cursor:pointer;font:inherit;font-size:13px;padding:9px 14px;border:1px solid #4a2f6e;border-radius:12px;background:rgba(36,20,54,.72);color:#d9c7ff;backdrop-filter:blur(3px)';
+  b.onclick=flipTreeStyle; document.body.appendChild(b); })();
+applyTreeStyle();
 
 // ---------- fireflies ----------
 const ffN = 260, ffPos = new Float32Array(ffN*3);
@@ -245,13 +290,18 @@ function animate(){
 
   // dramatic colour shift: vivid, saturated foliage that also glows in its own hue,
   // plus the whole environment (fog + lighting) bathes in the current palette colour.
-  const col = new THREE.Color();
-  for(let i=0;i<TREES;i++){
-    const h = (paletteHue + baseHue[i]*0.30 + Math.sin(t*0.3+i)*0.03) % 1;
-    col.setHSL(h, 1.0, 0.55 + Math.sin(t+i)*0.08);
-    foliage.setColorAt(i, col);
+  if(stylisedGrp.visible){
+    const col = new THREE.Color();
+    for(let i=0;i<TREES;i++){
+      const h = (paletteHue + baseHue[i]*0.30 + Math.sin(t*0.3+i)*0.03) % 1;
+      col.setHSL(h, 1.0, 0.55 + Math.sin(t+i)*0.08);
+      foliage.setColorAt(i, col);
+    }
+    foliage.instanceColor.needsUpdate = true;
+  } else {
+    // realistic trees: keep them facing the camera (Y-axis billboard)
+    for(const m of realPlanes) m.rotation.y = Math.atan2(camera.position.x-m.position.x, camera.position.z-m.position.z);
   }
-  foliage.instanceColor.needsUpdate = true;
 
   const env = new THREE.Color().setHSL(paletteHue, 0.95, 0.5);
   foliageMat.emissive.copy(env);                 // trees glow in the colour so it reads in the dark
