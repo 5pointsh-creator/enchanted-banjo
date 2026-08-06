@@ -102,6 +102,7 @@
     <button class="btn" id="enter">Look up ▸</button>
   </div>
 
+<script src="bs-api.js"></script>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
 </script>
@@ -194,11 +195,11 @@ function addStar(data){
   if(data.tier==='banner') launchBanner(data);   // streak immediately when placed
 }
 function save(){ try{ localStorage.setItem('banjoSpiritStars',JSON.stringify(dedicated.map(s=>s.data))); }catch(e){} }
-function load(){ let a=[]; try{ a=JSON.parse(localStorage.getItem('banjoSpiritStars')||'[]'); }catch(e){}
-  a.forEach(d=>{ d.idx=dedicated.length; addStar(d); }); }
+async function load(){ const a = await BS.getStars(); a.forEach(d=>{ d.idx=dedicated.length; addStar(d); }); }
 
-// seed a couple so the sky isn't empty on first visit
+// seed a couple so the sky isn't empty on first visit (demo/preview only)
 function seedIfEmpty(){
+  if(BS.mode!=='demo') return;
   if(dedicated.length) return;
   addStar({tier:'white',name:'In loving memory',msg:'For all the ones we hold in our hearts.',dx:0.3,dy:0.8,dz:-0.5});
   addStar({tier:'red',name:'Grandma Rose',msg:'We still hear your songs.',dx:-0.4,dy:0.7,dz:-0.6});
@@ -266,12 +267,15 @@ Object.entries(TIERS).forEach(([k,t],i)=>{
 document.getElementById('dedicate').onclick=()=>form.style.display='flex';
 document.getElementById('sCancel').onclick=()=>form.style.display='none';
 document.getElementById('rClose').onclick=()=>document.getElementById('reader').style.display='none';
-document.getElementById('sPlace').onclick=()=>{
+document.getElementById('sPlace').onclick=async ()=>{
   const name=document.getElementById('sName').value.trim(), msg=document.getElementById('sMsg').value.trim();
+  // on the live site an account is required so the star joins the shared sky
+  const ok = await BS.ensureAuth(); if(!ok) return;
   // place in front of where the viewer is currently looking
   const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
   dir.x+=(Math.random()-0.5)*0.4; dir.y+=(Math.random()-0.3)*0.25; dir.normalize();
-  addStar({tier:chosen,name,msg,dx:dir.x,dy:Math.max(0.15,dir.y),dz:dir.z}); save();
+  const saved = await BS.addStar({tier:chosen,name,msg,dx:dir.x,dy:Math.max(0.15,dir.y),dz:dir.z});
+  addStar(saved);
   form.style.display='none';
   document.getElementById('sName').value=''; document.getElementById('sMsg').value='';
   showPrompt(chosen==='banner'?'Your banner star is streaking across the sky ✨':'Your star is placed ✨');
@@ -318,7 +322,7 @@ function animate(){
   }
   renderer.render(scene,camera);
 }
-load(); seedIfEmpty(); animate();
+animate(); BS.init().then(async()=>{ await load(); seedIfEmpty(); });
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 document.getElementById('enter').addEventListener('click',()=>{document.getElementById('start').style.display='none';started=true;});
 </script>
