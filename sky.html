@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Banjo Spirits — Dedicate a Star</title>
+<style>
+  :root{ --cream:#eaf0ff; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#04060f;font-family:"Segoe UI",system-ui,sans-serif;color:var(--cream)}
+  #c{display:block;width:100vw;height:100vh;touch-action:none}
+  .hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:14px 16px;display:flex;justify-content:space-between;z-index:5}
+  .title{font-size:15px;opacity:.9;text-shadow:0 2px 8px #000}
+  .title b{background:linear-gradient(180deg,#dfe9ff,#8fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .help{font-size:12px;opacity:.62;text-align:right;line-height:1.7;text-shadow:0 1px 4px #000}
+  kbd{background:#182036;border:1px solid #33436e;border-radius:4px;padding:0 6px;font-size:11px;color:#c7d7ff}
+  #dedicate{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;pointer-events:auto;cursor:pointer;
+     border:1px solid #4a6ab0;border-radius:14px;font:inherit;font-size:15px;padding:12px 22px;color:#fff;
+     background:linear-gradient(180deg,#3a63c0,#22397e);box-shadow:0 0 20px rgba(90,150,255,.5)}
+  .prompt{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:9;background:rgba(90,150,255,.92);color:#fff;
+     padding:9px 18px;border-radius:999px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none}
+  /* modal shared */
+  .modal{position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;background:rgba(4,6,15,.78);backdrop-filter:blur(3px)}
+  .card{background:#0d1228;border:1px solid #33436e;border-radius:16px;padding:22px;width:min(430px,92vw)}
+  .card h3{font-size:18px;color:#dfe9ff;margin-bottom:4px}
+  .card p.sub{opacity:.6;font-size:13px;margin-bottom:14px}
+  label{font-size:12px;opacity:.75}
+  input,textarea{width:100%;margin:5px 0 12px;padding:10px;border-radius:9px;border:1px solid #33436e;background:#080c1c;color:#eaf0ff;font:inherit}
+  textarea{resize:none}
+  .tiers{display:flex;flex-direction:column;gap:8px;margin:6px 0 14px}
+  .tier{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;border:2px solid #26304e;background:#080c1c;cursor:pointer}
+  .tier.sel{border-color:#5a8cff}
+  .dot{width:16px;height:16px;border-radius:50%;flex:none;box-shadow:0 0 10px currentColor}
+  .tier .nm{flex:1;font-size:14px}
+  .tier .pr{opacity:.8;font-size:13px}
+  .btns{display:flex;gap:10px;justify-content:flex-end}
+  button.act{border:none;color:#fff;padding:10px 18px;border-radius:10px;font:inherit;cursor:pointer;background:linear-gradient(180deg,#3a63c0,#22397e)}
+  button.ghost{background:#16203c;border:1px solid #33436e;color:#c7d7ff;padding:10px 16px;border-radius:10px;font:inherit;cursor:pointer}
+  #reader .card{text-align:center}
+  #rName{font-size:22px;font-weight:700;margin-bottom:10px}
+  #rMsg{font-size:15px;line-height:1.6;opacity:.9;white-space:pre-wrap}
+  #start{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;
+     background:radial-gradient(circle at 50% 35%,rgba(30,50,110,.5),rgba(4,6,15,.94))}
+  #start h1{font-size:clamp(24px,5vw,40px);background:linear-gradient(180deg,#dfe9ff,#8fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #start p{max-width:440px;opacity:.82;font-size:14px;line-height:1.6}
+  .btn{pointer-events:auto;cursor:pointer;background:linear-gradient(180deg,#3a63c0,#22397e);border:none;color:#fff;font:inherit;font-size:16px;padding:13px 30px;border-radius:14px;box-shadow:0 0 24px rgba(90,150,255,.6)}
+  @media (hover:none){ .help{display:none} }
+</style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div class="title">✨ <b>Banjo Spirits — the night sky</b></div>
+    <div class="help">drag — look around<br>tap a star to read it<br><kbd>D</kbd> — dedicate a star</div>
+  </div>
+  <div class="prompt" id="prompt"></div>
+  <button id="dedicate">✨ Dedicate a star</button>
+
+  <!-- dedicate form -->
+  <div class="modal" id="form">
+    <div class="card">
+      <h3>Dedicate a star ✨</h3>
+      <p class="sub">Place a star in the sky for someone - in memory, or in love.</p>
+      <label>Name</label>
+      <input id="sName" maxlength="40" placeholder="e.g. Mum, or Buddy 🐾">
+      <label>Message</label>
+      <textarea id="sMsg" rows="2" maxlength="140" placeholder="A few words..."></textarea>
+      <label>Choose a star</label>
+      <div class="tiers" id="tiers"></div>
+      <div class="btns">
+        <button class="ghost" id="sCancel">Cancel</button>
+        <button class="act" id="sPlace">Place my star ✨</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- read a star -->
+  <div class="modal" id="reader">
+    <div class="card">
+      <div id="rName"></div>
+      <div id="rMsg"></div>
+      <button class="act" id="rClose" style="margin-top:18px">Close</button>
+    </div>
+  </div>
+
+  <div id="start">
+    <h1>The night sky</h1>
+    <p>Look up at a sky of dedications. Drag to look around, tap a star to read who it's for,
+       and dedicate your own - including a shooting star that streaks past towing a banner.</p>
+    <button class="btn" id="enter">Look up ▸</button>
+  </div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,4000);
+camera.position.set(0,0,0);
+
+// ---------- sky dome (vertical gradient) ----------
+function skyTexture(){
+  const cv=document.createElement('canvas'); cv.width=8; cv.height=256; const g=cv.getContext('2d');
+  const grd=g.createLinearGradient(0,0,0,256);
+  grd.addColorStop(0,'#05060f');    // zenith
+  grd.addColorStop(0.6,'#0a1330');
+  grd.addColorStop(0.85,'#182a55');  // toward horizon
+  grd.addColorStop(1,'#243a6b');
+  g.fillStyle=grd; g.fillRect(0,0,8,256);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+const dome=new THREE.Mesh(new THREE.SphereGeometry(1500,32,16),
+  new THREE.MeshBasicMaterial({map:skyTexture(),side:THREE.BackSide}));
+scene.add(dome);
+
+// ---------- background starfield ----------
+const N=1600, pos=new Float32Array(N*3), sz=new Float32Array(N);
+for(let i=0;i<N;i++){
+  const u=Math.random(), v=Math.random();
+  const th=2*Math.PI*u, ph=Math.acos(2*v-1);
+  const r=900;
+  pos[i*3]=r*Math.sin(ph)*Math.cos(th); pos[i*3+1]=Math.abs(r*Math.cos(ph))*0.9-50; pos[i*3+2]=r*Math.sin(ph)*Math.sin(th);
+  sz[i]=Math.random()*1.6+0.4;
+}
+const bgGeo=new THREE.BufferGeometry();
+bgGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+bgGeo.setAttribute('size',new THREE.BufferAttribute(sz,1));
+const bgStars=new THREE.Points(bgGeo,new THREE.PointsMaterial({color:0xcfd8ff,size:2.2,sizeAttenuation:true,transparent:true,opacity:.9}));
+scene.add(bgStars);
+
+// ---------- moon ----------
+function glowTexture(){
+  const cv=document.createElement('canvas'); cv.width=128; cv.height=128; const g=cv.getContext('2d');
+  const grd=g.createRadialGradient(64,64,0,64,64,64);
+  grd.addColorStop(0,'rgba(255,255,255,1)'); grd.addColorStop(0.25,'rgba(255,255,255,0.85)');
+  grd.addColorStop(0.5,'rgba(255,255,255,0.25)'); grd.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle=grd; g.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(cv);
+}
+const glowTex=glowTexture();
+const moon=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xdfe6ff,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+moon.scale.setScalar(90); moon.position.set(-260,120,-500); scene.add(moon);
+
+// ---------- horizon forest silhouette (simple dark band of peaks) ----------
+function horizonTexture(){
+  const cv=document.createElement('canvas'); cv.width=1024; cv.height=256; const g=cv.getContext('2d');
+  g.clearRect(0,0,1024,256); g.fillStyle='#05070e';
+  g.beginPath(); g.moveTo(0,256);
+  let x=0; while(x<1024){ const w=20+Math.random()*40, h=90+Math.random()*120; g.lineTo(x+w/2,256-h); g.lineTo(x+w,256); x+=w; }
+  g.lineTo(1024,256); g.closePath(); g.fill();
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=THREE.RepeatWrapping; t.repeat.set(4,1); return t;
+}
+const horizon=new THREE.Mesh(new THREE.CylinderGeometry(780,780,150,48,1,true),
+  new THREE.MeshBasicMaterial({map:horizonTexture(),transparent:true,side:THREE.BackSide}));
+horizon.position.y=-40; scene.add(horizon);
+
+// ---------- dedicated stars ----------
+const TIERS={
+  white:{color:'#ffffff', label:'White star', price:5,  scale:14},
+  red:  {color:'#ff5a5a', label:'Red star',   price:10, scale:17},
+  gold: {color:'#ffd45a', label:'Gold shooting star', price:20, scale:22},
+  banner:{color:'#9fd0ff',label:'Banner shooting star', price:50, scale:24},
+};
+const dedicated=[];        // {sprite,data}
+const pickable=[];
+function addStar(data){
+  const t=TIERS[data.tier]||TIERS.white;
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:new THREE.Color(t.color),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+  sp.scale.setScalar(t.scale);
+  const d=new THREE.Vector3(data.dx,data.dy,data.dz).normalize();
+  sp.position.copy(d.multiplyScalar(420));
+  sp.userData={idx:dedicated.length, base:t.scale};
+  scene.add(sp); dedicated.push({sprite:sp,data}); pickable.push(sp);
+  if(data.tier==='banner') launchBanner(data);   // streak immediately when placed
+}
+function save(){ try{ localStorage.setItem('banjoSpiritStars',JSON.stringify(dedicated.map(s=>s.data))); }catch(e){} }
+function load(){ let a=[]; try{ a=JSON.parse(localStorage.getItem('banjoSpiritStars')||'[]'); }catch(e){}
+  a.forEach(d=>{ d.idx=dedicated.length; addStar(d); }); }
+
+// seed a couple so the sky isn't empty on first visit
+function seedIfEmpty(){
+  if(dedicated.length) return;
+  addStar({tier:'white',name:'In loving memory',msg:'For all the ones we hold in our hearts.',dx:0.3,dy:0.8,dz:-0.5});
+  addStar({tier:'red',name:'Grandma Rose',msg:'We still hear your songs.',dx:-0.4,dy:0.7,dz:-0.6});
+  addStar({tier:'gold',name:'Dad',msg:'The brightest of them all.',dx:0.6,dy:0.6,dz:-0.4});
+  save();
+}
+
+// ---------- shooting star + banner ----------
+const shooters=[];
+function bannerTexture(name,msg){
+  const cv=document.createElement('canvas'); cv.width=1024; cv.height=180; const g=cv.getContext('2d');
+  g.fillStyle='rgba(10,16,40,0.85)'; round(g,4,4,1016,172,26); g.fill();
+  g.lineWidth=5; g.strokeStyle='#9fd0ff'; round(g,4,4,1016,172,26); g.stroke();
+  g.textAlign='left'; g.fillStyle='#9fd0ff'; g.font='bold 58px Segoe UI, sans-serif';
+  g.fillText((name||'In memory').slice(0,26),40,78);
+  g.fillStyle='#eaf0ff'; g.font='38px Segoe UI, sans-serif';
+  g.fillText((msg||'').slice(0,40),40,132);
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; return t;
+}
+function round(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath();}
+function launchBanner(data){
+  const grp=new THREE.Group();
+  const head=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffffff,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+  head.scale.setScalar(26); grp.add(head);
+  const trail=[];
+  for(let i=0;i<10;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0x9fd0ff,transparent:true,opacity:0.5*(1-i/10),depthWrite:false,blending:THREE.AdditiveBlending})); s.scale.setScalar(16*(1-i/12)); grp.add(s); trail.push(s); }
+  const banner=new THREE.Sprite(new THREE.SpriteMaterial({map:bannerTexture(data.name,data.msg),transparent:true,depthWrite:false}));
+  banner.scale.set(150,26,1); grp.add(banner);
+  scene.add(grp);
+  shooters.push({grp,head,trail,banner,data,start:null,dur:6,path:{a:new THREE.Vector3(-380,180,-260),b:new THREE.Vector3(380,60,-320)}});
+}
+let bannerTimer=6;   // periodic re-launch so you can catch it
+
+// ---------- interaction ----------
+let yaw=0,pitch=0.35,drag=false,px=0,py=0,downX=0,downY=0;
+canvas.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY;drag=true;px=e.clientX;py=e.clientY;});
+addEventListener('pointerup',()=>drag=false);
+addEventListener('pointermove',e=>{ if(!drag)return; yaw-=(e.clientX-px)*0.0026; pitch-=(e.clientY-py)*0.0026; pitch=Math.max(-0.3,Math.min(1.2,pitch)); px=e.clientX; py=e.clientY; });
+canvas.addEventListener('touchstart',e=>{const t=e.touches[0];downX=t.clientX;downY=t.clientY;drag=true;px=t.clientX;py=t.clientY;},{passive:true});
+canvas.addEventListener('touchmove',e=>{if(!drag)return;const t=e.touches[0];yaw-=(t.clientX-px)*0.004;pitch-=(t.clientY-py)*0.004;pitch=Math.max(-0.3,Math.min(1.2,pitch));px=t.clientX;py=t.clientY;},{passive:true});
+canvas.addEventListener('touchend',()=>drag=false);
+
+const raycaster=new THREE.Raycaster();
+canvas.addEventListener('click',e=>{
+  if(Math.hypot(e.clientX-downX,e.clientY-downY)>6) return;
+  const rx=(e.clientX/innerWidth)*2-1, ry=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera({x:rx,y:ry},camera);
+  raycaster.params.Sprite={threshold:0};
+  const hit=raycaster.intersectObjects(pickable,false)[0];
+  if(hit){ const s=dedicated[hit.object.userData.idx];
+    document.getElementById('rName').textContent=s.data.name||'In memory';
+    document.getElementById('rMsg').textContent=s.data.msg||'';
+    document.getElementById('reader').style.display='flex'; }
+});
+
+// ---------- dedicate flow ----------
+const form=document.getElementById('form'), tiersBox=document.getElementById('tiers');
+let chosen='white';
+Object.entries(TIERS).forEach(([k,t],i)=>{
+  const el=document.createElement('div'); el.className='tier'+(i===0?' sel':'');
+  el.innerHTML=`<span class="dot" style="background:${t.color};color:${t.color}"></span><span class="nm">${t.label}</span><span class="pr">$${t.price}</span>`;
+  el.onclick=()=>{chosen=k;[...tiersBox.children].forEach(x=>x.classList.remove('sel'));el.classList.add('sel');};
+  tiersBox.appendChild(el);
+});
+document.getElementById('dedicate').onclick=()=>form.style.display='flex';
+document.getElementById('sCancel').onclick=()=>form.style.display='none';
+document.getElementById('rClose').onclick=()=>document.getElementById('reader').style.display='none';
+document.getElementById('sPlace').onclick=()=>{
+  const name=document.getElementById('sName').value.trim(), msg=document.getElementById('sMsg').value.trim();
+  // place in front of where the viewer is currently looking
+  const dir=new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+  dir.x+=(Math.random()-0.5)*0.4; dir.y+=(Math.random()-0.3)*0.25; dir.normalize();
+  addStar({tier:chosen,name,msg,dx:dir.x,dy:Math.max(0.15,dir.y),dz:dir.z}); save();
+  form.style.display='none';
+  document.getElementById('sName').value=''; document.getElementById('sMsg').value='';
+  showPrompt(chosen==='banner'?'Your banner star is streaking across the sky ✨':'Your star is placed ✨');
+};
+addEventListener('keydown',e=>{ if(e.key.toLowerCase()==='d'&&form.style.display!=='flex') form.style.display='flex'; });
+const promptEl=document.getElementById('prompt'); let pt;
+function showPrompt(t){promptEl.textContent=t;promptEl.style.opacity=1;clearTimeout(pt);pt=setTimeout(()=>promptEl.style.opacity=0,2600);}
+
+// ---------- loop ----------
+let started=false; const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+  yaw+=dt*0.006;  // gentle drift
+  const cq=new THREE.Euler(pitch,yaw,0,'YXZ'); camera.quaternion.setFromEuler(cq);
+
+  // twinkle dedicated stars
+  for(const s of dedicated){ const b=s.sprite.userData.base; s.sprite.scale.setScalar(b*(0.85+0.15*Math.sin(t*3+s.sprite.position.x))); }
+  bgStars.material.opacity=0.75+0.2*Math.sin(t*1.5);
+
+  // periodic banner shooting star from any banner dedication
+  bannerTimer-=dt;
+  if(bannerTimer<=0){
+    const banners=dedicated.filter(s=>s.data.tier==='banner');
+    if(banners.length){ launchBanner(banners[(Math.floor(t/9))%banners.length].data); }
+    bannerTimer=9;
+  }
+  // advance shooters
+  for(let i=shooters.length-1;i>=0;i--){
+    const sh=shooters[i]; if(sh.start===null) sh.start=t;
+    const k=(t-sh.start)/sh.dur;
+    if(k>=1){ scene.remove(sh.grp); shooters.splice(i,1); continue; }
+    const p=new THREE.Vector3().lerpVectors(sh.path.a,sh.path.b,k);
+    sh.head.position.copy(p);
+    const dir=new THREE.Vector3().subVectors(sh.path.b,sh.path.a).normalize();
+    sh.trail.forEach((s,j)=>{ s.position.copy(p).addScaledVector(dir,-(j+1)*7); });
+    sh.banner.position.copy(p).addScaledVector(dir,-95);
+    const fade=Math.sin(Math.min(1,k*1.05)*Math.PI);   // fade in/out
+    sh.head.material.opacity=fade; sh.banner.material.opacity=fade;
+    sh.trail.forEach((s,j)=>s.material.opacity=fade*0.5*(1-j/10));
+  }
+  renderer.render(scene,camera);
+}
+load(); seedIfEmpty(); animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+document.getElementById('enter').addEventListener('click',()=>{document.getElementById('start').style.display='none';started=true;});
+</script>
+</body>
+</html>
