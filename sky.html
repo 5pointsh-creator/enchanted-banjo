@@ -54,6 +54,18 @@
     <div class="help">drag — look around<br>tap a star to read it<br><kbd>D</kbd> — dedicate a star</div>
   </div>
   <div class="prompt" id="prompt"></div>
+
+  <div id="controls" style="position:fixed;left:16px;bottom:24px;z-index:9;pointer-events:auto;
+       background:rgba(13,18,40,.7);border:1px solid #33436e;border-radius:12px;padding:10px 14px;backdrop-filter:blur(3px);
+       display:flex;align-items:center;gap:10px;font-size:13px;color:#c7d7ff">
+    <span>🌙</span>
+    <input id="bright" type="range" min="0.7" max="2.2" step="0.01" value="1.15" style="width:120px">
+    <span>☀️</span>
+  </div>
+  <a id="toForest" href="forest.html" style="position:fixed;right:16px;bottom:24px;z-index:9;pointer-events:auto;
+     text-decoration:none;background:rgba(13,18,40,.7);border:1px solid #33436e;border-radius:12px;padding:11px 16px;
+     color:#c7d7ff;font-size:14px;backdrop-filter:blur(3px)">🌲 Back to the forest</a>
+
   <button id="dedicate">✨ Dedicate a star</button>
 
   <!-- dedicate form -->
@@ -100,6 +112,8 @@ const canvas=document.getElementById('c');
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.LinearToneMapping;
+renderer.toneMappingExposure=1.15;   // user-adjustable brightness (slider)
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,0.1,4000);
 camera.position.set(0,0,0);
@@ -108,10 +122,10 @@ camera.position.set(0,0,0);
 function skyTexture(){
   const cv=document.createElement('canvas'); cv.width=8; cv.height=256; const g=cv.getContext('2d');
   const grd=g.createLinearGradient(0,0,0,256);
-  grd.addColorStop(0,'#05060f');    // zenith
-  grd.addColorStop(0.6,'#0a1330');
-  grd.addColorStop(0.85,'#182a55');  // toward horizon
-  grd.addColorStop(1,'#243a6b');
+  grd.addColorStop(0,'#0b1224');    // zenith (lightened a touch from near-black)
+  grd.addColorStop(0.6,'#152142');
+  grd.addColorStop(0.85,'#26407a');  // toward horizon
+  grd.addColorStop(1,'#3a5aa0');
   g.fillStyle=grd; g.fillRect(0,0,8,256);
   const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; return t;
 }
@@ -265,6 +279,9 @@ document.getElementById('sPlace').onclick=()=>{
 addEventListener('keydown',e=>{ if(e.key.toLowerCase()==='d'&&form.style.display!=='flex') form.style.display='flex'; });
 const promptEl=document.getElementById('prompt'); let pt;
 function showPrompt(t){promptEl.textContent=t;promptEl.style.opacity=1;clearTimeout(pt);pt=setTimeout(()=>promptEl.style.opacity=0,2600);}
+
+// brightness control
+document.getElementById('bright').addEventListener('input',e=>{ renderer.toneMappingExposure=parseFloat(e.target.value); });
 
 // ---------- loop ----------
 let started=false; const clock=new THREE.Clock();
