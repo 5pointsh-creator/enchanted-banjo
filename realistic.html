@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Banjo Spirits — Realistic Trees Preview</title>
+<style>
+  :root{ --glow:#b26bff; --cream:#efe6ff; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#07040c;font-family:"Segoe UI",system-ui,sans-serif;color:var(--cream)}
+  #c{display:block;width:100vw;height:100vh;touch-action:none}
+  .hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:14px 16px;display:flex;justify-content:space-between;z-index:5}
+  .title{font-size:15px;opacity:.85;text-shadow:0 2px 8px #000}
+  .title b{background:linear-gradient(180deg,#e9d4ff,#9b5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .help{font-size:12px;opacity:.6;text-align:right;line-height:1.7;text-shadow:0 1px 4px #000}
+  kbd{background:#241436;border:1px solid #4a2f6e;border-radius:4px;padding:0 6px;font-size:11px;color:#d9c7ff}
+  #toggle{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;pointer-events:auto;cursor:pointer;
+     border:1px solid #7a3cff;border-radius:14px;font:inherit;font-size:15px;padding:12px 22px;color:#fff;
+     background:linear-gradient(180deg,#7a3cff,#5322b0);box-shadow:0 0 18px rgba(140,80,255,.5)}
+  .pad{position:fixed;bottom:88px;z-index:8;display:none;pointer-events:auto;user-select:none}
+  .pad.left{left:22px} .pad.right{right:22px}
+  .pad button{width:54px;height:54px;margin:3px;border-radius:50%;border:1px solid #4a2f6e;background:rgba(36,20,54,.7);color:#d9c7ff;font-size:19px}
+  .row{display:flex;justify-content:center}
+  #start{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;
+     background:radial-gradient(circle at 50% 40%,rgba(60,20,110,.5),rgba(7,4,12,.92))}
+  #start h1{font-size:clamp(24px,5vw,40px);background:linear-gradient(180deg,#e9d4ff,#9b5cff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  #start p{max-width:440px;opacity:.8;font-size:14px;line-height:1.6}
+  .btn{pointer-events:auto;cursor:pointer;background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;font:inherit;font-size:16px;padding:13px 30px;border-radius:14px;box-shadow:0 0 24px rgba(140,80,255,.6)}
+  @media (hover:none){ .pad{display:block} .help{display:none} }
+</style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hud">
+    <div class="title">🌲 <b>Banjo Spirits — tree preview</b></div>
+    <div class="help">
+      <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / arrows — walk<br>
+      drag — look around<br>
+      <kbd>T</kbd> — switch tree style
+    </div>
+  </div>
+  <button id="toggle">Trees: Realistic ⇄ Simple</button>
+  <div class="pad left"><div class="row"><button data-move="f">▲</button></div>
+    <div class="row"><button data-move="l">◀</button><button data-move="b">▼</button><button data-move="r">▶</button></div></div>
+
+  <div id="start">
+    <h1>Realistic trees preview</h1>
+    <p>Same forest, two looks. Walk in, then tap the button (or press T) to flip between the
+       new photo-style bare trees and the simple stylised ones - so you can see the difference.</p>
+    <button class="btn" id="enter">Walk in ▸</button>
+  </div>
+
+<script type="importmap">
+{ "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas=document.getElementById('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x0a0714);
+scene.fog=new THREE.FogExp2(0x140a24,0.03);
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,400);
+camera.position.set(0,1.7,18);
+
+const hemi=new THREE.HemisphereLight(0x6a4aa0,0x0a0812,0.6); scene.add(hemi);
+const moon=new THREE.DirectionalLight(0x9d7bff,0.5); moon.position.set(-8,20,-6); scene.add(moon);
+const playerGlow=new THREE.PointLight(0xb26bff,5,20,2); scene.add(playerGlow);
+
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(300,400),
+  new THREE.MeshStandardMaterial({color:0x161022,roughness:1}));
+ground.rotation.x=-Math.PI/2; scene.add(ground);
+const path=new THREE.Mesh(new THREE.PlaneGeometry(6,400),
+  new THREE.MeshStandardMaterial({color:0x2a2340,roughness:1}));
+path.rotation.x=-Math.PI/2; path.position.y=0.02; scene.add(path);
+
+// ---------- tree positions ----------
+const rand=(a,b)=>a+Math.random()*(b-a);
+const POS=[];
+for(let i=0;i<150;i++){
+  POS.push({x:rand(5,55)*(Math.random()<.5?-1:1), z:rand(-160,28), s:rand(0.8,1.7)});
+}
+
+// ---------- STYLISED cone trees (InstancedMesh) ----------
+const coneGrp=new THREE.Group(); scene.add(coneGrp);
+const trunkMat=new THREE.MeshStandardMaterial({color:0x241a2e,roughness:1});
+const trunks=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.18,0.32,6,6),trunkMat,POS.length);
+const foliageMat=new THREE.MeshStandardMaterial({roughness:.9,emissive:0x1a0d33,emissiveIntensity:.4});
+const foliage=new THREE.InstancedMesh(new THREE.ConeGeometry(1.7,4.5,7),foliageMat,POS.length);
+coneGrp.add(trunks,foliage);
+const dummy=new THREE.Object3D();
+POS.forEach((p,i)=>{
+  dummy.position.set(p.x,3*p.s,p.z); dummy.scale.setScalar(p.s); dummy.rotation.y=rand(0,6.28);
+  dummy.updateMatrix(); trunks.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(p.x,6*p.s,p.z); dummy.scale.set(p.s,p.s*rand(1,1.4),p.s);
+  dummy.updateMatrix(); foliage.setMatrixAt(i,dummy.matrix);
+  foliage.setColorAt(i,new THREE.Color().setHSL(0.75,0.6,0.4));
+});
+trunks.instanceMatrix.needsUpdate=true; foliage.instanceMatrix.needsUpdate=true;
+
+// ---------- REALISTIC bare-tree billboards ----------
+// procedurally drawn bare, twisted tree silhouettes (like the original photo)
+function bareTreeTexture(seed){
+  const cv=document.createElement('canvas'); cv.width=256; cv.height=400;
+  const g=cv.getContext('2d');
+  let s=seed*9301+49297;
+  const rnd=()=>{ s=(s*9301+49297)%233280; return s/233280; };
+  g.strokeStyle='#0e0b16'; g.lineCap='round';
+  function branch(x,y,ang,len,w){
+    if(len<8||w<0.6) return;
+    const nx=x+Math.cos(ang)*len, ny=y+Math.sin(ang)*len;
+    g.lineWidth=w; g.beginPath(); g.moveTo(x,y);
+    const mx=(x+nx)/2+(rnd()-0.5)*len*0.3, my=(y+ny)/2;
+    g.quadraticCurveTo(mx,my,nx,ny); g.stroke();
+    const n=2+(rnd()<0.4?1:0);
+    for(let i=0;i<n;i++){
+      branch(nx,ny, ang-0.5+rnd()*1.0 - Math.PI*0.0, len*(0.62+rnd()*0.2), w*0.68);
+    }
+  }
+  // trunk base near bottom center, growing up (canvas y grows downward, so up = negative)
+  branch(128,392, -Math.PI/2 + (rnd()-0.5)*0.3, 78, 13);
+  // faint mist glow at base
+  const grd=g.createRadialGradient(128,380,4,128,380,90);
+  grd.addColorStop(0,'rgba(150,110,200,0.10)'); grd.addColorStop(1,'rgba(150,110,200,0)');
+  g.fillStyle=grd; g.fillRect(0,300,256,100);
+  const tx=new THREE.CanvasTexture(cv); tx.colorSpace=THREE.SRGBColorSpace; return tx;
+}
+const bareTex=[bareTreeTexture(3),bareTreeTexture(11),bareTreeTexture(27)];
+const realGrp=new THREE.Group(); realGrp.visible=false; scene.add(realGrp);
+const realPlanes=[];
+POS.forEach((p,i)=>{
+  const h=9*p.s, w=6*p.s;
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+    new THREE.MeshBasicMaterial({map:bareTex[i%3],transparent:true,depthWrite:false}));
+  m.position.set(p.x,h/2,p.z);
+  realGrp.add(m); realPlanes.push(m);
+});
+
+// ---------- controls ----------
+const keys={};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; if(e.key.toLowerCase()==='t')flip();});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+let yaw=0,pitch=0,drag=false,px=0,py=0;
+canvas.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY;});
+addEventListener('mouseup',()=>drag=false);
+addEventListener('mousemove',e=>{if(!drag)return;yaw-=(e.clientX-px)*0.003;pitch-=(e.clientY-py)*0.003;pitch=Math.max(-0.6,Math.min(0.6,pitch));px=e.clientX;py=e.clientY;});
+canvas.addEventListener('touchstart',e=>{drag=true;px=e.touches[0].clientX;py=e.touches[0].clientY;},{passive:true});
+canvas.addEventListener('touchmove',e=>{if(!drag)return;const t=e.touches[0];yaw-=(t.clientX-px)*0.005;pitch-=(t.clientY-py)*0.005;pitch=Math.max(-0.6,Math.min(0.6,pitch));px=t.clientX;py=t.clientY;},{passive:true});
+canvas.addEventListener('touchend',()=>drag=false);
+const move={f:false,b:false,l:false,r:false};
+document.querySelectorAll('[data-move]').forEach(b=>{const d=b.dataset.move;
+  const on=e=>{e.preventDefault();move[d]=true;},off=e=>{e.preventDefault();move[d]=false;};
+  b.addEventListener('touchstart',on,{passive:false});b.addEventListener('touchend',off);
+  b.addEventListener('mousedown',on);b.addEventListener('mouseup',off);});
+
+let realistic=true;                       // start on the new realistic trees
+function apply(){ realGrp.visible=realistic; coneGrp.visible=!realistic;
+  document.getElementById('toggle').textContent = realistic ? 'Trees: Realistic  (tap for Simple)' : 'Trees: Simple  (tap for Realistic)'; }
+function flip(){ realistic=!realistic; apply(); }
+document.getElementById('toggle').addEventListener('click',flip);
+
+// ---------- loop ----------
+let paletteHue=0.75, started=false;
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=Math.min(clock.getDelta(),0.05), t=clock.elapsedTime;
+  if(started){
+    const sp=14*dt;
+    const fwd=(keys['w']||keys['arrowup']||move.f?1:0)-(keys['s']||keys['arrowdown']||move.b?1:0);
+    const str=(keys['d']||keys['arrowright']||move.r?1:0)-(keys['a']||keys['arrowleft']||move.l?1:0);
+    camera.position.x+=(Math.sin(yaw)*-fwd+Math.cos(yaw)*str)*sp;
+    camera.position.z+=(Math.cos(yaw)*-fwd-Math.sin(yaw)*str)*sp;
+    camera.position.x=Math.max(-58,Math.min(58,camera.position.x));
+    camera.position.z=Math.max(-150,Math.min(26,camera.position.z));
+  }
+  camera.rotation.set(pitch,yaw,0,'YXZ');
+  playerGlow.position.set(camera.position.x,2.2,camera.position.z);
+  paletteHue=(paletteHue+dt*0.02)%1;
+  const env=new THREE.Color().setHSL(paletteHue,0.9,0.5);
+  scene.fog.color.copy(env).multiplyScalar(0.25);
+  scene.background.copy(env).multiplyScalar(0.09);
+  hemi.color.copy(env); playerGlow.color.copy(env);
+  // stylised cones glow through the palette
+  if(coneGrp.visible){
+    const c=new THREE.Color();
+    for(let i=0;i<POS.length;i++){ c.setHSL((paletteHue+i*0.01)%1,1,0.55); foliage.setColorAt(i,c); }
+    foliage.instanceColor.needsUpdate=true;
+    foliageMat.emissive.copy(env); foliageMat.emissiveIntensity=0.7;
+  }
+  // realistic trees billboard toward the camera (Y axis) and take a faint colour rim
+  if(realGrp.visible){
+    for(const m of realPlanes){ m.rotation.y = Math.atan2(camera.position.x-m.position.x, camera.position.z-m.position.z); }
+  }
+  renderer.render(scene,camera);
+}
+apply(); animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+document.getElementById('enter').addEventListener('click',()=>{document.getElementById('start').style.display='none';started=true;});
+</script>
+</body>
+</html>
