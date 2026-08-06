@@ -1,42 +1,53 @@
-# The Enchanted Banjo
+# Banjo Spirits
 
-An interactive, playable banjo built on top of a forest photo. Pluck the glowing
-strings, strum, or play chords — every note is generated live in the browser with
-Karplus–Strong plucked-string synthesis (WebAudio), so strings ring and decay like
-real steel rather than playing a canned clip.
+An interactive memorial forest and star sky, built around a playable banjo. Visitors
+walk a 3D forest, plant dedication trees, dedicate stars in the night sky, and play a
+banjo whose strings are synthesised live in the browser (Karplus–Strong, WebAudio).
 
-## Play
+## Pages
 
-- **Click / tap** a glowing string to pluck it.
-- **Drag** across the strings to swipe-strum.
-- **Keyboard:** `A` `S` `D` `F` pluck the four strings, `Space` strums,
-  `G` `C` `D` play chords.
-- **Buttons** under the banjo: Strum and G / C / D / Em chords.
+- `index.html` — the playable banjo landing page.
+- `forest.html` — 3D forest walkthrough with the banjo playable in the clearing, plus a
+  visitor tree-style toggle (realistic ⇄ simple).
+- `plant.html` — the forest with plant-a-tree dedications (tiered trees, adopt existing).
+- `sky.html` — the night sky with star dedications, colour tiers and a banner shooting star.
+- `realistic.html` — side-by-side realistic vs stylised tree preview.
 
-On mobile, tap once to enable sound (browser autoplay policy), then play.
+## Two ways it runs
 
-## Run locally
+- **Static preview (GitHub Pages):** everything works, and dedications save on each
+  visitor's own device (demo mode).
+- **Live site (with the backend):** accounts + a shared database, so every visitor sees
+  the same forest and sky. The front-end auto-detects the backend (`bs-api.js`).
 
-It's a static page — no build step. Just serve the folder:
+## Backend (accounts + shared database)
+
+Node/Express + PostgreSQL.
 
 ```bash
-# any static server works, e.g.
-python3 -m http.server 8000
-# then open http://localhost:8000
+npm install
+DATABASE_URL=postgres://user@host:5432/dbname JWT_SECRET=some-long-random-string npm start
+# serves the site + API on http://localhost:3000
 ```
 
-Or open `index.html` directly in a browser.
+Environment variables:
+
+- `DATABASE_URL` — PostgreSQL connection string (provided automatically by the host's
+  Postgres add-on). The schema is created on first boot.
+- `JWT_SECRET` — any long random string, used to sign login sessions.
+
+### Deploy (one click)
+
+1. Create the project from this repo on your host (Railway recommended).
+2. Add a **PostgreSQL** database to the project — it sets `DATABASE_URL` automatically.
+3. Add a `JWT_SECRET` variable (any long random string).
+4. Deploy. The app migrates the database on first start and serves the whole site.
+
+Point your domain (e.g. `banjospirits.com`) at the deployed URL to go live.
 
 ## Files
 
-- `index.html` — the whole app: markup, styling, string overlay and audio engine.
-- `banjo.jpg` — the banjo/forest artwork the instrument is built on.
-
-## How it works
-
-The banjo photo sits under an SVG overlay whose coordinate space matches the image
-(`viewBox="0 0 1024 1536"`), so the interactive strings line up with the real strings
-at any screen size. Each string has a wide invisible hit-zone for easy tapping and a
-thin glowing wire that visibly vibrates when played. Audio is a Karplus–Strong model:
-a short noise burst fed through a tuned delay + low-pass feedback loop, one buffer per
-pluck, shaped by a decay envelope.
+- `index.html`, `forest.html`, `plant.html`, `sky.html`, `realistic.html` — the pages.
+- `bs-api.js` — client that talks to the backend, with an on-device fallback.
+- `server.js`, `db.js` — the Express server and database schema.
+- `banjo.jpg` — the banjo/forest artwork.
