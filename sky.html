@@ -149,6 +149,25 @@ bgGeo.setAttribute('size',new THREE.BufferAttribute(sz,1));
 const bgStars=new THREE.Points(bgGeo,new THREE.PointsMaterial({color:0xcfd8ff,size:2.2,sizeAttenuation:true,transparent:true,opacity:.9}));
 scene.add(bgStars);
 
+// ---------- aurora: a faint shimmer low on the horizon ----------
+function auroraTexture(){
+  const cv=document.createElement('canvas'); cv.width=512; cv.height=256; const g=cv.getContext('2d');
+  for(let x=0;x<512;x++){
+    const wave=(Math.sin(x*0.03)+Math.sin(x*0.011+1.7))*0.5;   // gentle vertical curtains
+    const h=90+wave*40;
+    const grd=g.createLinearGradient(0,256,0,256-h*1.6);
+    grd.addColorStop(0,'rgba(60,255,170,0)');
+    grd.addColorStop(0.35,'rgba(60,255,170,0.55)');
+    grd.addColorStop(0.7,'rgba(150,90,255,0.35)');
+    grd.addColorStop(1,'rgba(150,90,255,0)');
+    g.fillStyle=grd; g.fillRect(x,256-h*1.6,1,h*1.6);
+  }
+  const t=new THREE.CanvasTexture(cv); t.colorSpace=THREE.SRGBColorSpace; t.wrapS=THREE.RepeatWrapping; t.repeat.set(3,1); return t;
+}
+const aurora=new THREE.Mesh(new THREE.CylinderGeometry(700,700,260,64,1,true),
+  new THREE.MeshBasicMaterial({map:auroraTexture(),transparent:true,side:THREE.BackSide,depthWrite:false,blending:THREE.AdditiveBlending,opacity:0.3}));
+aurora.position.y=70; scene.add(aurora);
+
 // ---------- moon ----------
 function glowTexture(){
   const cv=document.createElement('canvas'); cv.width=128; cv.height=128; const g=cv.getContext('2d');
@@ -233,6 +252,23 @@ function launchBanner(data){
 }
 let bannerTimer=6;   // periodic re-launch so you can catch it
 
+// ambient shooting stars - plain streaks that cross the sky on their own (like wishes)
+function launchAmbientStar(){
+  const grp=new THREE.Group();
+  const head=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xffffff,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending}));
+  head.scale.setScalar(14); grp.add(head);
+  const trail=[];
+  for(let i=0;i<8;i++){ const s=new THREE.Sprite(new THREE.SpriteMaterial({map:glowTex,color:0xcfe0ff,transparent:true,opacity:0.4*(1-i/8),depthWrite:false,blending:THREE.AdditiveBlending})); s.scale.setScalar(10*(1-i/10)); grp.add(s); trail.push(s); }
+  scene.add(grp);
+  const sx=(Math.random()<0.5?-1:1);
+  const ax=sx*380, bx=-sx*(120+Math.random()*260);
+  const ay=120+Math.random()*120, by=30+Math.random()*80;
+  const az=-220-Math.random()*140, bz=az-Math.random()*80;
+  shooters.push({grp,head,trail,banner:null,start:null,dur:1.6+Math.random()*1.2,
+    path:{a:new THREE.Vector3(ax,ay,az), b:new THREE.Vector3(bx,by,bz)}});
+}
+let ambientTimer=3;
+
 // ---------- interaction ----------
 let yaw=0,pitch=0.35,drag=false,px=0,py=0,downX=0,downY=0;
 canvas.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY;drag=true;px=e.clientX;py=e.clientY;});
@@ -306,6 +342,9 @@ function animate(){
     if(banners.length){ launchBanner(banners[(Math.floor(t/9))%banners.length].data); }
     bannerTimer=9;
   }
+  ambientTimer-=dt;
+  if(ambientTimer<=0){ launchAmbientStar(); ambientTimer=6+Math.random()*8; }
+  if(aurora){ aurora.material.map.offset.x += dt*0.008; aurora.material.opacity = 0.28 + 0.14*Math.sin(t*0.5); }
   // advance shooters
   for(let i=shooters.length-1;i>=0;i--){
     const sh=shooters[i]; if(sh.start===null) sh.start=t;
@@ -315,9 +354,9 @@ function animate(){
     sh.head.position.copy(p);
     const dir=new THREE.Vector3().subVectors(sh.path.b,sh.path.a).normalize();
     sh.trail.forEach((s,j)=>{ s.position.copy(p).addScaledVector(dir,-(j+1)*7); });
-    sh.banner.position.copy(p).addScaledVector(dir,-95);
+    if(sh.banner) sh.banner.position.copy(p).addScaledVector(dir,-95);
     const fade=Math.sin(Math.min(1,k*1.05)*Math.PI);   // fade in/out
-    sh.head.material.opacity=fade; sh.banner.material.opacity=fade;
+    sh.head.material.opacity=fade; if(sh.banner) sh.banner.material.opacity=fade;
     sh.trail.forEach((s,j)=>s.material.opacity=fade*0.5*(1-j/10));
   }
   renderer.render(scene,camera);
