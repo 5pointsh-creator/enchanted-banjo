@@ -155,6 +155,128 @@
   }
   const escapeHtml = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-  window.BS = { init, getTrees, addTree, getStars, addStar, login, register, logout, ensureAuth,
+  // ---------- Share + Invite (works on the live site and the preview alike) ----------
+  const SHARE_TEXT = 'Banjo Spirits - walk an enchanted forest, plant a memorial tree and dedicate a star for someone you love.';
+  const INVITE_TEXT = "I thought you'd love this - Banjo Spirits. You can walk a peaceful forest, plant a tree and dedicate a star in memory of someone. Come see it:";
+
+  const shareUrl = () => location.href.split('#')[0];
+  const inviteUrl = () => {
+    const u = new URL(location.href.split('#')[0]);
+    u.searchParams.set('from', 'invite');
+    return u.toString();
+  };
+
+  function toast(msg) {
+    let t = document.getElementById('bs-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'bs-toast'; document.body.appendChild(t); }
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); toast('Link copied'); }
+    catch (e) {
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand('copy'); toast('Link copied'); } catch (_) { toast('Copy failed'); }
+      ta.remove();
+    }
+  }
+  function openWin(u) { window.open(u, '_blank', 'noopener,noreferrer,width=640,height=560'); }
+
+  function injectShare() {
+    if (document.getElementById('bs-share')) return;
+    const css = document.createElement('style');
+    css.textContent = `
+      #bs-share-btn{position:fixed;right:14px;bottom:14px;z-index:44;cursor:pointer;border:1px solid #6a3cff;
+        border-radius:24px;padding:10px 15px;background:rgba(24,14,44,.82);color:#eadcff;backdrop-filter:blur(4px);
+        font:600 13px/1 "Segoe UI",system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4)}
+      #bs-share-btn:hover{background:rgba(48,26,86,.92)}
+      #bs-share{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+        background:rgba(6,4,12,.72);backdrop-filter:blur(4px);font-family:"Segoe UI",system-ui,sans-serif}
+      #bs-share .card{background:#140c26;border:1px solid #4a2f6e;border-radius:18px;padding:22px;width:min(420px,92vw);color:#efe6ff}
+      #bs-share h3{font-size:19px;margin-bottom:2px}
+      #bs-share p.sub{opacity:.62;font-size:13px;margin-bottom:14px}
+      #bs-share .row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+      #bs-share .row button{flex:1 1 46%;cursor:pointer;font:inherit;padding:11px;border-radius:11px;border:1px solid #4a2f6e;
+        background:#0e0718;color:#e8dcff;display:flex;align-items:center;justify-content:center;gap:7px}
+      #bs-share .row button:hover{background:#1c1136;border-color:#6a3cff}
+      #bs-share .primary{width:100%;cursor:pointer;font:inherit;padding:12px;border:none;border-radius:12px;
+        background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;margin-bottom:14px}
+      #bs-share hr{border:none;border-top:1px solid #2c1c48;margin:14px 0}
+      #bs-share h4{font-size:15px;margin-bottom:2px}
+      #bs-share input{width:100%;margin:8px 0;padding:11px;border-radius:10px;border:1px solid #4a2f6e;background:#0e0718;color:#efe6ff;font:inherit}
+      #bs-share .close{width:100%;margin-top:10px;cursor:pointer;font:inherit;padding:10px;border:1px solid #4a2f6e;border-radius:11px;background:transparent;color:#c7b3ff}
+      #bs-toast{position:fixed;left:50%;bottom:76px;transform:translate(-50%,12px);z-index:70;opacity:0;pointer-events:none;
+        background:#2a1750;border:1px solid #6a3cff;color:#eadcff;padding:9px 16px;border-radius:20px;font:13px "Segoe UI",system-ui,sans-serif;transition:.25s}
+      #bs-toast.show{opacity:1;transform:translate(-50%,0)}`;
+    document.head.appendChild(css);
+
+    const btn = document.createElement('button');
+    btn.id = 'bs-share-btn'; btn.type = 'button'; btn.innerHTML = '✦ Share';
+    document.body.appendChild(btn);
+
+    const modal = document.createElement('div'); modal.id = 'bs-share';
+    modal.innerHTML = `
+      <div class="card">
+        <h3>Share Banjo Spirits</h3>
+        <p class="sub">Help someone find a little peace here.</p>
+        <button class="primary" id="bs-sh-native">Share…</button>
+        <div class="row">
+          <button data-net="facebook">Facebook</button>
+          <button data-net="x">X</button>
+          <button data-net="whatsapp">WhatsApp</button>
+          <button data-net="email">Email</button>
+        </div>
+        <div class="row"><button id="bs-sh-copy" style="flex:1 1 100%">Copy link</button></div>
+        <hr>
+        <h4>Invite a friend</h4>
+        <p class="sub">Send a personal invite to someone you'd like to see it.</p>
+        <input id="bs-inv-name" placeholder="Their name (optional)">
+        <button class="primary" id="bs-inv-send">Send invite</button>
+        <div class="row"><button id="bs-inv-copy" style="flex:1 1 100%">Copy invite link</button></div>
+        <button class="close" id="bs-sh-close">Close</button>
+      </div>`;
+    document.body.appendChild(modal);
+
+    const show = (v) => { modal.style.display = v ? 'flex' : 'none'; };
+    btn.onclick = () => show(true);
+    modal.querySelector('#bs-sh-close').onclick = () => show(false);
+    modal.onclick = (e) => { if (e.target === modal) show(false); };
+
+    modal.querySelector('#bs-sh-native').onclick = async () => {
+      const url = shareUrl();
+      if (navigator.share) { try { await navigator.share({ title: 'Banjo Spirits', text: SHARE_TEXT, url }); } catch (e) {} }
+      else copy(url);
+    };
+    modal.querySelectorAll('.row button[data-net]').forEach((b) => {
+      b.onclick = () => {
+        const url = encodeURIComponent(shareUrl());
+        const text = encodeURIComponent(SHARE_TEXT);
+        const net = b.dataset.net;
+        if (net === 'facebook') openWin(`https://www.facebook.com/sharer/sharer.php?u=${url}`);
+        else if (net === 'x') openWin(`https://twitter.com/intent/tweet?url=${url}&text=${text}`);
+        else if (net === 'whatsapp') openWin(`https://wa.me/?text=${text}%20${url}`);
+        else if (net === 'email') location.href = `mailto:?subject=${encodeURIComponent('Banjo Spirits')}&body=${text}%0A%0A${url}`;
+      };
+    });
+    modal.querySelector('#bs-sh-copy').onclick = () => copy(shareUrl());
+
+    const inviteMessage = () => {
+      const nm = modal.querySelector('#bs-inv-name').value.trim();
+      const hi = nm ? `Hi ${nm}, ` : '';
+      return `${hi}${INVITE_TEXT} ${inviteUrl()}`;
+    };
+    modal.querySelector('#bs-inv-send').onclick = async () => {
+      const msg = inviteMessage();
+      if (navigator.share) { try { await navigator.share({ title: 'You are invited to Banjo Spirits', text: msg, url: inviteUrl() }); return; } catch (e) {} }
+      location.href = `mailto:?subject=${encodeURIComponent('You are invited to Banjo Spirits')}&body=${encodeURIComponent(msg)}`;
+    };
+    modal.querySelector('#bs-inv-copy').onclick = () => copy(inviteUrl());
+  }
+
+  window.BS = { init, getTrees, addTree, getStars, addStar, login, register, logout, ensureAuth, injectShare,
     get user() { return user; }, get mode() { return mode; } };
+
+  // Share/invite widget appears on every page that loads this script, no init needed.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', injectShare);
+  else injectShare();
 })();
