@@ -85,6 +85,8 @@
       <div id="pTiers" style="display:flex;gap:8px;margin:8px 0 12px"></div>
       <label style="font-size:12px;opacity:.75">Tree colour</label>
       <div id="pColors" style="display:flex;gap:8px;margin:8px 0 16px"></div>
+      <label style="font-size:12px;opacity:.75">🎵 Leave them a song <span style="opacity:.6">(optional)</span></label>
+      <div id="pSong" style="margin:6px 0 16px"></div>
       <div style="display:flex;gap:10px;justify-content:flex-end">
         <button id="pCancel" style="background:#241436;border:1px solid #4a2f6e;color:#d9c7ff;padding:10px 16px;border-radius:10px;font:inherit;cursor:pointer">Cancel</button>
         <button id="pPlant" style="background:linear-gradient(180deg,#3aa06a,#1e6b3f);border:none;color:#fff;padding:10px 20px;border-radius:10px;font:inherit;cursor:pointer">Plant it 🌱</button>
@@ -98,7 +100,10 @@
     <div style="background:#160c26;border:1px solid #4a2f6e;border-radius:16px;padding:26px 24px;width:min(420px,92vw);text-align:center">
       <div id="rName" style="font-size:22px;font-weight:700;color:#e9d4ff;margin-bottom:10px"></div>
       <div id="rMsg" style="font-size:15px;line-height:1.6;opacity:.9;white-space:pre-wrap"></div>
-      <button id="rClose" style="margin-top:20px;background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;padding:10px 22px;border-radius:11px;font:inherit;cursor:pointer">Close</button>
+      <div style="margin-top:18px;display:flex;gap:10px;justify-content:center">
+        <button id="rPlay" style="display:none;background:linear-gradient(180deg,#3aa06a,#1e6b3f);border:none;color:#fff;padding:10px 20px;border-radius:11px;font:inherit;cursor:pointer">🎵 Play their song</button>
+        <button id="rClose" style="background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;padding:10px 22px;border-radius:11px;font:inherit;cursor:pointer">Close</button>
+      </div>
     </div>
   </div>
 
@@ -123,6 +128,7 @@
   <div id="playLayer"></div>
 
 <script src="bs-api.js"></script>
+<script src="bs-song.js"></script>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
 </script>
@@ -405,6 +411,9 @@ Object.entries(TIERS).forEach(([key,t])=>{
   b.onclick=()=>{chosenTier=key;[...tiersBox.children].forEach(x=>x.style.borderColor='#3a2456');b.style.borderColor='#7a3cff';};
   tiersBox.appendChild(b);
 });
+// "leave them a song" recorder inside the plant form
+const songRec = BSSong.mountRecorder(document.getElementById('pSong'), {});
+
 plantBtn.onclick=()=>{ plantMode=!plantMode; plantHint.style.display=plantMode?'block':'none';
   plantBtn.style.filter=plantMode?'brightness(1.3)':''; };
 
@@ -416,12 +425,12 @@ document.getElementById('pPlant').onclick=async ()=>{
   // on the live site an account is required so the tree is saved to the shared forest
   const ok = await BS.ensureAuth(); if(!ok) return;
   const data={x:pendingPoint.x, z:pendingPoint.z, name, msg,
-              color:chosenColor, tier:chosenTier, adopt:pendingAdopt};
+              color:chosenColor, tier:chosenTier, adopt:pendingAdopt, song:songRec.getSong()};
   const saved = await BS.addTree(data);
   saved.idx = plantedTrees.length; buildTree(saved);
   plantForm.style.display='none'; pendingPoint=null; pendingAdopt=false;
   plantMode=false; plantHint.style.display='none'; plantBtn.style.filter='';
-  document.getElementById('pName').value=''; document.getElementById('pMsg').value='';
+  document.getElementById('pName').value=''; document.getElementById('pMsg').value=''; songRec.clear();
 };
 document.getElementById('rClose').onclick=()=>reader.style.display='none';
 
@@ -468,7 +477,11 @@ canvas.addEventListener('click', e=>{
   if(th){
     const t = plantedTrees[th.object.userData.idx];
     if(t){ document.getElementById('rName').textContent=t.data.name||'In memory';
-      document.getElementById('rMsg').textContent=t.data.msg||''; reader.style.display='flex'; return; }
+      document.getElementById('rMsg').textContent=t.data.msg||'';
+      const rPlay=document.getElementById('rPlay');
+      if(t.data.song && t.data.song.length){ rPlay.style.display='inline-block'; rPlay.onclick=()=>BSSong.play(t.data.song); }
+      else rPlay.style.display='none';
+      reader.style.display='flex'; return; }
   }
   // play the banjo
   if(raycaster.intersectObject(banjo).length && nearBanjo){ openBanjo(); }

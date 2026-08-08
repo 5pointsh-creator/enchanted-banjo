@@ -14,8 +14,9 @@
         return d;
       });
 
-  const treeFromServer = (t) => ({ id: t.id, x: t.x, z: t.z, name: t.name, msg: t.message, color: t.color, tier: t.tier, adopt: t.adopt, owner: t.owner });
-  const starFromServer = (s) => ({ id: s.id, dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, msg: s.message, tier: s.tier, owner: s.owner });
+  const parseSong = (v) => { if (!v) return null; if (Array.isArray(v)) return v; try { return JSON.parse(v); } catch (e) { return null; } };
+  const treeFromServer = (t) => ({ id: t.id, x: t.x, z: t.z, name: t.name, msg: t.message, color: t.color, tier: t.tier, adopt: t.adopt, song: parseSong(t.song), owner: t.owner });
+  const starFromServer = (s) => ({ id: s.id, dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, msg: s.message, tier: s.tier, song: parseSong(s.song), owner: s.owner });
 
   async function init() {
     try {
@@ -37,7 +38,7 @@
   }
   async function addTree(t) {
     if (mode === 'live') {
-      const d = await api('/api/trees', { method: 'POST', body: JSON.stringify({ x: t.x, z: t.z, name: t.name, message: t.msg, color: t.color, tier: t.tier, adopt: t.adopt }) });
+      const d = await api('/api/trees', { method: 'POST', body: JSON.stringify({ x: t.x, z: t.z, name: t.name, message: t.msg, color: t.color, tier: t.tier, adopt: t.adopt, song: t.song ? JSON.stringify(t.song) : null }) });
       return treeFromServer(d.tree);
     }
     const arr = JSON.parse(localStorage.getItem('banjoSpiritTrees') || '[]');
@@ -49,7 +50,7 @@
   }
   async function addStar(s) {
     if (mode === 'live') {
-      const d = await api('/api/stars', { method: 'POST', body: JSON.stringify({ dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, message: s.msg, tier: s.tier }) });
+      const d = await api('/api/stars', { method: 'POST', body: JSON.stringify({ dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, message: s.msg, tier: s.tier, song: s.song ? JSON.stringify(s.song) : null }) });
       return starFromServer(d.star);
     }
     const arr = JSON.parse(localStorage.getItem('banjoSpiritStars') || '[]');
