@@ -191,6 +191,8 @@
         border-radius:24px;padding:10px 15px;background:rgba(24,14,44,.82);color:#eadcff;backdrop-filter:blur(4px);
         font:600 13px/1 "Segoe UI",system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4)}
       #bs-share-btn:hover{background:rgba(48,26,86,.92)}
+      /* on phones the bottom corners hold the walk pads / colour button, so move Share up top */
+      @media (hover:none){ #bs-share-btn{top:12px;bottom:auto;right:12px} }
       #bs-share{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
         background:rgba(6,4,12,.72);backdrop-filter:blur(4px);font-family:"Segoe UI",system-ui,sans-serif}
       #bs-share .card{background:#140c26;border:1px solid #4a2f6e;border-radius:18px;padding:22px;width:min(420px,92vw);color:#efe6ff}

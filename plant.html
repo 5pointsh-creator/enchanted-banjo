@@ -38,7 +38,9 @@
   .banjo-prompt{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:8;
        background:rgba(140,80,255,.9);padding:10px 20px;border-radius:999px;font-size:14px;
        opacity:0;transition:opacity .3s;pointer-events:none;text-shadow:none}
-  @media (hover:none){ .pad{display:block} .help{display:none} }
+  @media (hover:none){ .pad{display:block} .help{display:none}
+    /* keep the Plant button clear of the walk pads in the bottom corners */
+    #plantBtn{bottom:150px !important} #plantHint{bottom:206px !important} }
 </style>
 </head>
 <body>

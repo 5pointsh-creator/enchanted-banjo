@@ -44,13 +44,15 @@
   #start h1{font-size:clamp(24px,5vw,40px);background:linear-gradient(180deg,#dfe9ff,#8fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
   #start p{max-width:440px;opacity:.82;font-size:14px;line-height:1.6}
   .btn{pointer-events:auto;cursor:pointer;background:linear-gradient(180deg,#3a63c0,#22397e);border:none;color:#fff;font:inherit;font-size:16px;padding:13px 30px;border-radius:14px;box-shadow:0 0 24px rgba(90,150,255,.6)}
-  @media (hover:none){ .help{display:none} }
+  @media (hover:none){ .help{display:none}
+    /* keep the Dedicate button clear of the brightness slider and forest link below it */
+    #dedicate{bottom:92px !important} .prompt{bottom:150px !important} }
 </style>
 </head>
 <body>
   <canvas id="c"></canvas>
   <div class="hud">
-    <div class="title">✨ <b>Banjo Spirits — the night sky</b></div>
+    <div class="title">✨ <b>Banjo Spirits</b></div>
     <div class="help">drag — look around<br>tap a star to read it<br><kbd>D</kbd> — dedicate a star</div>
   </div>
   <div class="prompt" id="prompt"></div>

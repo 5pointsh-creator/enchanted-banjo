@@ -18,36 +18,40 @@
   function audio() {
     if (!ctx) {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
-      master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
+      master = ctx.createGain(); master.gain.value = 0.6;
+      // a gentle limiter so overlapping notes in a melody never clip or screech
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -10; comp.knee.value = 20; comp.ratio.value = 12;
+      comp.attack.value = 0.003; comp.release.value = 0.25;
+      master.connect(comp); comp.connect(ctx.destination);
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
 
-  // one plucked note: a warm tone with a fast attack and a natural decay.
-  // No feedback loop - every note is self-contained and always dies away cleanly.
+  // one plucked banjo string - the same Karplus-Strong string as the forest banjo,
+  // so the melody sounds like the banjo, not a piano. It's a one-shot buffer that is
+  // rendered once and decays to silence on its own, so a note can never stick.
   function pluck(freq, when, dur) {
     const ac = audio();
+    const sr = ac.sampleRate;
     const t = Math.max(when || ac.currentTime, ac.currentTime);
-    dur = dur || 1.8;
+    dur = dur || 2.0;
 
-    const o1 = ac.createOscillator(); o1.type = 'triangle'; o1.frequency.value = freq;
-    const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 2; // faint shimmer
-    const shimmer = ac.createGain(); shimmer.gain.value = 0.15;
-    const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
-    lp.frequency.setValueAtTime(Math.min(6500, freq * 6), t);
-    lp.frequency.exponentialRampToValueAtTime(Math.max(600, freq * 2), t + dur);
-    const g = ac.createGain(); g.gain.value = 0.0001;
+    const N = Math.max(2, Math.round(sr / freq));
+    const len = Math.floor(sr * dur);
+    const buf = ac.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    for (let i = 0; i < N; i++) d[i] = Math.random() * 2 - 1;        // pluck excitation
+    for (let i = N; i < len; i++) d[i] = 0.996 * 0.5 * (d[i - N] + d[i - N + 1]); // string decay
 
-    o1.connect(g); o2.connect(shimmer); shimmer.connect(g); g.connect(lp); lp.connect(master);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const g = ac.createGain(); g.gain.setValueAtTime(0.75, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur - 0.15);     // fade out cleanly
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3400;
 
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.40, t + 0.006);   // quick pluck attack
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);   // gentle decay to silence
-
-    o1.start(t); o2.start(t);
-    o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
-    o1.onended = () => { try { o1.disconnect(); o2.disconnect(); shimmer.disconnect(); g.disconnect(); lp.disconnect(); } catch (e) {} };
+    src.connect(lp); lp.connect(g); g.connect(master);
+    src.start(t); src.stop(t + dur + 0.05);
+    src.onended = () => { try { src.disconnect(); lp.disconnect(); g.disconnect(); } catch (e) {} };
   }
 
   function playNote(n) { const note = NOTES[n] || NOTES[0]; pluck(note.f); }
