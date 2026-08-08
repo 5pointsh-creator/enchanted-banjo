@@ -73,8 +73,8 @@
   <div id="plantForm" style="position:fixed;inset:0;z-index:25;display:none;align-items:center;justify-content:center;
      background:rgba(7,4,12,.75);backdrop-filter:blur(3px)">
     <div style="background:#160c26;border:1px solid #4a2f6e;border-radius:16px;padding:22px;width:min(420px,92vw)">
-      <h3 style="margin-bottom:4px;font-size:18px;color:#e9d4ff">Plant a spirit tree 🌳</h3>
-      <p style="opacity:.6;font-size:13px;margin-bottom:14px">Dedicate this tree to someone - lost, or loved and still here.</p>
+      <h3 id="pTitle" style="margin-bottom:4px;font-size:18px;color:#e9d4ff">Plant a spirit tree 🌳</h3>
+      <p id="pSub" style="opacity:.6;font-size:13px;margin-bottom:14px">Dedicate this tree to someone - lost, or loved and still here.</p>
       <label style="font-size:12px;opacity:.75">Name</label>
       <input id="pName" maxlength="40" placeholder="e.g. Grandma Rose, or Buddy 🐾"
         style="width:100%;margin:5px 0 12px;padding:10px;border-radius:9px;border:1px solid #4a2f6e;background:#0e0718;color:#efe6ff;font:inherit">
@@ -443,6 +443,8 @@ canvas.addEventListener('click', e=>{
       const m = new THREE.Matrix4(); foliage.getMatrixAt(adoptHit.instanceId, m);
       const pos = new THREE.Vector3().setFromMatrixPosition(m);
       pendingPoint = new THREE.Vector3(pos.x, 0, pos.z); pendingAdopt = true;
+      document.getElementById('pTitle').textContent='Adopt this tree 🌳';
+      document.getElementById('pSub').textContent='Make this tree yours - dedicate it to someone lost, or loved and still here.';
       plantForm.style.display='flex'; return;
     }
     if(groundHit){
@@ -454,7 +456,10 @@ canvas.addEventListener('click', e=>{
         if(dir.lengthSq() < 0.001) dir = new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
         pt = feet.add(dir.normalize().multiplyScalar(11));
       }
-      pendingPoint = pt; pendingAdopt = false; plantForm.style.display='flex';
+      pendingPoint = pt; pendingAdopt = false;
+      document.getElementById('pTitle').textContent='Plant a spirit tree 🌳';
+      document.getElementById('pSub').textContent='Dedicate this tree to someone - lost, or loved and still here.';
+      plantForm.style.display='flex';
     }
     return;
   }
