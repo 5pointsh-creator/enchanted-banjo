@@ -1,7 +1,3 @@
 node_modules/
-__pycache__/
-*.pyc
-*.py
+IMG_*.jpg
 *.png
-.env
-pgdata/
