@@ -24,31 +24,30 @@
     return ctx;
   }
 
-  // one plucked note via a damped feedback delay line
+  // one plucked note: a warm tone with a fast attack and a natural decay.
+  // No feedback loop - every note is self-contained and always dies away cleanly.
   function pluck(freq, when, dur) {
     const ac = audio();
-    const t = when || ac.currentTime;
-    dur = dur || 2.4;
-    const noiseLen = Math.max(0.015, 2 / freq);
-    const buf = ac.createBuffer(1, Math.ceil(ac.sampleRate * noiseLen), ac.sampleRate);
-    const ch = buf.getChannelData(0);
-    for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-    const src = ac.createBufferSource(); src.buffer = buf;
+    const t = Math.max(when || ac.currentTime, ac.currentTime);
+    dur = dur || 1.8;
 
-    const delay = ac.createDelay(0.05); delay.delayTime.value = 1 / freq;
-    const fb = ac.createGain(); fb.gain.value = 0.972;
-    const damp = ac.createBiquadFilter(); damp.type = 'lowpass'; damp.frequency.value = Math.min(7000, freq * 9);
-    const out = ac.createGain(); out.gain.value = 0.0;
+    const o1 = ac.createOscillator(); o1.type = 'triangle'; o1.frequency.value = freq;
+    const o2 = ac.createOscillator(); o2.type = 'sine'; o2.frequency.value = freq * 2; // faint shimmer
+    const shimmer = ac.createGain(); shimmer.gain.value = 0.15;
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(Math.min(6500, freq * 6), t);
+    lp.frequency.exponentialRampToValueAtTime(Math.max(600, freq * 2), t + dur);
+    const g = ac.createGain(); g.gain.value = 0.0001;
 
-    src.connect(delay); delay.connect(damp); damp.connect(fb); fb.connect(delay);
-    src.connect(out); delay.connect(out);
-    out.connect(master);
+    o1.connect(g); o2.connect(shimmer); shimmer.connect(g); g.connect(lp); lp.connect(master);
 
-    out.gain.setValueAtTime(0.85, t);
-    out.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-    src.start(t);
-    const kill = (t - ac.currentTime + dur + 0.25) * 1000;
-    setTimeout(() => { try { src.disconnect(); delay.disconnect(); fb.disconnect(); damp.disconnect(); out.disconnect(); } catch (e) {} }, Math.max(60, kill));
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.40, t + 0.006);   // quick pluck attack
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);   // gentle decay to silence
+
+    o1.start(t); o2.start(t);
+    o1.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+    o1.onended = () => { try { o1.disconnect(); o2.disconnect(); shimmer.disconnect(); g.disconnect(); lp.disconnect(); } catch (e) {} };
   }
 
   function playNote(n) { const note = NOTES[n] || NOTES[0]; pluck(note.f); }
