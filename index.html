@@ -76,9 +76,48 @@
 </style>
 </head>
 <body>
+  <div id="welcome" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+     background:rgba(6,3,12,.82);backdrop-filter:blur(4px);padding:20px">
+    <div style="background:#160c26;border:1px solid #4a2f6e;border-radius:18px;padding:26px 24px;max-width:440px;text-align:center;
+       box-shadow:0 0 40px rgba(120,60,220,.35)">
+      <div style="font-size:34px;margin-bottom:6px">🌲✨</div>
+      <h2 style="color:#e9d4ff;font-size:22px;margin-bottom:12px">Welcome to Banjo Spirits</h2>
+      <p style="opacity:.88;font-size:15px;line-height:1.6;margin-bottom:12px">
+        This is a gentle memorial place — a forest and a starlit sky where you can remember
+        someone you love.
+      </p>
+      <p style="opacity:.88;font-size:15px;line-height:1.6;margin-bottom:12px">
+        🌱 Plant a memorial tree, or ⭐ dedicate a star, and write a few words for them.
+        Each one becomes a lasting tribute you can visit anytime.
+      </p>
+      <p style="opacity:.65;font-size:13px;line-height:1.6;margin-bottom:20px">
+        It's a keepsake, not a real plant — a quiet corner of the internet that's theirs, forever.
+      </p>
+      <button id="welcomeBtn" style="background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;
+         padding:12px 28px;border-radius:12px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;
+         box-shadow:0 0 18px rgba(140,80,255,.5)">Step inside ▸</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var w=document.getElementById('welcome');
+      try{ if(!localStorage.getItem('bsWelcomed')) w.style.display='flex'; }catch(e){ w.style.display='flex'; }
+      document.getElementById('welcomeBtn').addEventListener('click',function(){
+        w.style.display='none'; try{ localStorage.setItem('bsWelcomed','1'); }catch(e){}
+      });
+    })();
+  </script>
+
   <header>
     <h1>Banjo Spirits</h1>
-    <div class="sub">Pluck the glowing strings · press <kbd>Space</kbd> to strum · play chords</div>
+    <div class="sub" style="max-width:640px;margin:0 auto;line-height:1.5">
+      A place of remembrance. Plant a memorial tree or dedicate a star in memory of
+      someone you love — and visit them whenever you need to.
+    </div>
+    <div class="sub" style="max-width:640px;margin:8px auto 0;font-size:13px;opacity:.7;line-height:1.5">
+      Every tree and star here is a lasting digital tribute, kept safe forever in this
+      forest and sky. (Not a real plant — a keepsake you can always return to.)
+    </div>
   </header>
 
   <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:4px 16px 18px">
@@ -94,6 +133,10 @@
        background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;text-decoration:none;
        border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 0 18px rgba(140,80,255,.5)">
        🌲 Walk the 3D Forest ▸</a>
+  </div>
+
+  <div style="text-align:center;max-width:640px;margin:2px auto 6px;font-size:14px;opacity:.82;line-height:1.5">
+    🎵 And when you need a quiet moment, play the memorial banjo below — pluck the glowing strings for a little peace.
   </div>
 
   <div class="stage">
