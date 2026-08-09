@@ -81,16 +81,16 @@ app.get('/api/me', async (req, res) => {
 // ---- trees (shared) ----
 app.get('/api/trees', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT t.id,t.x,t.z,t.name,t.message,t.color,t.tier,t.adopt,u.display_name AS owner FROM trees t LEFT JOIN users u ON u.id=t.owner_id ORDER BY t.id'
+    'SELECT t.id,t.x,t.z,t.name,t.message,t.color,t.tier,t.adopt,t.song,u.display_name AS owner FROM trees t LEFT JOIN users u ON u.id=t.owner_id ORDER BY t.id'
   );
   res.json({ trees: rows });
 });
 app.post('/api/trees', requireAuth, async (req, res) => {
   const b = req.body || {};
   const { rows } = await pool.query(
-    'INSERT INTO trees (owner_id,x,z,name,message,color,tier,adopt) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+    'INSERT INTO trees (owner_id,x,z,name,message,color,tier,adopt,song) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
     [req.user.id, +b.x || 0, +b.z || 0, (b.name || '').slice(0, 60), (b.message || '').slice(0, 200),
-     b.color || '#b26bff', b.tier || 'spirit', !!b.adopt]
+     b.color || '#b26bff', b.tier || 'spirit', !!b.adopt, b.song || null]
   );
   res.json({ tree: rows[0] });
 });
@@ -98,15 +98,15 @@ app.post('/api/trees', requireAuth, async (req, res) => {
 // ---- stars (shared) ----
 app.get('/api/stars', async (req, res) => {
   const { rows } = await pool.query(
-    'SELECT s.id,s.dx,s.dy,s.dz,s.name,s.message,s.tier,u.display_name AS owner FROM stars s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.id'
+    'SELECT s.id,s.dx,s.dy,s.dz,s.name,s.message,s.tier,s.song,u.display_name AS owner FROM stars s LEFT JOIN users u ON u.id=s.owner_id ORDER BY s.id'
   );
   res.json({ stars: rows });
 });
 app.post('/api/stars', requireAuth, async (req, res) => {
   const b = req.body || {};
   const { rows } = await pool.query(
-    'INSERT INTO stars (owner_id,dx,dy,dz,name,message,tier) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
-    [req.user.id, +b.dx || 0, +b.dy || 0, +b.dz || 0, (b.name || '').slice(0, 60), (b.message || '').slice(0, 200), b.tier || 'white']
+    'INSERT INTO stars (owner_id,dx,dy,dz,name,message,tier,song) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *',
+    [req.user.id, +b.dx || 0, +b.dy || 0, +b.dz || 0, (b.name || '').slice(0, 60), (b.message || '').slice(0, 200), b.tier || 'white', b.song || null]
   );
   res.json({ star: rows[0] });
 });

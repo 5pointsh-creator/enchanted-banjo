@@ -32,6 +32,7 @@ async function migrate() {
       color      TEXT,
       tier       TEXT,
       adopt      BOOLEAN DEFAULT FALSE,
+      song       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE TABLE IF NOT EXISTS stars (
@@ -43,8 +44,14 @@ async function migrate() {
       name       TEXT,
       message    TEXT,
       tier       TEXT,
+      song       TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+  `);
+  // keeps older databases in step with the melody feature
+  await pool.query(`
+    ALTER TABLE trees ADD COLUMN IF NOT EXISTS song TEXT;
+    ALTER TABLE stars ADD COLUMN IF NOT EXISTS song TEXT;
   `);
 }
 
