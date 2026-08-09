@@ -15,6 +15,8 @@
       });
 
   const parseSong = (v) => { if (!v) return null; if (Array.isArray(v)) return v; try { return JSON.parse(v); } catch (e) { return null; } };
+  // never let a half-written or corrupt entry blank the whole forest/sky
+  const readList = (key) => { try { const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
   const treeFromServer = (t) => ({ id: t.id, x: t.x, z: t.z, name: t.name, msg: t.message, color: t.color, tier: t.tier, adopt: t.adopt, song: parseSong(t.song), owner: t.owner });
   const starFromServer = (s) => ({ id: s.id, dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, msg: s.message, tier: s.tier, song: parseSong(s.song), owner: s.owner });
 
@@ -34,26 +36,26 @@
   // ---------- data ----------
   async function getTrees() {
     if (mode === 'live') { const d = await api('/api/trees'); return d.trees.map(treeFromServer); }
-    return JSON.parse(localStorage.getItem('banjoSpiritTrees') || '[]');
+    return readList('banjoSpiritTrees');
   }
   async function addTree(t) {
     if (mode === 'live') {
       const d = await api('/api/trees', { method: 'POST', body: JSON.stringify({ x: t.x, z: t.z, name: t.name, message: t.msg, color: t.color, tier: t.tier, adopt: t.adopt, song: t.song ? JSON.stringify(t.song) : null }) });
       return treeFromServer(d.tree);
     }
-    const arr = JSON.parse(localStorage.getItem('banjoSpiritTrees') || '[]');
+    const arr = readList('banjoSpiritTrees');
     t.idx = arr.length; arr.push(t); localStorage.setItem('banjoSpiritTrees', JSON.stringify(arr)); return t;
   }
   async function getStars() {
     if (mode === 'live') { const d = await api('/api/stars'); return d.stars.map(starFromServer); }
-    return JSON.parse(localStorage.getItem('banjoSpiritStars') || '[]');
+    return readList('banjoSpiritStars');
   }
   async function addStar(s) {
     if (mode === 'live') {
       const d = await api('/api/stars', { method: 'POST', body: JSON.stringify({ dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, message: s.msg, tier: s.tier, song: s.song ? JSON.stringify(s.song) : null }) });
       return starFromServer(d.star);
     }
-    const arr = JSON.parse(localStorage.getItem('banjoSpiritStars') || '[]');
+    const arr = readList('banjoSpiritStars');
     s.idx = arr.length; arr.push(s); localStorage.setItem('banjoSpiritStars', JSON.stringify(arr)); return s;
   }
 
