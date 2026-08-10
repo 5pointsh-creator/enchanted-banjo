@@ -7,8 +7,17 @@ const { pool, migrate } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const PRODUCTION = !!process.env.DATABASE_URL;
+// never sign real sessions with a secret that sits in a public repo
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  (PRODUCTION ? require('crypto').randomBytes(32).toString('hex') : 'dev-secret-change-me');
+if (PRODUCTION && !process.env.JWT_SECRET) {
+  console.warn('JWT_SECRET not set - using a temporary one, everyone signs in again after a redeploy.');
+}
 
+// Railway terminates HTTPS at its proxy, so req.secure needs this to be true
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cookieParser());
 
@@ -18,7 +27,7 @@ function issueToken(res, user) {
   res.cookie('bs_token', token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: PRODUCTION,
     maxAge: 30 * 24 * 3600 * 1000,
   });
 }
