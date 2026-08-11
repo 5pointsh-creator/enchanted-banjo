@@ -21,6 +21,17 @@ app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cookieParser());
 
+// The site must come up even before a database exists, otherwise the very first
+// deploy dies and takes the whole page with it. Until the database answers, the
+// API politely refuses and the front-end falls back to on-device demo storage.
+let dbReady = false;
+app.use('/api', (req, res, next) => {
+  if (!dbReady) {
+    return res.status(503).json({ error: 'The shared database is still being set up - saving to this device for now.' });
+  }
+  next();
+});
+
 // ---- auth helpers ----
 function issueToken(res, user) {
   const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
@@ -123,6 +134,15 @@ app.post('/api/stars', requireAuth, async (req, res) => {
 // ---- static site (same HTML the Pages preview serves) ----
 app.use(express.static(path.join(__dirname), { extensions: ['html'] }));
 
-migrate()
-  .then(() => app.listen(PORT, () => console.log(`Banjo Spirits running on :${PORT}`)))
-  .catch((e) => { console.error('DB migrate failed:', e); process.exit(1); });
+app.listen(PORT, () => console.log(`Banjo Spirits running on :${PORT}`));
+
+// Keep trying: the database is often attached minutes after the first deploy.
+function connect() {
+  migrate()
+    .then(() => { dbReady = true; console.log('Database connected - accounts and shared dedications are live.'); })
+    .catch((e) => {
+      console.warn('No database yet, running in demo mode. Retrying in 30s. (' + e.message + ')');
+      setTimeout(connect, 30000);
+    });
+}
+connect();
