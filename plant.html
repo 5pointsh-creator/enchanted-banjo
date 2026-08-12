@@ -340,7 +340,8 @@ function wrap(g,text,x,y,maxW,lh){
   if(lines<5) g.fillText(line,x,yy);
 }
 
-// tree tiers: visibly different in the forest, each its own price point
+// tree tiers: visibly different in the forest. Everything is free while the forest
+// fills up — the price values stay here so they can be switched back on later.
 const TIERS = {
   sapling: {price:5,  label:'Sapling', s:0.6, cones:2, lightI:2, lightR:10, extras:false},
   spirit:  {price:10, label:'Spirit tree', s:1.0, cones:3, lightI:3, lightR:14, extras:false},
@@ -411,7 +412,7 @@ TREE_COLORS.forEach((c,i)=>{
 const tiersBox=document.getElementById('pTiers');
 Object.entries(TIERS).forEach(([key,t])=>{
   const b=document.createElement('button');
-  b.innerHTML=`${t.label}<br><b>$${t.price}</b>`;
+  b.innerHTML=`${t.label}<br><b>Free</b>`;
   b.style.cssText=`flex:1;cursor:pointer;font:inherit;font-size:12px;line-height:1.4;padding:8px 4px;border-radius:10px;
      color:#efe6ff;background:#0e0718;border:2px solid ${key==='spirit'?'#7a3cff':'#3a2456'}`;
   b.onclick=()=>{chosenTier=key;[...tiersBox.children].forEach(x=>x.style.borderColor='#3a2456');b.style.borderColor='#7a3cff';};

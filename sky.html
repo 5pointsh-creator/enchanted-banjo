@@ -203,6 +203,7 @@ const horizon=new THREE.Mesh(new THREE.CylinderGeometry(780,780,150,48,1,true),
 horizon.position.y=-40; scene.add(horizon);
 
 // ---------- dedicated stars ----------
+// everything is free while the sky fills up — prices stay here to switch back on later
 const TIERS={
   white:{color:'#ffffff', label:'White star', price:5,  scale:14},
   red:  {color:'#ff5a5a', label:'Red star',   price:10, scale:17},
@@ -307,7 +308,7 @@ const form=document.getElementById('form'), tiersBox=document.getElementById('ti
 let chosen='white';
 Object.entries(TIERS).forEach(([k,t],i)=>{
   const el=document.createElement('div'); el.className='tier'+(i===0?' sel':'');
-  el.innerHTML=`<span class="dot" style="background:${t.color};color:${t.color}"></span><span class="nm">${t.label}</span><span class="pr">$${t.price}</span>`;
+  el.innerHTML=`<span class="dot" style="background:${t.color};color:${t.color}"></span><span class="nm">${t.label}</span><span class="pr">Free</span>`;
   el.onclick=()=>{chosen=k;[...tiersBox.children].forEach(x=>x.classList.remove('sel'));el.classList.add('sel');};
   tiersBox.appendChild(el);
 });
