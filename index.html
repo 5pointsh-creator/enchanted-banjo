@@ -135,6 +135,32 @@
        🌲 Walk the 3D Forest ▸</a>
   </div>
 
+  <!-- short tour. Only a still is loaded up front; the video itself is fetched on tap,
+       so nobody on a phone pays for it unless they actually want to watch. -->
+  <div style="max-width:600px;margin:6px auto 16px;padding:0 16px">
+    <button id="tourBox" aria-label="Play a short tour of Banjo Spirits"
+       style="position:relative;display:block;width:100%;padding:0;border:1px solid #4a2f6e;border-radius:16px;
+       overflow:hidden;background:none;cursor:pointer;line-height:0;box-shadow:0 0 22px rgba(120,60,220,.28)">
+      <img src="tour-poster.jpg" alt="" style="width:100%;display:block">
+      <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+         justify-content:center;gap:10px;background:rgba(10,6,16,.34)">
+        <span style="width:58px;height:58px;border-radius:50%;background:rgba(140,80,255,.92);
+           display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(140,80,255,.6)">
+          <span style="color:#fff;font-size:22px;margin-left:4px">▶</span>
+        </span>
+        <span style="color:#efe6ff;font-size:14px;line-height:1.4;background:rgba(10,6,16,.55);
+           padding:7px 14px;border-radius:10px">See the forest in 70 seconds</span>
+      </span>
+    </button>
+  </div>
+  <script>
+    document.getElementById('tourBox').addEventListener('click', function(){
+      this.innerHTML = '<video src="banjo-spirits-tour.mp4" poster="tour-poster.jpg" controls autoplay ' +
+                       'playsinline style="width:100%;display:block"></video>';
+      this.style.cursor = 'default';
+    }, { once: true });
+  </script>
+
   <div style="text-align:center;max-width:640px;margin:2px auto 6px;font-size:14px;opacity:.82;line-height:1.5">
     🎵 And when you need a quiet moment, play the memorial banjo below — pluck the glowing strings for a little peace.
   </div>
