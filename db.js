@@ -53,6 +53,26 @@ async function migrate() {
     ALTER TABLE trees ADD COLUMN IF NOT EXISTS song TEXT;
     ALTER TABLE stars ADD COLUMN IF NOT EXISTS song TEXT;
   `);
+  // somewhere durable to keep the session signing key, so it survives a redeploy
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
 }
 
-module.exports = { pool, migrate };
+// The signing key decides whether people stay signed in. Held in the database so a
+// redeploy cannot change it: generated once, then read back every time after that.
+// ON CONFLICT DO NOTHING means two containers starting at once still agree on one key.
+async function getOrCreateSigningSecret() {
+  const fresh = require('crypto').randomBytes(32).toString('hex');
+  await pool.query(
+    `INSERT INTO settings (key, value) VALUES ('jwt_secret', $1) ON CONFLICT (key) DO NOTHING`,
+    [fresh]
+  );
+  const { rows } = await pool.query(`SELECT value FROM settings WHERE key='jwt_secret'`);
+  return rows[0].value;
+}
+
+module.exports = { pool, migrate, getOrCreateSigningSecret };

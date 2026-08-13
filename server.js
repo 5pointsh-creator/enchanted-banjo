@@ -3,18 +3,17 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { pool, migrate } = require('./db');
+const { pool, migrate, getOrCreateSigningSecret } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const PRODUCTION = !!process.env.DATABASE_URL;
-// never sign real sessions with a secret that sits in a public repo
-const JWT_SECRET =
-  process.env.JWT_SECRET ||
-  (PRODUCTION ? require('crypto').randomBytes(32).toString('hex') : 'dev-secret-change-me');
-if (PRODUCTION && !process.env.JWT_SECRET) {
-  console.warn('JWT_SECRET not set - using a temporary one, everyone signs in again after a redeploy.');
-}
+
+// Never sign real sessions with a secret that sits in a public repo. A JWT_SECRET in the
+// environment wins if one is set; otherwise the key comes from the database, which keeps
+// people signed in across redeploys without anyone having to configure anything.
+let signingSecret = process.env.JWT_SECRET || (PRODUCTION ? null : 'dev-secret-change-me');
+let secretSource = process.env.JWT_SECRET ? 'environment' : (PRODUCTION ? 'pending' : 'development');
 
 // Railway terminates HTTPS at its proxy, so req.secure needs this to be true
 app.set('trust proxy', 1);
@@ -25,6 +24,13 @@ app.use(cookieParser());
 // deploy dies and takes the whole page with it. Until the database answers, the
 // API politely refuses and the front-end falls back to on-device demo storage.
 let dbReady = false;
+
+// Answers before the database is up, so it can report on the database itself.
+// Deliberately says only where the session key came from, never what it is.
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, database: dbReady, sessionKey: secretSource });
+});
+
 app.use('/api', (req, res, next) => {
   if (!dbReady) {
     return res.status(503).json({ error: 'The shared database is still being set up - saving to this device for now.' });
@@ -34,7 +40,7 @@ app.use('/api', (req, res, next) => {
 
 // ---- auth helpers ----
 function issueToken(res, user) {
-  const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, { expiresIn: '30d' });
+  const token = jwt.sign({ id: user.id, email: user.email }, signingSecret, { expiresIn: '30d' });
   res.cookie('bs_token', token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -44,8 +50,8 @@ function issueToken(res, user) {
 }
 function currentUser(req) {
   const t = req.cookies && req.cookies.bs_token;
-  if (!t) return null;
-  try { return jwt.verify(t, JWT_SECRET); } catch { return null; }
+  if (!t || !signingSecret) return null;
+  try { return jwt.verify(t, signingSecret); } catch { return null; }
 }
 function requireAuth(req, res, next) {
   const u = currentUser(req);
@@ -139,7 +145,15 @@ app.listen(PORT, () => console.log(`Banjo Spirits running on :${PORT}`));
 // Keep trying: the database is often attached minutes after the first deploy.
 function connect() {
   migrate()
-    .then(() => { dbReady = true; console.log('Database connected - accounts and shared dedications are live.'); })
+    .then(async () => {
+      if (!signingSecret) {
+        signingSecret = await getOrCreateSigningSecret();
+        secretSource = 'database';
+      }
+      dbReady = true;
+      console.log('Database connected - accounts and shared dedications are live.');
+      console.log('Session key source: ' + secretSource);
+    })
     .catch((e) => {
       console.warn('No database yet, running in demo mode. Retrying in 30s. (' + e.message + ')');
       setTimeout(connect, 30000);
