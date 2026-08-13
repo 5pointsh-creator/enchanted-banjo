@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Banjo Spirits — Site owner</title>
+<meta name="robots" content="noindex">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;background:#0c0710;color:#efe6ff;font-family:"Segoe UI",system-ui,sans-serif;
+       display:flex;align-items:center;justify-content:center;padding:24px}
+  .card{background:#140c26;border:1px solid #4a2f6e;border-radius:18px;padding:26px;width:min(460px,94vw)}
+  h1{font-size:22px;margin-bottom:6px;background:linear-gradient(180deg,#e9d4ff,#9b5cff);
+     -webkit-background-clip:text;background-clip:text;color:transparent}
+  p{opacity:.78;font-size:14px;line-height:1.6;margin-bottom:14px}
+  ol{margin:0 0 16px 18px;font-size:14px;line-height:1.9;opacity:.85}
+  input{width:100%;padding:12px;border-radius:10px;border:1px solid #4a2f6e;background:#0e0718;
+        color:#efe6ff;font:inherit;margin-bottom:10px}
+  button{width:100%;cursor:pointer;font:inherit;padding:12px;border:none;border-radius:12px;
+         background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff}
+  .msg{min-height:20px;font-size:14px;margin-top:12px}
+  .ok{color:#9df5c0} .err{color:#ff9aa2}
+  a{color:#c7b3ff}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Site owner</h1>
+    <div id="body">
+      <p>Loading…</p>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+<script src="bs-api.js"></script>
+<script>
+(async function(){
+  const body = document.getElementById('body');
+  const msg  = document.getElementById('msg');
+  const show = (t, cls) => { msg.className = 'msg ' + (cls||''); msg.textContent = t; };
+
+  const state = await BS.init();
+
+  if(state.mode !== 'live'){
+    body.innerHTML = '<p>This page only works on the live site, not the preview copy.</p>';
+    return;
+  }
+  if(!state.user){
+    body.innerHTML = '<p>Sign in first, using the button in the top corner, then come back to this page.</p>';
+    return;
+  }
+  if(state.user.isOwner){
+    body.innerHTML = '<p>You are the owner of this site.</p>' +
+      '<p>To take something down, open the forest or the sky, click the tree or star in question, ' +
+      'and use Remove. You can remove anything; everyone else can only remove their own.</p>' +
+      '<p><a href="plant.html">Go to the forest</a> &nbsp;·&nbsp; <a href="sky.html">Go to the sky</a></p>';
+    return;
+  }
+
+  body.innerHTML =
+    '<p>Claiming ownership lets you take down anything cruel that someone writes in the forest ' +
+    'or the sky. It works once.</p>' +
+    '<ol><li>Open Railway and your banjo service</li>' +
+    '<li>Open the Deployments tab and view the log of the newest one</li>' +
+    '<li>Find the three words after <b>enter:</b></li>' +
+    '<li>Type them below</li></ol>' +
+    '<input id="code" placeholder="three-words-here" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+    '<button id="go">Make me the owner</button>';
+
+  document.getElementById('go').onclick = async () => {
+    const code = document.getElementById('code').value.trim();
+    if(!code) return show('Type the three words first.', 'err');
+    show('Checking…');
+    try{
+      const r = await fetch('/api/claim-owner', {
+        method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ code })
+      });
+      const d = await r.json().catch(()=>({}));
+      if(!r.ok) return show(d.error || 'That did not work.', 'err');
+      show('Done - this site is yours. Reloading…', 'ok');
+      setTimeout(()=>location.reload(), 1200);
+    }catch(e){ show(e.message, 'err'); }
+  };
+})();
+</script>
+</body>
+</html>

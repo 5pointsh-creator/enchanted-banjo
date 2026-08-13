@@ -141,10 +141,19 @@ const stylisedGrp = new THREE.Group(); stylisedGrp.add(trunks, foliage); scene.a
 const dummy = new THREE.Object3D();
 const baseHue = []; // per-tree hue offset for the colour animation
 const treePos = []; // remembered so the realistic trees sit in the same spots
-const rand = (a,b)=> a + Math.random()*(b-a);
+// The forest must be the SAME forest on every visit, on every device, for everyone.
+// A place you cannot find your way back to is no memorial at all. These trees were
+// scattered by Math.random(), so they landed somewhere new on every page load and a
+// dedication could never be found again. A fixed seed pins them down for good.
+// Do not change FOREST_SEED - it would move every tree in the world. It must also
+// stay identical to the one in plant.html, or the two pages show different forests.
+const FOREST_SEED = 8419;
+let forestRnd = FOREST_SEED;
+const srand = ()=>{ forestRnd = (forestRnd*9301 + 49297) % 233280; return forestRnd/233280; };
+const rand = (a,b)=> a + srand()*(b-a);
 for(let i=0;i<TREES;i++){
   // keep a clear path corridor: |x| between 5 and 60, along z
-  let x = rand(5, 55) * (Math.random()<0.5?-1:1);
+  let x = rand(5, 55) * (srand()<0.5?-1:1);
   let z = rand(-160, 30);
   const s = rand(0.7, 1.5);
   treePos.push({x, z, s});
@@ -154,7 +163,7 @@ for(let i=0;i<TREES;i++){
   // foliage (stacked look via taller cone on top of trunk)
   dummy.position.set(x, 6*s, z); dummy.scale.set(s, s*rand(1,1.5), s);
   dummy.updateMatrix(); foliage.setMatrixAt(i, dummy.matrix);
-  baseHue.push(Math.random());
+  baseHue.push(srand());
   foliage.setColorAt(i, new THREE.Color().setHSL(0.75, 0.5, 0.35));
 }
 trunks.instanceMatrix.needsUpdate = true;

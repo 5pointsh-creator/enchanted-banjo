@@ -60,6 +60,26 @@ async function migrate() {
       value TEXT NOT NULL
     );
   `);
+  // whoever runs the site can take down something cruel; nobody else can
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;`);
+}
+
+// Printed in the deploy log on the first start only, and only while nobody owns the site
+// yet. Three plain words, because it gets read off one phone screen and typed into another.
+const WORDS = ['banjo','forest','star','river','lantern','willow','ember','meadow','hollow',
+               'thistle','harbour','clover','autumn','birch','quiet','amber','heather','moss'];
+async function ensureOwnerCode() {
+  const { rows: admins } = await pool.query('SELECT 1 FROM users WHERE is_admin LIMIT 1');
+  if (admins.length) { await pool.query(`DELETE FROM settings WHERE key='owner_code'`); return null; }
+  const existing = await pool.query(`SELECT value FROM settings WHERE key='owner_code'`);
+  if (existing.rows.length) return existing.rows[0].value;
+  const crypto = require('crypto');
+  const pick = () => WORDS[crypto.randomInt(WORDS.length)];
+  const code = `${pick()}-${pick()}-${pick()}`;
+  await pool.query(`INSERT INTO settings (key,value) VALUES ('owner_code',$1)
+                    ON CONFLICT (key) DO NOTHING`, [code]);
+  const { rows } = await pool.query(`SELECT value FROM settings WHERE key='owner_code'`);
+  return rows[0].value;
 }
 
 // The signing key decides whether people stay signed in. Held in the database so a
@@ -75,4 +95,4 @@ async function getOrCreateSigningSecret() {
   return rows[0].value;
 }
 
-module.exports = { pool, migrate, getOrCreateSigningSecret };
+module.exports = { pool, migrate, getOrCreateSigningSecret, ensureOwnerCode };

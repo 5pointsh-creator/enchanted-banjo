@@ -119,6 +119,10 @@
         <button id="rPlay" style="display:none;background:linear-gradient(180deg,#3aa06a,#1e6b3f);border:none;color:#fff;padding:10px 20px;border-radius:11px;font:inherit;cursor:pointer">🎵 Play their song</button>
         <button id="rClose" style="background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;padding:10px 22px;border-radius:11px;font:inherit;cursor:pointer">Close</button>
       </div>
+      <div style="margin-top:12px;display:flex;gap:10px;justify-content:center">
+        <button id="rEdit" style="display:none;background:#241436;border:1px solid #4a2f6e;color:#d9c7ff;padding:9px 16px;border-radius:10px;font:inherit;cursor:pointer">Edit</button>
+        <button id="rRemove" style="display:none;background:#2a1220;border:1px solid #7a3550;color:#ffb3c4;padding:9px 16px;border-radius:10px;font:inherit;cursor:pointer">Remove</button>
+      </div>
     </div>
   </div>
 
@@ -192,10 +196,18 @@ const stylisedGrp = new THREE.Group(); stylisedGrp.add(trunks, foliage); scene.a
 const dummy = new THREE.Object3D();
 const baseHue = []; // per-tree hue offset for the colour animation
 const treePos = []; // remembered so the realistic trees sit in the same spots
-const rand = (a,b)=> a + Math.random()*(b-a);
+// The forest must be the SAME forest on every visit, on every device, for everyone.
+// A place you cannot find your way back to is no memorial at all. These trees were
+// scattered by Math.random(), so they landed somewhere new on every page load and a
+// dedication could never be found again. A fixed seed pins them down for good.
+// Do not change FOREST_SEED - it would move every tree in the world.
+const FOREST_SEED = 8419;
+let forestRnd = FOREST_SEED;
+const srand = ()=>{ forestRnd = (forestRnd*9301 + 49297) % 233280; return forestRnd/233280; };
+const rand = (a,b)=> a + srand()*(b-a);
 for(let i=0;i<TREES;i++){
   // keep a clear path corridor: |x| between 5 and 60, along z
-  let x = rand(5, 55) * (Math.random()<0.5?-1:1);
+  let x = rand(5, 55) * (srand()<0.5?-1:1);
   let z = rand(-160, 30);
   const s = rand(0.7, 1.5);
   treePos.push({x, z, s});
@@ -205,7 +217,7 @@ for(let i=0;i<TREES;i++){
   // foliage (stacked look via taller cone on top of trunk)
   dummy.position.set(x, 6*s, z); dummy.scale.set(s, s*rand(1,1.5), s);
   dummy.updateMatrix(); foliage.setMatrixAt(i, dummy.matrix);
-  baseHue.push(Math.random());
+  baseHue.push(srand());
   foliage.setColorAt(i, new THREE.Color().setHSL(0.75, 0.5, 0.35));
 }
 trunks.instanceMatrix.needsUpdate = true;
@@ -406,6 +418,26 @@ function buildTree(data){
 async function loadTrees(){
   const arr = await BS.getTrees();
   arr.forEach(d=>{ d.idx = plantedTrees.length; buildTree(d); });
+  if(minePanel) minePanel.refresh();
+}
+
+// After an edit or a removal the world has to be rebuilt, otherwise the old plaque hangs
+// there with the old words on it.
+function reloadTrees(){
+  plantedTrees.forEach(t=>{
+    scene.remove(t.grp);
+    t.grp.traverse(o=>{
+      if(o.geometry) o.geometry.dispose();
+      if(o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());
+    });
+  });
+  plantedTrees.length = 0; pickable.length = 0; plantedPlaques.length = 0;
+  return loadTrees();
+}
+
+// A tree someone has already dedicated is theirs - say so before they type a name out.
+function alreadyTaken(x, z){
+  return plantedTrees.some(t=> Math.hypot(t.data.x - x, t.data.z - z) < 0.75);
 }
 
 // ---------- plant flow UI ----------
@@ -435,21 +467,76 @@ const songRec = BSSong.mountRecorder(document.getElementById('pSong'), {});
 plantBtn.onclick=()=>{ plantMode=!plantMode; plantHint.style.display=plantMode?'block':'none';
   plantBtn.style.filter=plantMode?'brightness(1.3)':''; };
 
-document.getElementById('pCancel').onclick=()=>{ plantForm.style.display='none'; pendingPoint=null; pendingAdopt=false; };
+let editing = null;   // the tree being edited, or null when planting a new one
+
+function closeForm(){
+  plantForm.style.display='none'; pendingPoint=null; pendingAdopt=false; editing=null;
+  document.getElementById('pName').value=''; document.getElementById('pMsg').value=''; songRec.clear();
+  document.getElementById('pPlant').textContent='Plant it 🌱';
+}
+document.getElementById('pCancel').onclick=closeForm;
+
+// Reuses the planting form: same fields, filled in, so there is nothing new to learn.
+function openEdit(tree){
+  editing = tree;
+  document.getElementById('pTitle').textContent='Edit this dedication ✏️';
+  document.getElementById('pSub').textContent='Change the name, the message, or the song.';
+  document.getElementById('pName').value = tree.name || '';
+  document.getElementById('pMsg').value = tree.msg || '';
+  songRec.clear(); if(tree.song) songRec.setSong && songRec.setSong(tree.song);
+  document.getElementById('pPlant').textContent='Save changes';
+  plantForm.style.display='flex';
+}
+
 document.getElementById('pPlant').onclick=async ()=>{
   const name=document.getElementById('pName').value.trim();
   const msg=document.getElementById('pMsg').value.trim();
-  if(!pendingPoint) return;
-  // on the live site an account is required so the tree is saved to the shared forest
-  const ok = await BS.ensureAuth(); if(!ok) return;
-  const data={x:pendingPoint.x, z:pendingPoint.z, name, msg,
-              color:chosenColor, tier:chosenTier, adopt:pendingAdopt, song:songRec.getSong()};
-  const saved = await BS.addTree(data);
-  saved.idx = plantedTrees.length; buildTree(saved);
-  plantForm.style.display='none'; pendingPoint=null; pendingAdopt=false;
-  plantMode=false; plantHint.style.display='none'; plantBtn.style.filter='';
-  document.getElementById('pName').value=''; document.getElementById('pMsg').value=''; songRec.clear();
+  const btn=document.getElementById('pPlant');
+  btn.disabled = true;
+  try{
+    if(editing){
+      await BS.updateTree(editing, {name, msg, song:songRec.getSong()});
+      closeForm(); await reloadTrees();
+      return;
+    }
+    if(!pendingPoint) return;
+    // on the live site an account is required so the tree is saved to the shared forest
+    const ok = await BS.ensureAuth(); if(!ok) return;
+    const data={x:pendingPoint.x, z:pendingPoint.z, name, msg,
+                color:chosenColor, tier:chosenTier, adopt:pendingAdopt, song:songRec.getSong()};
+    const saved = await BS.addTree(data);
+    saved.idx = plantedTrees.length; buildTree(saved);
+    closeForm();
+    plantMode=false; plantHint.style.display='none'; plantBtn.style.filter='';
+    minePanel.refresh();
+  }catch(e){
+    // the server has the final say on whether a spot is free
+    plantHint.textContent = e.message; plantHint.style.display='block';
+    setTimeout(()=>{ plantHint.textContent='Click open ground to plant a new tree — or click a tree already standing to adopt it'; }, 3600);
+    closeForm();
+  }finally{ btn.disabled = false; }
 };
+
+// ---------- your own trees ----------
+const minePanel = BS.minePanel({
+  id:'bs-my-trees', buttonLabel:'🌱 Your trees', buttonStyle:'right:14px;bottom:62px',
+  title:'Your trees', subtitle:'Come back to them whenever you need to.',
+  emptyText:"You haven't planted a tree yet.", goLabel:'Visit',
+  getItems: ()=> plantedTrees.map(t=>t.data),
+  onGo: (d)=>{ goToTree(d); },
+  onEdit: (d)=> openEdit(d),
+  onRemove: async (d)=>{ await BS.removeTree(d); await reloadTrees(); },
+});
+
+// Walk you to the tree and turn you to face it, rather than dropping you inside it.
+function goToTree(d){
+  const away = 7;
+  const dir = new THREE.Vector3(d.x, 0, d.z).sub(new THREE.Vector3(0,0,0)).normalize();
+  camera.position.set(d.x - dir.x*away, 1.7, d.z - dir.z*away + away*0.2);
+  yaw = Math.atan2(d.x - camera.position.x, d.z - camera.position.z) + Math.PI;
+  pitch = 0;
+  if(!started){ document.getElementById('enter').click(); }
+}
 document.getElementById('rClose').onclick=()=>reader.style.display='none';
 
 // ---------- click router: plant ground / read tree / play banjo ----------
@@ -469,6 +556,12 @@ canvas.addEventListener('click', e=>{
     if(adoptHit && (!groundHit || adoptHit.distance < groundHit.distance)){
       const m = new THREE.Matrix4(); foliage.getMatrixAt(adoptHit.instanceId, m);
       const pos = new THREE.Vector3().setFromMatrixPosition(m);
+      if(alreadyTaken(pos.x, pos.z)){
+        plantHint.textContent = 'Someone has already dedicated that tree - please choose another.';
+        plantHint.style.display = 'block';
+        setTimeout(()=>{ plantHint.textContent = 'Click open ground to plant a new tree — or click a tree already standing to adopt it'; }, 3200);
+        return;
+      }
       pendingPoint = new THREE.Vector3(pos.x, 0, pos.z); pendingAdopt = true;
       document.getElementById('pTitle').textContent='Adopt this tree 🌳';
       document.getElementById('pSub').textContent='Make this tree yours - dedicate it to someone lost, or loved and still here.';
@@ -499,6 +592,16 @@ canvas.addEventListener('click', e=>{
       const rPlay=document.getElementById('rPlay');
       if(t.data.song && t.data.song.length){ rPlay.style.display='inline-block'; rPlay.onclick=()=>BSSong.play(t.data.song); }
       else rPlay.style.display='none';
+      // your own dedication can be put right; the site owner can take anything down
+      const rEdit=document.getElementById('rEdit'), rRemove=document.getElementById('rRemove');
+      rEdit.style.display = BS.isMine(t.data) ? 'inline-block' : 'none';
+      rRemove.style.display = BS.canRemove(t.data) ? 'inline-block' : 'none';
+      rEdit.onclick=()=>{ reader.style.display='none'; openEdit(t.data); };
+      rRemove.onclick=async ()=>{
+        if(!confirm(`Remove ${t.data.name||'this dedication'}? This cannot be undone.`)) return;
+        try{ await BS.removeTree(t.data); reader.style.display='none'; await reloadTrees(); }
+        catch(err){ alert(err.message); }
+      };
       reader.style.display='flex'; return; }
   }
   // play the banjo

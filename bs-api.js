@@ -17,8 +17,8 @@
   const parseSong = (v) => { if (!v) return null; if (Array.isArray(v)) return v; try { return JSON.parse(v); } catch (e) { return null; } };
   // never let a half-written or corrupt entry blank the whole forest/sky
   const readList = (key) => { try { const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } };
-  const treeFromServer = (t) => ({ id: t.id, x: t.x, z: t.z, name: t.name, msg: t.message, color: t.color, tier: t.tier, adopt: t.adopt, song: parseSong(t.song), owner: t.owner });
-  const starFromServer = (s) => ({ id: s.id, dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, msg: s.message, tier: s.tier, song: parseSong(s.song), owner: s.owner });
+  const treeFromServer = (t) => ({ id: t.id, x: t.x, z: t.z, name: t.name, msg: t.message, color: t.color, tier: t.tier, adopt: t.adopt, song: parseSong(t.song), owner: t.owner, mine: t.mine });
+  const starFromServer = (s) => ({ id: s.id, dx: s.dx, dy: s.dy, dz: s.dz, name: s.name, msg: s.message, tier: s.tier, song: parseSong(s.song), owner: s.owner, mine: s.mine });
 
   async function init() {
     try {
@@ -46,6 +46,49 @@
     const arr = readList('banjoSpiritTrees');
     t.idx = arr.length; arr.push(t); localStorage.setItem('banjoSpiritTrees', JSON.stringify(arr)); return t;
   }
+  // ---- changing your mind ----
+  // In the on-device preview there are no accounts, so everything there is "yours".
+  const writeList = (key, arr) => localStorage.setItem(key, JSON.stringify(arr));
+  function localEdit(key, item, patch) {
+    const arr = readList(key);
+    const i = arr.findIndex((e) => e.idx === item.idx);
+    if (i < 0) return item;
+    arr[i] = { ...arr[i], ...patch };
+    writeList(key, arr);
+    return arr[i];
+  }
+  function localRemove(key, item) {
+    const arr = readList(key).filter((e) => e.idx !== item.idx);
+    arr.forEach((e, i) => { e.idx = i; });
+    writeList(key, arr);
+  }
+
+  async function updateTree(tree, patch) {
+    if (mode === 'live') {
+      const d = await api(`/api/trees/${tree.id}`, { method: 'PATCH', body: JSON.stringify({ name: patch.name, message: patch.msg, song: patch.song ? JSON.stringify(patch.song) : null }) });
+      return treeFromServer(d.tree);
+    }
+    return localEdit('banjoSpiritTrees', tree, patch);
+  }
+  async function removeTree(tree) {
+    if (mode === 'live') { await api(`/api/trees/${tree.id}`, { method: 'DELETE' }); return; }
+    localRemove('banjoSpiritTrees', tree);
+  }
+  async function updateStar(star, patch) {
+    if (mode === 'live') {
+      const d = await api(`/api/stars/${star.id}`, { method: 'PATCH', body: JSON.stringify({ name: patch.name, message: patch.msg, song: patch.song ? JSON.stringify(patch.song) : null }) });
+      return starFromServer(d.star);
+    }
+    return localEdit('banjoSpiritStars', star, patch);
+  }
+  async function removeStar(star) {
+    if (mode === 'live') { await api(`/api/stars/${star.id}`, { method: 'DELETE' }); return; }
+    localRemove('banjoSpiritStars', star);
+  }
+  // "mine" comes from the server; in the preview everything on this device counts as yours.
+  const isMine = (item) => (mode === 'live' ? !!item.mine : true);
+  const canRemove = (item) => isMine(item) || !!(user && user.isOwner);
+
   async function getStars() {
     if (mode === 'live') { const d = await api('/api/stars'); return d.stars.map(starFromServer); }
     return readList('banjoSpiritStars');
@@ -278,7 +321,81 @@
     modal.querySelector('#bs-inv-copy').onclick = () => copy(inviteUrl());
   }
 
+  // ---------- "yours" panel ----------
+  // The whole promise of the place is that you can come back to them. Without this you
+  // had to wander the forest hoping to walk past your own tree. Shared by both pages so
+  // the forest and the sky behave the same way.
+  function minePanel(opts) {
+    const id = opts.id;
+    if (!document.getElementById('bs-mine-css')) {
+      const css = document.createElement('style'); css.id = 'bs-mine-css';
+      css.textContent = `
+        .bs-mine-btn{position:fixed;z-index:44;cursor:pointer;border:1px solid #6a3cff;border-radius:24px;
+          padding:10px 15px;background:rgba(24,14,44,.82);color:#eadcff;backdrop-filter:blur(4px);
+          font:600 13px/1 "Segoe UI",system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.4);display:none}
+        .bs-mine-wrap{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+          background:rgba(6,4,12,.72);backdrop-filter:blur(4px);font-family:"Segoe UI",system-ui,sans-serif}
+        .bs-mine-wrap .card{background:#140c26;border:1px solid #4a2f6e;border-radius:18px;padding:22px;
+          width:min(430px,92vw);max-height:82vh;overflow:auto;color:#efe6ff}
+        .bs-mine-wrap h3{font-size:19px;margin-bottom:2px}
+        .bs-mine-wrap p.sub{opacity:.62;font-size:13px;margin-bottom:14px}
+        .bs-row{border:1px solid #33234f;border-radius:12px;padding:12px;margin-bottom:9px;background:#0e0718}
+        .bs-row .nm{font-size:15px;font-weight:600;margin-bottom:2px;word-break:break-word}
+        .bs-row .ms{font-size:12px;opacity:.6;margin-bottom:9px;word-break:break-word}
+        .bs-row .acts{display:flex;gap:7px;flex-wrap:wrap}
+        .bs-row button{cursor:pointer;font:inherit;font-size:13px;padding:8px 12px;border-radius:9px;
+          border:1px solid #4a2f6e;background:#1a1030;color:#dcc9ff}
+        .bs-row button.go{background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff}
+        .bs-row button.del{border-color:#7a3550;color:#ffb3c4}
+        .bs-mine-close{width:100%;margin-top:6px;cursor:pointer;font:inherit;padding:10px;
+          border:1px solid #4a2f6e;border-radius:11px;background:transparent;color:#c7b3ff}
+        .bs-empty{opacity:.6;font-size:13px;padding:6px 0 12px}`;
+      document.head.appendChild(css);
+    }
+    const btn = document.createElement('button');
+    btn.className = 'bs-mine-btn'; btn.type = 'button'; btn.textContent = opts.buttonLabel;
+    btn.style.cssText += opts.buttonStyle || 'right:14px;bottom:62px';
+    document.body.appendChild(btn);
+
+    const wrap = document.createElement('div'); wrap.className = 'bs-mine-wrap'; wrap.id = id;
+    wrap.innerHTML = `<div class="card"><h3>${escapeHtml(opts.title)}</h3>
+      <p class="sub">${escapeHtml(opts.subtitle)}</p><div class="bs-list"></div>
+      <button class="bs-mine-close">Close</button></div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('.bs-mine-close').onclick = () => { wrap.style.display = 'none'; };
+    wrap.onclick = (e) => { if (e.target === wrap) wrap.style.display = 'none'; };
+
+    function render() {
+      const items = opts.getItems().filter(isMine);
+      const list = wrap.querySelector('.bs-list');
+      if (!items.length) { list.innerHTML = `<div class="bs-empty">${escapeHtml(opts.emptyText)}</div>`; return; }
+      list.innerHTML = '';
+      items.forEach((it) => {
+        const row = document.createElement('div'); row.className = 'bs-row';
+        row.innerHTML = `<div class="nm">${escapeHtml(it.name || 'Unnamed')}</div>
+          <div class="ms">${escapeHtml((it.msg || '').slice(0, 90))}</div>
+          <div class="acts"><button class="go">${escapeHtml(opts.goLabel)}</button>
+          <button class="ed">Edit</button><button class="del">Remove</button></div>`;
+        row.querySelector('.go').onclick = () => { wrap.style.display = 'none'; opts.onGo(it); };
+        row.querySelector('.ed').onclick = () => { wrap.style.display = 'none'; opts.onEdit(it); };
+        row.querySelector('.del').onclick = async () => {
+          if (!confirm(`Remove ${it.name || 'this'}? This cannot be undone.`)) return;
+          try { await opts.onRemove(it); render(); refresh(); }
+          catch (e) { alert(e.message); }
+        };
+        list.appendChild(row);
+      });
+    }
+    function refresh() {
+      const has = opts.getItems().filter(isMine).length > 0;
+      btn.style.display = (mode === 'demo' || user) && has ? 'block' : 'none';
+    }
+    btn.onclick = () => { render(); wrap.style.display = 'flex'; };
+    return { refresh, render };
+  }
+
   window.BS = { init, getTrees, addTree, getStars, addStar, login, register, logout, ensureAuth, injectShare,
+    updateTree, removeTree, updateStar, removeStar, isMine, canRemove, minePanel,
     get user() { return user; }, get mode() { return mode; } };
 
   // Share/invite widget appears on every page that loads this script, no init needed.
