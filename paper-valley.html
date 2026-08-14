@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Paper Valley — Banjo Spirits</title>
-<meta name="description" content="Paper Valley - hope for connecting with the ones we never forgot. Hang a lantern with their name and other people walking the trail may know something. Free.">
+<meta name="description" content="Paper Valley - for people in hopes of reconnecting with the ones we never forgot. A brother, a birth mother, a lost lover, a friend. Hang a lantern with their name and other people walking the trail may know something. Free.">
 <link rel="canonical" href="https://banjospirits.com/paper-valley.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Banjo Spirits">
 <meta property="og:title" content="Paper Valley — for someone still out there">
-<meta property="og:description" content="Hang a lantern for someone you have lost touch with. Others walking the valley may know something.">
+<meta property="og:description" content="In hopes of reconnecting with the ones we never forgot. Hang a lantern for someone you have lost touch with and others walking the valley may know something.">
 <meta property="og:url" content="https://banjospirits.com/paper-valley.html">
 <meta property="og:image" content="https://banjospirits.com/tour-poster.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -108,7 +108,7 @@
   <div class="sheet" id="hangForm">
     <div class="card">
       <h3 id="fTitle">Hang a lantern 🏮</h3>
-      <p class="sub" id="fSub">For someone still out there that you have lost touch with. Fill in what you know — leave the rest blank.</p>
+      <p class="sub" id="fSub">For someone still out there that you are in hopes of reconnecting with. Fill in what you know — leave the rest blank.</p>
 
       <label>Who are you looking for?</label>
       <input id="fName" maxlength="60" placeholder="Their name">
@@ -116,7 +116,7 @@
       <div class="two">
         <div>
           <label>Who are they to you?</label>
-          <input id="fRel" maxlength="40" placeholder="Brother, birth mother…">
+          <input id="fRel" maxlength="40" placeholder="Brother, birth mother, lost love…">
         </div>
         <div>
           <label>Roughly how old now?</label>
@@ -199,8 +199,9 @@
 
   <div id="start">
     <h1>Paper Valley</h1>
-    <p>Paper Valley is for connecting with the ones we never forgot. A brother you fell
-       out with, a birth mother, a friend you lost track of thirty years ago.</p>
+    <p>Paper Valley is for people in hopes of reconnecting with the ones we never forgot.
+       A brother you fell out with, a birth mother, a lost lover, a friend you lost track
+       of thirty years ago.</p>
     <p>Hang a lantern with their name on it and it stands on the trail where everyone
        walking past will read it. Somebody might know something.</p>
     <button class="btn" id="enter">Walk the trail ▸</button>
@@ -578,7 +579,7 @@ function closeHang(){
   hangForm.style.display='none'; editing=null; F('fErr').textContent='';
   ['fName','fRel','fAge','fArea','fYear','fNote'].forEach(id=>F(id).value='');
   F('fTitle').textContent='Hang a lantern 🏮'; F('fSave').textContent='Hang it 🏮';
-  F('fSub').textContent='For someone still out there that you have lost touch with. Fill in what you know — leave the rest blank.';
+  F('fSub').textContent='For someone still out there that you are in hopes of reconnecting with. Fill in what you know — leave the rest blank.';
 }
 F('fCancel').onclick = closeHang;
 F('hangBtn').onclick = ()=>{ closeHang(); hangForm.style.display='flex'; };
