@@ -271,10 +271,10 @@
   <!-- inside the mill: the reunions -->
   <div class="sheet" id="millSheet">
     <div class="card">
-      <h3>Inside the mill</h3>
-      <p class="sub">The searches that ended. This is the only room here that isn't sad.</p>
+      <h3>Off the wall</h3>
+      <p class="sub">A search that ended. This is the only wall here that isn't sad.</p>
       <div id="millList"></div>
-      <div class="acts"><button class="go" id="millClose">Back outside</button></div>
+      <div class="acts"><button class="go" id="millClose">Hang it back up</button></div>
     </div>
   </div>
 
@@ -1197,6 +1197,261 @@ let fireFlame = null, fireLight = null;
   scene.add(grp);
 })();
 
+// ---------- inside the mill ----------
+// Walking in used to put a panel of text over the valley, which is not going inside
+// anywhere - you could not see past it and there was nothing behind it. So the inside is
+// a real room now: floorboards, the wheel still turning, and a wall the found ones hang on.
+// It is built well above the valley so no tree or hillside can push through the walls.
+const ROOM = { x: MILL_AT.x, y: 620, z: MILL_AT.z, w: 24, d: 18, h: 8 };
+const DOOR_X = ROOM.x + 4;                                  // the way back out
+const millRoom = new THREE.Group();
+const millPapers = [];                                      // clickable stories on the wall
+let millWheel = null, millPegWall = null, millBoard = null;
+
+function woodTexture(){
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#5a462c'; g.fillRect(0,0,256,256);
+  for(let i=0;i<7;i++){                                     // planks and their grain
+    const y = i*37;
+    g.fillStyle = i%2 ? '#61492d' : '#523d25'; g.fillRect(0, y, 256, 35);
+    g.strokeStyle = 'rgba(0,0,0,.45)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, y+36); g.lineTo(256, y+36); g.stroke();
+    g.strokeStyle = 'rgba(255,220,170,.05)';
+    for(let k=0;k<4;k++){
+      g.beginPath(); g.moveTo(0, y + 6 + k*8); g.bezierCurveTo(90, y+4+k*8, 160, y+10+k*8, 256, y+6+k*8); g.stroke();
+    }
+  }
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+  tx.wrapS = tx.wrapT = THREE.RepeatWrapping; return tx;
+}
+// What the wall says while nobody has been found yet. It is the honest answer to
+// "am I meant to be seeing something else" - the room tells you itself.
+function boardTexture(){
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 288;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#2a2015'; roundRect(g, 4, 4, 504, 280, 10); g.fill();
+  g.strokeStyle = '#6b5528'; g.lineWidth = 4; roundRect(g, 4, 4, 504, 280, 10); g.stroke();
+  g.textAlign = 'center';
+  g.fillStyle = '#ffcf8a'; g.font = 'bold 30px Georgia, serif';
+  g.fillText('THE WALL OF FOUND', 256, 62);
+  g.fillStyle = '#d8c9a8'; g.font = '21px Georgia, serif';
+  g.fillText('Nobody has been found yet.', 256, 116);
+  g.fillStyle = '#a89a7e'; g.font = '19px Georgia, serif';
+  wrap(g, 'When a search on this trail ends well, their paper is hung here and it stays hung. The pegs are waiting.', 256, 160, 420, 28, 4);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+}
+// What you see through the doorway: the treeline and a couple of lanterns still burning
+// out there. A flat dark panel read as a blue rectangle, which is not a way out of anywhere.
+function doorwayTexture(){
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 320;
+  const g = cv.getContext('2d');
+  const sky = g.createLinearGradient(0, 0, 0, 320);
+  sky.addColorStop(0, '#111c2b'); sky.addColorStop(0.55, '#0d1622'); sky.addColorStop(1, '#070b10');
+  g.fillStyle = sky; g.fillRect(0, 0, 256, 320);
+  g.fillStyle = '#080d13';                                  // trees against it
+  for(let i=0;i<18;i++){
+    const x = i*15 + (i%2?4:0), h = 46 + (i%4)*22;
+    g.beginPath(); g.moveTo(x, 236); g.lineTo(x+8, 236-h); g.lineTo(x+16, 236); g.closePath(); g.fill();
+  }
+  g.fillStyle = '#05080c'; g.fillRect(0, 232, 256, 88);     // the ground you walked in over
+  for(const [lx, ly, r] of [[62, 214, 16], [186, 220, 12]]){ // two lanterns out on the trail
+    const gl = g.createRadialGradient(lx, ly, 0, lx, ly, r);
+    gl.addColorStop(0, 'rgba(255,200,130,.95)'); gl.addColorStop(1, 'rgba(255,170,80,0)');
+    g.fillStyle = gl; g.fillRect(lx-r, ly-r, r*2, r*2);
+  }
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+}
+function reunionPaperTexture(r){
+  const cv = document.createElement('canvas'); cv.width = 320; cv.height = 420;
+  const g = cv.getContext('2d');
+  g.fillStyle = '#efe3c8'; g.fillRect(0, 0, 320, 420);
+  g.strokeStyle = '#b9a87e'; g.lineWidth = 2; g.strokeRect(9, 9, 302, 402);
+  g.textAlign = 'center';
+  g.fillStyle = '#8a4a1c'; g.font = 'bold 24px Georgia, serif';
+  g.fillText('FOUND', 160, 56);
+  g.fillStyle = '#20180c'; g.font = 'bold 30px Georgia, serif';
+  g.fillText(clip(r.name || 'Someone', 15), 160, 100);
+  g.fillStyle = '#5a4a2c'; g.font = '17px Georgia, serif';
+  const sub = [r.relation, r.last_area || r.lastArea].filter(Boolean).join(' · ');
+  if(sub) g.fillText(clip(sub, 26), 160, 128);
+  g.fillStyle = '#4a3d24'; g.font = '17px Georgia, serif';
+  wrap(g, r.found_note || r.foundNote || '', 160, 170, 268, 24, 8);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+}
+
+(function buildMillRoom(){
+  const wood = woodTexture();
+  const floorTex = wood.clone(); floorTex.needsUpdate = true; floorTex.repeat.set(4, 3);
+  const wallTex = wood.clone(); wallTex.needsUpdate = true; wallTex.repeat.set(3, 1);
+
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(ROOM.w, 0.5, ROOM.d),
+    new THREE.MeshStandardMaterial({map:floorTex, roughness:1, fog:false}));
+  floor.position.set(ROOM.x, ROOM.y - 0.25, ROOM.z); millRoom.add(floor);
+
+  const ceil = new THREE.Mesh(new THREE.BoxGeometry(ROOM.w, 0.4, ROOM.d),
+    new THREE.MeshStandardMaterial({color:0x120e09, roughness:1, fog:false}));
+  ceil.position.set(ROOM.x, ROOM.y + ROOM.h, ROOM.z); millRoom.add(ceil);
+  for(let i=0;i<4;i++){                                     // roof beams
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(ROOM.w, 0.55, 0.55),
+      new THREE.MeshStandardMaterial({color:0x2a2016, roughness:1, fog:false}));
+    beam.position.set(ROOM.x, ROOM.y + ROOM.h - 0.5, ROOM.z - ROOM.d/2 + 3 + i*4);
+    millRoom.add(beam);
+  }
+
+  const wallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:1, fog:false});
+  const wall = (w, h, d, x, y, z)=>{
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+    m.position.set(x, y, z); millRoom.add(m); return m;
+  };
+  wall(ROOM.w, ROOM.h, 0.4, ROOM.x, ROOM.y + ROOM.h/2, ROOM.z - ROOM.d/2);   // the paper wall
+  wall(0.4, ROOM.h, ROOM.d, ROOM.x - ROOM.w/2, ROOM.y + ROOM.h/2, ROOM.z);
+  wall(0.4, ROOM.h, ROOM.d, ROOM.x + ROOM.w/2, ROOM.y + ROOM.h/2, ROOM.z);
+  // the wall you came through, with a doorway left in it
+  const southZ = ROOM.z + ROOM.d/2;
+  const leftW = (DOOR_X - 1.8) - (ROOM.x - ROOM.w/2);
+  wall(leftW, ROOM.h, 0.4, (ROOM.x - ROOM.w/2 + (DOOR_X - 1.8))/2, ROOM.y + ROOM.h/2, southZ);
+  const rightW = (ROOM.x + ROOM.w/2) - (DOOR_X + 1.8);
+  wall(rightW, ROOM.h, 0.4, ((DOOR_X + 1.8) + ROOM.x + ROOM.w/2)/2, ROOM.y + ROOM.h/2, southZ);
+  wall(3.6, ROOM.h - 4.4, 0.4, DOOR_X, ROOM.y + 4.4 + (ROOM.h-4.4)/2, southZ);   // over the door
+  // night, seen through the doorway - so the way out reads as a way out
+  const night = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 4.4),
+    new THREE.MeshBasicMaterial({map: doorwayTexture(), fog:false}));
+  night.position.set(DOOR_X, ROOM.y + 2.2, southZ + 0.3);
+  night.rotation.y = Math.PI; millRoom.add(night);
+  // no extra glow sprite in the doorway - the lanterns are painted into the view itself,
+  // and a sprite this close to the camera filled the whole opening with an orange blob
+
+  // the wheel, still turning, because a mill that has stopped is just a shed
+  millWheel = new THREE.Group();
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(3.6, 0.3, 8, 24),
+    new THREE.MeshStandardMaterial({color:0x6b5232, roughness:1, fog:false}));
+  millWheel.add(rim);
+  const inner = new THREE.Mesh(new THREE.TorusGeometry(2.2, 0.2, 8, 20),
+    new THREE.MeshStandardMaterial({color:0x5c4529, roughness:1, fog:false}));
+  millWheel.add(inner);
+  for(let i=0;i<10;i++){                                    // spokes and paddles
+    const a = i/10*Math.PI*2;
+    const sp = new THREE.Mesh(new THREE.BoxGeometry(0.22, 7.2, 0.22),
+      new THREE.MeshStandardMaterial({color:0x6b5232, roughness:1, fog:false}));
+    sp.rotation.z = a; millWheel.add(sp);
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.16, 1.5),
+      new THREE.MeshStandardMaterial({color:0x5c4529, roughness:1, fog:false}));
+    pad.position.set(Math.cos(a)*3.5, Math.sin(a)*3.5, 0);
+    pad.rotation.z = a; millWheel.add(pad);
+  }
+  // against the side wall, clear of the papers, where you see it the moment you turn left
+  const WHEEL_X = ROOM.x - ROOM.w/2 + 1.5, WHEEL_Z = ROOM.z + 1.5;
+  millWheel.position.set(WHEEL_X, ROOM.y + 4.0, WHEEL_Z);
+  millWheel.rotation.y = Math.PI/2;                          // stood on edge, facing the room
+  millRoom.add(millWheel);
+  const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 7, 8),
+    new THREE.MeshStandardMaterial({color:0x2b2116, roughness:1, fog:false}));
+  axle.rotation.z = Math.PI/2;
+  axle.position.set(WHEEL_X + 3.6, ROOM.y + 4.0, WHEEL_Z);
+  millRoom.add(axle);
+  const stone = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 0.7, 20),
+    new THREE.MeshStandardMaterial({color:0x4a453c, roughness:1, fog:false}));
+  stone.position.set(WHEEL_X + 6.4, ROOM.y + 1.1, WHEEL_Z);
+  millRoom.add(stone);
+  const spindle = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 3.2, 8),
+    new THREE.MeshStandardMaterial({color:0x2b2116, roughness:1, fog:false}));
+  spindle.position.set(WHEEL_X + 6.4, ROOM.y + 2.6, WHEEL_Z);
+  millRoom.add(spindle);
+
+  // Three lanterns hung from the beams. Lamplight indoors carries much further than a
+  // lantern out in the fog does, so these are wide and soft rather than bright points -
+  // the first cut lit two hot blobs and left the rest of the room pitch black.
+  millRoom.add(new THREE.AmbientLight(0x6b5636, 0.62));
+  // the back pair sit out at the sides, never in front of the papers
+  for(const [lx, lz] of [[ROOM.x - 6, ROOM.z + 4], [ROOM.x + 6, ROOM.z + 4],
+                         [ROOM.x - 10.2, ROOM.z - 7], [ROOM.x + 10.2, ROOM.z - 7]]){
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.6, 4),
+      new THREE.MeshStandardMaterial({color:0x1b1710, roughness:1, fog:false}));
+    cord.position.set(lx, ROOM.y + ROOM.h - 1.4, lz); millRoom.add(cord);
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.68, 0.5),
+      new THREE.MeshStandardMaterial({color:0x2c2418, roughness:.8, emissive:0xffb457,
+        emissiveIntensity:.7, fog:false}));
+    body.position.set(lx, ROOM.y + ROOM.h - 2.4, lz); millRoom.add(body);
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: GLOW_TEX, color: 0xffb457, transparent:true, opacity:0.55,
+      blending: THREE.AdditiveBlending, depthWrite:false, fog:false }));
+    gl.position.copy(body.position); gl.scale.setScalar(1.5); millRoom.add(gl);
+    const pl = new THREE.PointLight(0xffc078, 26, 30, 2);
+    pl.position.copy(body.position); millRoom.add(pl);
+  }
+
+  // pegs along the far wall, waiting. They are there whether anything hangs on them or not.
+  millPegWall = new THREE.Group();
+  for(let r=0;r<2;r++) for(let c=0;c<4;c++){
+    const peg = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.5, 6),
+      new THREE.MeshStandardMaterial({color:0x33271a, roughness:1, fog:false}));
+    peg.rotation.x = Math.PI/2;
+    peg.position.set(ROOM.x - 7.2 + c*4.8, ROOM.y + 5.6 - r*3.0, ROOM.z - ROOM.d/2 + 0.5);
+    millPegWall.add(peg);
+  }
+  millRoom.add(millPegWall);
+
+  millBoard = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.6),
+    new THREE.MeshBasicMaterial({map: boardTexture(), transparent:true, fog:false}));
+  millBoard.position.set(ROOM.x, ROOM.y + 3.4, ROOM.z - ROOM.d/2 + 0.42);
+  millRoom.add(millBoard);
+
+  millRoom.visible = false;
+  scene.add(millRoom);
+})();
+
+function hangReunions(rows){
+  millPapers.forEach(p=>{
+    millRoom.remove(p);
+    p.geometry.dispose(); if(p.material.map) p.material.map.dispose(); p.material.dispose();
+  });
+  millPapers.length = 0;
+  millBoard.visible = !rows.length;
+  rows.slice(0, 8).forEach((r, i)=>{
+    const c = i % 4, row = Math.floor(i / 4);
+    const x = ROOM.x - 7.2 + c*4.8, y = ROOM.y + 5.0 - row*3.0;
+    const paper = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 3.1),
+      new THREE.MeshBasicMaterial({map: reunionPaperTexture(r), transparent:true, fog:false}));
+    paper.position.set(x, y, ROOM.z - ROOM.d/2 + 0.55);
+    paper.rotation.z = (hash(i, 3, 11) - 0.5) * 0.09;        // hung by hand, not by a machine
+    paper.userData.reunion = r;
+    millRoom.add(paper); millPapers.push(paper);
+  });
+}
+
+let inside = false, outsideSave = null;
+async function enterMill(){
+  if(inside) return;
+  outsideSave = { pos: camera.position.clone(), yaw, pitch };
+  inside = true;
+  millRoom.visible = true;
+  camera.position.set(DOOR_X, ROOM.y + 1.7, ROOM.z + ROOM.d/2 - 2.4);
+  yaw = 0; pitch = 0;                                        // facing the wall of found
+  placeHint.style.display = 'none'; placeHold = 0;
+  F('hangBtn').style.display = 'none';                       // lanterns go on the trail, not in here
+  let rows = [];
+  try{ rows = await BS.getReunions(); }catch(e){ rows = []; }
+  hangReunions(rows || []);
+}
+function leaveMill(){
+  if(!inside) return;
+  inside = false;
+  millRoom.visible = false;
+  if(outsideSave){
+    camera.position.copy(outsideSave.pos);
+    pitch = 0;
+    // you come out of a door facing away from it, not staring back at the one you just left
+    yaw = Math.atan2(-(camera.position.x - MILL_AT.x), -(camera.position.z - MILL_AT.z));
+  }
+  placeHold = 0;
+  F('hangBtn').style.display = '';
+  // you step out still holding the key that took you in - without this you walk
+  // straight back through the door and it looks like the door does not work
+  millCool = 1.6;
+}
+let millCool = 0;
+
 // You go into both by walking, the same way you crossed the treeline - one verb for the
 // whole site, because being asked to tap a banner is what stranded him three times.
 let placeHold = 0, activePlace = null;
@@ -1205,7 +1460,8 @@ placeHint.onclick = ()=>{ if(activePlace) enterPlace(activePlace); };
 
 function enterPlace(which){
   placeHold = 0;
-  if(which === 'mill') openMill();
+  if(which === 'mill') enterMill();
+  else if(which === 'out') leaveMill();
   else openFire();
 }
 
@@ -1215,6 +1471,28 @@ function updatePlaces(dt){
     .some(el => getComputedStyle(el).display !== 'none');
   if(anySheetOpen){ placeHint.style.display='none'; activePlace=null; placeHold=0; return; }
 
+  // indoors, the only thing to walk into is the doorway you came through
+  if(inside){
+    const dOut = Math.hypot(camera.position.x - DOOR_X, camera.position.z - (ROOM.z + ROOM.d/2));
+    const near = dOut < 4.2;
+    // only counts if you are walking AT the door, not away from it
+    const facingOut = Math.cos(yaw) < -0.2;   // forward is (-sin yaw, -cos yaw)
+    activePlace = 'out';
+    // standing in the doorway looking into the room is arriving, not leaving
+    if(near && !facingOut){ placeHint.style.display='none'; placeHold = 0; return; }
+    placeHint.style.display = 'block';
+    placeHint.innerHTML = near
+      ? '🚪 Back outside<br><span style="opacity:.7;font-size:12px">keep walking — or tap here</span>'
+      : '🚪 The door is behind you<br><span style="opacity:.7;font-size:12px">walk back to it — or tap here</span>';
+    const pushingOut = !!(keys['w'] || keys['arrowup'] || move.f);
+    if(pushingOut && facingOut && dOut < 3.4){
+      placeHold += dt;
+      if(placeHold > 0.7) leaveMill();
+    } else placeHold = 0;
+    return;
+  }
+
+  if(millCool > 0) millCool -= dt;
   const dFire = Math.hypot(camera.position.x - FIRE_POS.x, camera.position.z - FIRE_POS.z);
   const dMill = Math.hypot(camera.position.x - MILL_DOOR.x, camera.position.z - MILL_DOOR.z);
   // Two different distances for the mill: near enough to notice it from the trail, and
@@ -1241,7 +1519,7 @@ function updatePlaces(dt){
       ? '🏚️ Go inside the mill<br><span style="opacity:.7;font-size:12px">where the reunions are kept — keep walking, or tap here</span>'
       : '🏚️ The mill is over there<br><span style="opacity:.7;font-size:12px">follow the lanterns to its door — or tap here</span>';
   }
-  if(pushing && close){
+  if(pushing && close && !(which === 'mill' && millCool > 0)){
     placeHold += dt;
     placeHint.style.boxShadow = `0 0 ${20 + placeHold*40}px rgba(255,190,90,${0.3 + placeHold*0.5})`;
     if(placeHold > 1.0) enterPlace(which);
@@ -1251,28 +1529,23 @@ function updatePlaces(dt){
   }
 }
 
-async function openMill(){
+// One paper, taken down off the wall and read. The room is the list now.
+function openReunion(r){
+  if(!r) return;
   const list = F('millList');
-  list.innerHTML = '<div class="quiet">Loading…</div>';
-  millSheet.style.display = 'flex';
-  let rows = [];
-  try{ rows = await BS.getReunions(); }catch(e){ rows = []; }
-  if(!rows.length){
-    list.innerHTML = '<div class="quiet">Nobody has been found yet. When somebody is, their story is kept in here, and it is the thing that will make the next person believe it is worth hanging a lantern.</div>';
-    return;
-  }
   list.innerHTML = '';
-  rows.forEach(r=>{
-    const row = document.createElement('div');
-    row.style.cssText = 'border:1px solid #5c4415;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#171207';
-    row.innerHTML = `<div style="font-weight:600;color:#ffcf8a"></div>
-      <div style="font-size:12px;opacity:.6;margin:3px 0 8px"></div>
-      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>`;
-    row.children[0].textContent = '🕯️ ' + (r.name || 'Someone') + ' — found';
-    row.children[1].textContent = [r.relation, r.last_area, r.lost_year && `out of contact since ${r.lost_year}`].filter(Boolean).join(' · ');
-    row.children[2].textContent = r.found_note || '';
-    list.appendChild(row);
-  });
+  const row = document.createElement('div');
+  row.style.cssText = 'border:1px solid #5c4415;border-radius:12px;padding:12px 14px;background:#171207';
+  row.innerHTML = `<div style="font-weight:600;color:#ffcf8a"></div>
+    <div style="font-size:12px;opacity:.6;margin:3px 0 8px"></div>
+    <div style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>`;
+  row.children[0].textContent = '🕯️ ' + (r.name || 'Someone') + ' — found';
+  row.children[1].textContent = [r.relation, r.last_area || r.lastArea,
+    (r.lost_year || r.lostYear) && `out of contact since ${r.lost_year || r.lostYear}`]
+    .filter(Boolean).join(' · ');
+  row.children[2].textContent = r.found_note || r.foundNote || '';
+  list.appendChild(row);
+  millSheet.style.display = 'flex';
 }
 F('millClose').onclick = ()=>{ millSheet.style.display='none'; };
 
@@ -1351,6 +1624,11 @@ canvas.addEventListener('click', e=>{
   if(Math.hypot(e.clientX-downX, e.clientY-downY) > 6) return;
   const rx=(e.clientX/innerWidth)*2-1, ry=-(e.clientY/innerHeight)*2+1;
   raycaster.setFromCamera({x:rx,y:ry}, camera);
+  if(inside){
+    const paper = raycaster.intersectObjects(millPapers, false)[0];
+    if(paper) openReunion(paper.object.userData.reunion);
+    return;
+  }
   const hit = raycaster.intersectObjects(pickable, false)[0];
   if(hit){
     const l = lanternObjs[hit.object.userData.idx];
@@ -1390,6 +1668,8 @@ function maybeCreak(dt){
   nextCreak -= dt;
   if(nextCreak > 0) return;
   nextCreak = 5 + Math.random()*7;
+  // indoors it is the wheel you hear, not a lantern out in the fog
+  if(inside){ creak(-0.6, 0.13); return; }
   // out of sight in the fog, but close enough to hear
   const heard = lanternObjs.filter(l=>{
     const dist = l.grp.position.distanceTo(camera.position);
@@ -1418,9 +1698,17 @@ function animate(){
     camera.position.z += (Math.cos(yaw)*-fwd - Math.sin(yaw)*strafe)*speed;
   }
   updateGuide(dt, t);
-  // your feet stay on the ground, ridge or valley floor
-  const gh = heightAt(camera.position.x, camera.position.z);
-  camera.position.y += (gh + 1.7 - camera.position.y) * Math.min(1, dt*8);
+  if(inside){
+    // floorboards, not hillside - and the walls are walls
+    camera.position.y += (ROOM.y + 1.7 - camera.position.y) * Math.min(1, dt*10);
+    camera.position.x = Math.max(ROOM.x - ROOM.w/2 + 1.1, Math.min(ROOM.x + ROOM.w/2 - 1.1, camera.position.x));
+    camera.position.z = Math.max(ROOM.z - ROOM.d/2 + 1.6, Math.min(ROOM.z + ROOM.d/2 - 1.1, camera.position.z));
+    if(millWheel) millWheel.rotateZ(dt*0.55);      // it has not stopped turning
+  } else {
+    // your feet stay on the ground, ridge or valley floor
+    const gh = heightAt(camera.position.x, camera.position.z);
+    camera.position.y += (gh + 1.7 - camera.position.y) * Math.min(1, dt*8);
+  }
   camera.rotation.set(pitch, yaw, 0, 'YXZ');
   walkerGlow.position.set(camera.position.x, camera.position.y + 0.4, camera.position.z);
 
