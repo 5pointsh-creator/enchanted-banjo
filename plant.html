@@ -76,6 +76,18 @@
      background:rgba(36,20,54,.72);border:1px solid #4a2f6e;border-radius:12px;padding:9px 14px;color:#d9c7ff;
      font-size:13px;backdrop-filter:blur(3px)">✨ Look up at the sky</a>
 
+  <a href="lanterns.html" style="position:fixed;left:16px;top:176px;z-index:8;pointer-events:auto;text-decoration:none;
+     background:rgba(30,24,16,.74);border:1px solid #6b5326;border-radius:12px;padding:9px 14px;color:#e3ce9d;
+     font-size:13px;backdrop-filter:blur(3px)">🏮 The lantern trail</a>
+
+  <!-- Appears when you reach the far treeline. The two worlds are joined by a walk, not a menu. -->
+  <a href="lanterns.html" id="crossPrompt" style="position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:9;
+     display:none;pointer-events:auto;text-decoration:none;text-align:center;background:rgba(24,18,10,.92);
+     border:1px solid #8a6a2a;border-radius:14px;padding:12px 20px;color:#f0dcae;font-size:14px;
+     box-shadow:0 0 30px rgba(255,170,70,.25)">
+     🏮 There is a path into the dark woods<br>
+     <span style="opacity:.7;font-size:12px">for people still out there somewhere — tap to cross</span></a>
+
   <button id="plantBtn" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;
      pointer-events:auto;cursor:pointer;border:1px solid #7a3cff;border-radius:14px;font:inherit;font-size:15px;
      padding:12px 22px;color:#fff;background:linear-gradient(180deg,#3aa06a,#1e6b3f);box-shadow:0 0 18px rgba(60,200,120,.4)">
@@ -289,6 +301,35 @@ halo.position.set(0, 5.6, -68); scene.add(halo);
 const ring = new THREE.Mesh(new THREE.TorusGeometry(5.2, 0.12, 8, 48),
   new THREE.MeshBasicMaterial({color:0xb26bff}));
 ring.position.copy(BANJO_POS); scene.add(ring);
+
+// ---------- the far treeline ----------
+// The way through to the lantern trail. Deliberately not a button: you walk to the end of
+// this forest, the trees go black, and there is a lit gap with two lanterns burning in it.
+const TREELINE_Z = -140;
+(function buildTreeline(){
+  const wall = new THREE.Mesh(new THREE.PlaneGeometry(130, 34),
+    new THREE.MeshBasicMaterial({color:0x05030a, transparent:true, opacity:.96}));
+  wall.position.set(0, 17, TREELINE_Z); scene.add(wall);
+  for(let i=0;i<26;i++){                                  // ragged black conifers along it
+    const s = 1.1 + (i%5)*0.35;
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(2.2*s, 9*s, 6),
+      new THREE.MeshBasicMaterial({color:0x070410}));
+    const x = -62 + i*5 + (i%3)*1.4;
+    if(Math.abs(x) < 7) continue;                         // leave the gap you walk through
+    cone.position.set(x, 4.5*s, TREELINE_Z + 1.4); scene.add(cone);
+  }
+  for(const sx of [-6.5, 6.5]){                           // two lanterns marking the gap
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 3.4, 6),
+      new THREE.MeshStandardMaterial({color:0x241d14, roughness:1}));
+    post.position.set(sx, 1.7, TREELINE_Z + 2.5); scene.add(post);
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 10),
+      new THREE.MeshBasicMaterial({color:0xffd9a0}));
+    lamp.position.set(sx, 3.5, TREELINE_Z + 2.5); scene.add(lamp);
+    const gl = new THREE.PointLight(0xffb457, 4, 20, 2);
+    gl.position.copy(lamp.position); scene.add(gl);
+  }
+})();
+const crossPrompt = document.getElementById('crossPrompt');
 
 // ---------- controls ----------
 const keys = {};
@@ -669,6 +710,10 @@ function animate(){
   const d = camera.position.distanceTo(BANJO_POS);
   nearBanjo = d < 34;
   prompt.style.opacity = (nearBanjo && !playMode) ? 1 : 0;
+
+  // walked far enough into the woods to find the way through to the lantern trail
+  const nearGap = camera.position.z < TREELINE_Z + 34 && Math.abs(camera.position.x) < 26;
+  crossPrompt.style.display = (started && nearGap && !playMode) ? 'block' : 'none';
 
   renderer.render(scene, camera);
 }

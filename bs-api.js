@@ -85,6 +85,62 @@
     if (mode === 'live') { await api(`/api/stars/${star.id}`, { method: 'DELETE' }); return; }
     localRemove('banjoSpiritStars', star);
   }
+  // ---------- the lantern trail ----------
+  // A lantern never carries a place of its own: seq is its position along the trail, and
+  // the world works out where that is. Nobody can pick a spot, so nothing is ever scattered.
+  const lanternFromServer = (l) => ({
+    id: l.id, seq: l.seq, name: l.name, relation: l.relation, ageNow: l.age_now,
+    lastArea: l.last_area, lostYear: l.lost_year, note: l.note, status: l.status,
+    quietDays: l.quiet_days || 0, owner: l.owner, mine: l.mine,
+  });
+  const lanternToServer = (l) => ({
+    name: l.name, relation: l.relation, age_now: l.ageNow,
+    last_area: l.lastArea, lost_year: l.lostYear, note: l.note,
+  });
+
+  async function getLanterns() {
+    if (mode === 'live') { const d = await api('/api/lanterns'); return d.lanterns.map(lanternFromServer); }
+    const arr = readList('banjoSpiritLanterns');
+    arr.forEach((l, i) => { if (l.seq === undefined) l.seq = i + 1; });
+    return arr;
+  }
+  async function addLantern(l) {
+    if (mode === 'live') {
+      const d = await api('/api/lanterns', { method: 'POST', body: JSON.stringify(lanternToServer(l)) });
+      return lanternFromServer(d.lantern);
+    }
+    const arr = readList('banjoSpiritLanterns');
+    l.idx = arr.length; l.seq = arr.length + 1; l.status = 'looking'; l.quietDays = 0;
+    arr.push(l); writeList('banjoSpiritLanterns', arr); return l;
+  }
+  async function updateLantern(l, patch) {
+    if (mode === 'live') {
+      const d = await api(`/api/lanterns/${l.id}`, { method: 'PATCH', body: JSON.stringify(lanternToServer({ ...l, ...patch })) });
+      return lanternFromServer(d.lantern);
+    }
+    return localEdit('banjoSpiritLanterns', l, { ...patch, quietDays: 0 });
+  }
+  async function removeLantern(l) {
+    if (mode === 'live') { await api(`/api/lanterns/${l.id}`, { method: 'DELETE' }); return; }
+    localRemove('banjoSpiritLanterns', l);
+  }
+  async function stillLooking(l) {
+    if (mode === 'live') { await api(`/api/lanterns/${l.id}/still-looking`, { method: 'POST' }); return; }
+    localEdit('banjoSpiritLanterns', l, { quietDays: 0 });
+  }
+  // Deliberately needs no account: the person asking to come off the trail is the one
+  // person who should never have to sign up to the site that is looking for them.
+  async function requestTakedown(l, reason) {
+    if (mode === 'live') { await api(`/api/lanterns/${l.id}/takedown`, { method: 'POST', body: JSON.stringify({ reason }) }); return; }
+  }
+  async function getTakedowns() {
+    if (mode !== 'live') return [];
+    try { const d = await api('/api/takedowns'); return d.takedowns; } catch (e) { return []; }
+  }
+  async function resolveTakedown(id) {
+    if (mode === 'live') await api(`/api/takedowns/${id}/resolve`, { method: 'POST' });
+  }
+
   // "mine" comes from the server; in the preview everything on this device counts as yours.
   const isMine = (item) => (mode === 'live' ? !!item.mine : true);
   const canRemove = (item) => isMine(item) || !!(user && user.isOwner);
@@ -120,6 +176,9 @@
     const css = document.createElement('style');
     css.textContent = `
       #bs-chip{position:fixed;top:14px;right:14px;z-index:40;font:13px/1.2 "Segoe UI",system-ui,sans-serif}
+      /* On phones the Share button moves to the top right corner, where it was sitting on
+         top of Sign in and swallowing the tap. Drop the account chip below it. */
+      @media (hover:none){ #bs-chip{top:58px} }
       #bs-chip button{cursor:pointer;font:inherit;border-radius:10px;padding:8px 12px;border:1px solid #5a3aa0;background:rgba(20,12,36,.8);color:#e9d4ff;backdrop-filter:blur(3px)}
       #bs-auth{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(6,4,12,.8);backdrop-filter:blur(3px);font-family:"Segoe UI",system-ui,sans-serif}
       #bs-auth .card{background:#130c24;border:1px solid #4a2f6e;border-radius:16px;padding:22px;width:min(400px,92vw);color:#efe6ff}
@@ -396,6 +455,8 @@
 
   window.BS = { init, getTrees, addTree, getStars, addStar, login, register, logout, ensureAuth, injectShare,
     updateTree, removeTree, updateStar, removeStar, isMine, canRemove, minePanel,
+    getLanterns, addLantern, updateLantern, removeLantern, stillLooking,
+    requestTakedown, getTakedowns, resolveTakedown,
     get user() { return user; }, get mode() { return mode; } };
 
   // Share/invite widget appears on every page that loads this script, no init needed.

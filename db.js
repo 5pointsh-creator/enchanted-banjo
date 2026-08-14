@@ -53,6 +53,38 @@ async function migrate() {
     ALTER TABLE trees ADD COLUMN IF NOT EXISTS song TEXT;
     ALTER TABLE stars ADD COLUMN IF NOT EXISTS song TEXT;
   `);
+  // The lantern trail: people looking for someone who is still alive.
+  // There is no x/z here on purpose. Lanterns are never scattered - each one takes the
+  // next place along the trail, so the walk is always lit and the trail grows outwards
+  // as people arrive. seq decides where it stands, and the world works it out from that.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS lanterns (
+      id           SERIAL PRIMARY KEY,
+      owner_id     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      seq          INTEGER NOT NULL,
+      name         TEXT,
+      relation     TEXT,
+      age_now      TEXT,
+      last_area    TEXT,
+      lost_year    TEXT,
+      note         TEXT,
+      status       TEXT NOT NULL DEFAULT 'looking',
+      confirmed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS lanterns_seq_idx ON lanterns (seq);
+  `);
+  // Somebody who is not lost - who left, and does not want finding - must be able to say
+  // so without needing an account. The request lands here and the site owner sees it.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS takedowns (
+      id         SERIAL PRIMARY KEY,
+      lantern_id INTEGER REFERENCES lanterns(id) ON DELETE CASCADE,
+      reason     TEXT,
+      resolved   BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
   // somewhere durable to keep the session signing key, so it survives a redeploy
   await pool.query(`
     CREATE TABLE IF NOT EXISTS settings (
