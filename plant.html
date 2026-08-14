@@ -44,12 +44,16 @@
   .pad button{width:58px;height:58px;margin:3px;border-radius:50%;border:1px solid #4a2f6e;
        background:rgba(36,20,54,.7);color:#d9c7ff;font-size:20px;backdrop-filter:blur(3px)}
   .row{display:flex;justify-content:center}
-  .banjo-prompt{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:8;
+  .banjo-prompt{position:fixed;left:50%;bottom:122px;transform:translateX(-50%);z-index:8;
        background:rgba(140,80,255,.9);padding:10px 20px;border-radius:999px;font-size:14px;
        opacity:0;transition:opacity .3s;pointer-events:none;text-shadow:none}
   @media (hover:none){ .pad{display:block} .help{display:none}
     /* keep the Plant button clear of the walk pads in the bottom corners */
-    #plantBtn{bottom:150px !important} #plantHint{bottom:206px !important} }
+    #plantBtn{bottom:150px !important} #plantHint{bottom:206px !important}
+    /* and stack the prompts above it, or they land on top of the pads and each other:
+       banjo lowest, then the way through to Paper Valley */
+    .banjo-prompt{bottom:290px}
+    #gateHint{bottom:346px !important} #crossPrompt{bottom:346px !important} }
 </style>
 </head>
 <body>
@@ -80,8 +84,15 @@
      background:rgba(30,24,16,.74);border:1px solid #6b5326;border-radius:12px;padding:9px 14px;color:#e3ce9d;
      font-size:13px;backdrop-filter:blur(3px)">🏮 Paper Valley</a>
 
+  <!-- Shown once you are deep enough to see the two lanterns burning in the treeline, so
+       the walk has something telling you it leads somewhere. -->
+  <div id="gateHint" style="position:fixed;left:50%;bottom:176px;transform:translateX(-50%);z-index:9;
+     display:none;pointer-events:none;text-align:center;background:rgba(24,18,10,.8);
+     border:1px solid #6b5326;border-radius:12px;padding:9px 16px;color:#e3ce9d;font-size:13px">
+     🏮 There are lights in the trees ahead — keep walking</div>
+
   <!-- Appears when you reach the far treeline. The two worlds are joined by a walk, not a menu. -->
-  <a href="paper-valley.html" id="crossPrompt" style="position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:9;
+  <a href="paper-valley.html" id="crossPrompt" style="position:fixed;left:50%;bottom:176px;transform:translateX(-50%);z-index:9;
      display:none;pointer-events:auto;text-decoration:none;text-align:center;background:rgba(24,18,10,.92);
      border:1px solid #8a6a2a;border-radius:14px;padding:12px 20px;color:#f0dcae;font-size:14px;
      box-shadow:0 0 30px rgba(255,170,70,.25)">
@@ -305,7 +316,10 @@ ring.position.copy(BANJO_POS); scene.add(ring);
 // ---------- the far treeline ----------
 // The way through to Paper Valley. Deliberately not a button: you walk to the end of
 // this forest, the trees go black, and there is a lit gap with two lanterns burning in it.
-const TREELINE_Z = -140;
+// It sits just past the banjo rather than far beyond it, and the lanterns are bright enough
+// to be seen from the clearing - a walk nobody can find is the same as no walk at all.
+const TREELINE_Z = -104;
+const gateGlows = [];
 (function buildTreeline(){
   const wall = new THREE.Mesh(new THREE.PlaneGeometry(130, 34),
     new THREE.MeshBasicMaterial({color:0x05030a, transparent:true, opacity:.96}));
@@ -318,6 +332,17 @@ const TREELINE_Z = -140;
     if(Math.abs(x) < 7) continue;                         // leave the gap you walk through
     cone.position.set(x, 4.5*s, TREELINE_Z + 1.4); scene.add(cone);
   }
+  // a warm halo that carries: this is what you spot from the clearing and walk towards
+  const halo = (function(){
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    const g = cv.getContext('2d');
+    const grd = g.createRadialGradient(64,64,0,64,64,64);
+    grd.addColorStop(0,'rgba(255,255,255,1)');
+    grd.addColorStop(0.28,'rgba(255,215,150,0.7)');
+    grd.addColorStop(1,'rgba(255,170,80,0)');
+    g.fillStyle = grd; g.fillRect(0,0,128,128);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+  })();
   for(const sx of [-6.5, 6.5]){                           // two lanterns marking the gap
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 3.4, 6),
       new THREE.MeshStandardMaterial({color:0x241d14, roughness:1}));
@@ -325,11 +350,17 @@ const TREELINE_Z = -140;
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 10),
       new THREE.MeshBasicMaterial({color:0xffd9a0}));
     lamp.position.set(sx, 3.5, TREELINE_Z + 2.5); scene.add(lamp);
-    const gl = new THREE.PointLight(0xffb457, 4, 20, 2);
+    const gl = new THREE.PointLight(0xffb457, 9, 55, 2);
     gl.position.copy(lamp.position); scene.add(gl);
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: halo, color: 0xffb457, transparent:true,
+      blending: THREE.AdditiveBlending, depthWrite:false, fog:false }));
+    glow.position.copy(lamp.position); glow.scale.setScalar(9); scene.add(glow);
+    gateGlows.push(glow);
   }
 })();
 const crossPrompt = document.getElementById('crossPrompt');
+const gateHint = document.getElementById('gateHint');
 
 // ---------- controls ----------
 const keys = {};
@@ -714,6 +745,11 @@ function animate(){
   // walked far enough into the woods to find the way through to Paper Valley
   const nearGap = camera.position.z < TREELINE_Z + 34 && Math.abs(camera.position.x) < 26;
   crossPrompt.style.display = (started && nearGap && !playMode) ? 'block' : 'none';
+  // and before that, once past the banjo, a nudge that the lights down there mean something
+  const seesGate = !nearGap && camera.position.z < -46 && Math.abs(camera.position.x) < 40;
+  gateHint.style.display = (started && seesGate && !playMode) ? 'block' : 'none';
+  // the gate lanterns breathe, which is what catches your eye from back in the clearing
+  for(const g of gateGlows) g.scale.setScalar(9 + Math.sin(t*1.6)*1.6);
 
   renderer.render(scene, camera);
 }
