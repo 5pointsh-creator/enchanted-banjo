@@ -96,8 +96,8 @@
      display:none;pointer-events:auto;text-decoration:none;text-align:center;background:rgba(24,18,10,.92);
      border:1px solid #8a6a2a;border-radius:14px;padding:12px 20px;color:#f0dcae;font-size:14px;
      box-shadow:0 0 30px rgba(255,170,70,.25)">
-     🏮 There is a path into Paper Valley<br>
-     <span style="opacity:.7;font-size:12px">in hopes of reconnecting with the ones we never forgot — tap to cross</span></a>
+     🏮 Keep walking to cross into Paper Valley<br>
+     <span style="opacity:.7;font-size:12px">in hopes of reconnecting with the ones we never forgot — or tap here</span></a>
 
   <button id="plantBtn" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;
      pointer-events:auto;cursor:pointer;border:1px solid #7a3cff;border-radius:14px;font:inherit;font-size:15px;
@@ -364,6 +364,7 @@ const gateGlows = [];
   }
 })();
 const crossPrompt = document.getElementById('crossPrompt');
+let crossHold = 0;   // how long you have been pushing forward against the treeline
 const gateHint = document.getElementById('gateHint');
 
 // ---------- controls ----------
@@ -758,6 +759,22 @@ function animate(){
   // of the forest, and being shown a dead end there is exactly how this got missed twice.
   const nearGap = camera.position.z < TREELINE_Z + 34;
   crossPrompt.style.display = (started && nearGap && !playMode) ? 'block' : 'none';
+
+  // You cross by WALKING, not by finding a link to tap. Keep pushing forward once the
+  // forest has stopped you and you go through - which is what walking into a gap in the
+  // trees should do. Tapping the banner still works for anyone who reads it first.
+  const atEnd = camera.position.z <= TREELINE_Z + 18.4;
+  const pushing = !!(keys['w'] || keys['arrowup'] || move.f);
+  if(started && nearGap && atEnd && pushing && !playMode){
+    crossHold += dt;
+    crossPrompt.style.borderColor = '#ffcf8a';
+    crossPrompt.style.boxShadow = `0 0 ${20 + crossHold*40}px rgba(255,190,90,${0.3 + crossHold*0.5})`;
+    if(crossHold > 1.1){ crossHold = 0; location.href = 'paper-valley.html'; return; }
+  } else {
+    crossHold = 0;
+    crossPrompt.style.borderColor = '#8a6a2a';
+    crossPrompt.style.boxShadow = '0 0 30px rgba(255,170,70,.25)';
+  }
   // and before that, once past the banjo, a nudge that the lights down there mean something
   const seesGate = !nearGap && camera.position.z < -30;
   gateHint.style.display = (started && seesGate && !playMode) ? 'block' : 'none';
