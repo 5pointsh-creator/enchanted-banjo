@@ -382,14 +382,22 @@ scene.add(sky);
 // above it and he is over the whole valley.
 const rabbitSky = new THREE.Group();
 (function buildRabbitConstellation(){
-  // outline traced anticlockwise: haunch, back, ears, head, chest, front paw, tail
+  // A rabbit sitting in profile, facing left: nose, up over the forehead, both ears, down
+  // the back to the rump and tail, along the underside and back up the chest to the throat.
+  // Traced as an actual animal rather than a scatter of points - the shape has to land on
+  // somebody who has never been told what they are looking at.
   const OUTLINE = [
-    [-46,-14],[-38,-24],[-24,-27],[-10,-24],[-2,-16],[4,-4],[2,10],[-2,22],
-    [4,26],[10,14],[14,2],[22,-2],[30,2],[34,10],[32,20],[28,26],
-    [34,22],[38,12],[40,0],[36,-10],[26,-16],[12,-20],[0,-22],[-14,-30],
-    [-30,-32],[-44,-26],[-52,-16],[-54,-4],[-48,-2],[-46,-14],
+    [-46, 8], [-42, 18], [-36, 23],            // nose, muzzle, forehead
+    [-33, 40], [-31, 58], [-25, 60], [-24, 34],  // near ear, up and back down
+    [-18, 32], [-12, 52], [-5, 54], [-8, 28],    // far ear
+    [-1, 22], [12, 20], [24, 10],              // neck and along the back
+    [34, -4], [38, -16],                        // rump
+    [46, -12], [48, -20], [40, -24],           // tail
+    [28, -30], [12, -33], [-4, -33],           // underside
+    [-18, -31], [-30, -26],                    // front leg
+    [-40, -14], [-47, -2], [-46, 8],           // chest, throat, back to the nose
   ];
-  const EYE = [26, 6];
+  const EYE = [-34, 16];
   const SCALE = 8.6, LIFT = 640, DEPTH = -880;
   const toWorld = ([x,y]) => new THREE.Vector3(x*SCALE, LIFT + y*SCALE, DEPTH);
 
@@ -402,6 +410,38 @@ const rabbitSky = new THREE.Group();
     grd.addColorStop(1,'rgba(255,60,60,0)');
     g.fillStyle = grd; g.fillRect(0,0,64,64);
     const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+  })();
+
+  // A very faint wash inside the outline. Stars alone read as red dots to anyone who has
+  // not been staring at them for an hour - this is dim enough to still be a constellation,
+  // strong enough that the shape lands before you have worked it out.
+  (function silhouette(){
+    const W = 512, H = 512, PAD = 8;
+    const xs = OUTLINE.map(p=>p[0]), ys = OUTLINE.map(p=>p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    const sx = (W - PAD*2) / (maxX - minX), sy = (H - PAD*2) / (maxY - minY);
+    g.beginPath();
+    OUTLINE.forEach(([x,y], i)=>{
+      const px = PAD + (x - minX)*sx;
+      const py = H - (PAD + (y - minY)*sy);           // canvas y runs the other way
+      i ? g.lineTo(px, py) : g.moveTo(px, py);
+    });
+    g.closePath();
+    g.fillStyle = 'rgba(255,60,60,0.5)'; g.fill();
+    g.filter = 'blur(6px)'; g.fill(); g.filter = 'none';
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+    const w = (maxX - minX) * SCALE, h = (maxY - minY) * SCALE;
+    const wash = new THREE.Mesh(
+      new THREE.PlaneGeometry(w * 1.06, h * 1.06),
+      new THREE.MeshBasicMaterial({ map: tx, transparent: true, opacity: 0.16,
+        depthWrite: false, blending: THREE.AdditiveBlending, fog: false })
+    );
+    wash.position.set(((minX + maxX)/2) * SCALE, LIFT + ((minY + maxY)/2) * SCALE, DEPTH - 6);
+    wash.userData.isWash = true;
+    rabbitSky.add(wash);
   })();
 
   // the joining lines, so it reads as a drawn shape and not scattered stars
@@ -571,6 +611,19 @@ function refreshTrees(ci, cj){
 
 // ---------- the mill, down the valley ----------
 // Only really visible from up on the ridge, once you are above the fog.
+const GLOW_TEX = (function(){
+  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+  const g = cv.getContext('2d');
+  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grd.addColorStop(0, 'rgba(255,255,255,1)');
+  grd.addColorStop(0.25, 'rgba(255,220,160,0.75)');
+  grd.addColorStop(1, 'rgba(255,180,90,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+})();
+
+const MILL_AT = { x: 34, z: -72 };
+const MILL_DOOR = { x: 28, z: -60 };
 const mill = new THREE.Group();
 (function buildMill(){
   const body = new THREE.Mesh(new THREE.BoxGeometry(26, 13, 16),
@@ -591,9 +644,31 @@ const mill = new THREE.Group();
     w.position.set(-11 + cwin*2.6, 3.4 + r*3.6, 8.05); mill.add(w);
   }
   const glow = new THREE.PointLight(0xff9a3c, 9, 90, 2); glow.position.set(0, 9, 10); mill.add(glow);
-  mill.position.set(64, heightAt(64, -150), -150);
-  mill.rotation.y = -0.5;
+  // A halo that carries through the fog, so the mill is something you SPOT from the trail
+  // rather than something you have to already know about and walk a long way to find.
+  const millHalo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: GLOW_TEX, color: 0xff9436, transparent:true,
+    blending: THREE.AdditiveBlending, depthWrite:false, fog:false }));
+  millHalo.position.set(0, 10, 9); millHalo.scale.setScalar(26); mill.add(millHalo);
+  mill.position.set(MILL_AT.x, heightAt(MILL_AT.x, MILL_AT.z), MILL_AT.z);
+  mill.rotation.y = -0.62;
   scene.add(mill);
+
+  // lanterns down the short path from the trail to the door, so the way is obvious
+  for(let i=0;i<5;i++){
+    const f = i/4;
+    const px = trailX(MILL_AT.z + 26) + (MILL_DOOR.x - trailX(MILL_AT.z + 26))*f;
+    const pz = (MILL_AT.z + 26) + (MILL_DOOR.z - (MILL_AT.z + 26))*f;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 2.6, 6),
+      new THREE.MeshStandardMaterial({color:0x241d14, roughness:1}));
+    post.position.set(px, heightAt(px, pz) + 1.3, pz); scene.add(post);
+    const lamp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: GLOW_TEX, color: 0xffb457, transparent:true,
+      blending: THREE.AdditiveBlending, depthWrite:false, fog:true }));
+    lamp.position.set(px, heightAt(px, pz) + 2.7, pz); lamp.scale.setScalar(3.4); scene.add(lamp);
+    const pl = new THREE.PointLight(0xffb457, 2.6, 16, 2);
+    pl.position.copy(lamp.position); scene.add(pl);
+  }
 })();
 
 // ---------- lanterns ----------
@@ -639,17 +714,6 @@ function wrap(g,text,x,y,maxW,lh,maxLines){
   }
   g.fillText(line,x,yy);
 }
-
-const GLOW_TEX = (function(){
-  const cv = document.createElement('canvas'); cv.width = cv.height = 128;
-  const g = cv.getContext('2d');
-  const grd = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  grd.addColorStop(0, 'rgba(255,255,255,1)');
-  grd.addColorStop(0.25, 'rgba(255,220,160,0.75)');
-  grd.addColorStop(1, 'rgba(255,180,90,0)');
-  g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
-  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
-})();
 
 // A lantern nobody has confirmed in a long time burns lower. It is never put out, and
 // the number it fades by is only ever the real one from the database.
@@ -1135,7 +1199,6 @@ let fireFlame = null, fireLight = null;
 
 // You go into both by walking, the same way you crossed the treeline - one verb for the
 // whole site, because being asked to tap a banner is what stranded him three times.
-const MILL_DOOR = { x: 64 - Math.sin(-0.5)*0, z: -150 + 18 };
 let placeHold = 0, activePlace = null;
 const placeHint = F('placeHint');
 placeHint.onclick = ()=>{ if(activePlace) enterPlace(activePlace); };
@@ -1154,19 +1217,30 @@ function updatePlaces(dt){
 
   const dFire = Math.hypot(camera.position.x - FIRE_POS.x, camera.position.z - FIRE_POS.z);
   const dMill = Math.hypot(camera.position.x - MILL_DOOR.x, camera.position.z - MILL_DOOR.z);
+  // Two different distances for the mill: near enough to notice it from the trail, and
+  // near enough to walk in. Otherwise you pass it every time without ever being told.
   let which = null;
   if(dFire < 9) which = 'fire';
-  else if(dMill < 26) which = 'mill';
+  else if(dMill < 38) which = 'mill';
 
   activePlace = which;
   if(!which){ placeHint.style.display='none'; placeHold=0; return; }
-  placeHint.style.display = 'block';
-  placeHint.innerHTML = which === 'fire'
-    ? '🔥 Sit at the campfire<br><span style="opacity:.7;font-size:12px">keep walking towards it — or tap here</span>'
-    : '🏚️ Go inside the mill<br><span style="opacity:.7;font-size:12px">where the reunions are kept — keep walking, or tap here</span>';
 
   const pushing = !!(keys['w'] || keys['arrowup'] || move.f);
-  const close = which === 'fire' ? dFire < 4.6 : dMill < 15;
+  const close = which === 'fire' ? dFire < 4.6 : dMill < 16;
+
+  // Only say "keep walking" when walking forward will actually get you there. From back on
+  // the trail it points you at it instead, because straight ahead takes you past it.
+  placeHint.style.display = 'block';
+  if(which === 'fire'){
+    placeHint.innerHTML = close
+      ? '🔥 Sit at the campfire<br><span style="opacity:.7;font-size:12px">keep walking — or tap here</span>'
+      : '🔥 There is a campfire<br><span style="opacity:.7;font-size:12px">walk over to it — or tap here</span>';
+  } else {
+    placeHint.innerHTML = close
+      ? '🏚️ Go inside the mill<br><span style="opacity:.7;font-size:12px">where the reunions are kept — keep walking, or tap here</span>'
+      : '🏚️ The mill is over there<br><span style="opacity:.7;font-size:12px">follow the lanterns to its door — or tap here</span>';
+  }
   if(pushing && close){
     placeHold += dt;
     placeHint.style.boxShadow = `0 0 ${20 + placeHold*40}px rgba(255,190,90,${0.3 + placeHold*0.5})`;
@@ -1374,6 +1448,8 @@ function animate(){
       s.material.opacity = skyClear * (s.userData.isEye ? 1 : 0.95) * tw;
     } else if(s.isLine){
       s.material.opacity = skyClear * 0.42;
+    } else if(s.userData.isWash){
+      s.material.opacity = skyClear * 0.13;
     }
   }
 
