@@ -74,6 +74,49 @@ async function migrate() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS lanterns_seq_idx ON lanterns (seq);
   `);
+  // What somebody walking past knows, said out loud beside the lantern. Public, because
+  // half of what helps a search is other people's half-memories arguing with each other.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS lantern_comments (
+      id         SERIAL PRIMARY KEY,
+      lantern_id INTEGER NOT NULL REFERENCES lanterns(id) ON DELETE CASCADE,
+      author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      body       TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS lantern_comments_lantern_idx ON lantern_comments (lantern_id);
+  `);
+  // And what they would rather not say in public. This is what replaces posting your own
+  // social media on a page anyone can read: the message comes here, and only the person
+  // searching sees it. They decide afterwards whether to hand over anything else.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS lantern_tips (
+      id         SERIAL PRIMARY KEY,
+      lantern_id INTEGER NOT NULL REFERENCES lanterns(id) ON DELETE CASCADE,
+      author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      body       TEXT NOT NULL,
+      contact    TEXT,
+      read_at    TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS lantern_tips_lantern_idx ON lantern_tips (lantern_id);
+  `);
+  // When a search actually ends well. Kept apart from the lantern so the story survives
+  // even after the lantern itself is taken down.
+  await pool.query(`
+    ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS found_at TIMESTAMPTZ;
+    ALTER TABLE lanterns ADD COLUMN IF NOT EXISTS found_note TEXT;
+  `);
+  // The campfire: what people have learned about searching, left for whoever comes next.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS campfire_notes (
+      id         SERIAL PRIMARY KEY,
+      fire       TEXT NOT NULL DEFAULT 'general',
+      author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      body       TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
   // Somebody who is not lost - who left, and does not want finding - must be able to say
   // so without needing an account. The request lands here and the site owner sees it.
   await pool.query(`

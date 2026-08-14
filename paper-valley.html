@@ -42,7 +42,9 @@
        background:rgba(30,26,20,.7);color:#e0d3b8;font-size:20px;backdrop-filter:blur(3px)}
   .row{display:flex;justify-content:center}
   @media (hover:none){ .pad{display:block} .help{display:none}
-    #hangBtn{bottom:150px !important} #hangHint{bottom:206px !important} }
+    #hangBtn{bottom:150px !important} #hangHint{bottom:206px !important}
+    /* the mill / campfire prompt sits above both, never on the walk pads */
+    #placeHint{bottom:266px !important} }
 
   .side{position:fixed;left:16px;z-index:8;pointer-events:auto;text-decoration:none;
         background:rgba(28,24,18,.74);border:1px solid #4a4238;border-radius:12px;padding:9px 14px;
@@ -95,6 +97,14 @@
 
   <a class="side" style="top:56px" href="plant.html">🌲 Back to the memorial forest</a>
   <a class="side" style="top:96px" href="sky.html">✨ Look up at the sky</a>
+  <button class="side" id="findBtn" style="top:136px;cursor:pointer;font:inherit">🔎 Find someone</button>
+  <button class="side" id="inboxBtn" style="top:176px;cursor:pointer;font:inherit;display:none">✉️ Messages</button>
+
+  <!-- shown when you walk up to the mill or the fire; you go in by walking, same as the treeline -->
+  <div id="placeHint" style="position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:9;
+     display:none;pointer-events:auto;cursor:pointer;text-align:center;background:rgba(24,18,10,.92);
+     border:1px solid #8a6a2a;border-radius:14px;padding:12px 20px;color:#f0dcae;font-size:14px;
+     box-shadow:0 0 30px rgba(255,170,70,.25)"></div>
 
   <button id="hangBtn" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9;
      pointer-events:auto;cursor:pointer;border:1px solid #c8842f;border-radius:14px;font:inherit;font-size:15px;
@@ -152,6 +162,26 @@
     </div>
   </div>
 
+  <!-- find someone -->
+  <div class="sheet" id="findForm">
+    <div class="card">
+      <h3>Find someone 🔎</h3>
+      <p class="sub">Type a name and the rabbit will take you to their lantern. Leave the
+        name blank and use the boxes below to see everyone from one place or one year.</p>
+      <label>Name</label>
+      <input id="qName" maxlength="60" placeholder="Danny, or Reece, or Danny Reece">
+      <div class="two">
+        <div><label>Town or area</label><input id="qArea" maxlength="60" placeholder="Corbin"></div>
+        <div><label>Year contact was lost</label><input id="qYear" maxlength="12" placeholder="1998"></div>
+      </div>
+      <div id="qResults" style="margin-top:14px"></div>
+      <div class="acts">
+        <button id="qClose">Close</button>
+        <button class="go" id="qGo">Search</button>
+      </div>
+    </div>
+  </div>
+
   <!-- read a scroll -->
   <div class="sheet" id="reader">
     <div class="card">
@@ -159,9 +189,24 @@
       <div id="rRel"></div>
       <div class="facts" id="rFacts"></div>
       <div id="rNote"></div>
+      <div id="rFound" style="display:none;margin-top:12px;padding:11px 13px;border-radius:10px;
+           background:#1b1708;border:1px solid #6b5a1c;font-size:14px;line-height:1.6"></div>
       <div class="quiet" id="rQuiet"></div>
+
+      <div id="rComments" style="margin-top:16px;border-top:1px solid #302a22;padding-top:14px">
+        <div style="font-size:13px;opacity:.75;margin-bottom:8px" id="rCommentsTitle">What people know</div>
+        <div id="rCommentList"></div>
+        <textarea id="rCommentBox" maxlength="600" rows="2"
+          placeholder="I knew him in Corbin around 1998…"></textarea>
+        <div class="acts" style="margin-top:8px">
+          <button id="rCommentSend">Add what you know</button>
+        </div>
+      </div>
+
       <div class="acts">
+        <button id="rTip" style="display:none">I have information</button>
         <button id="rShare">Share this lantern</button>
+        <button id="rFoundBtn" style="display:none">They've been found</button>
         <button id="rStill" style="display:none">Still looking</button>
         <button id="rEdit" style="display:none">Edit</button>
         <button id="rRemove" class="del" style="display:none">Take down</button>
@@ -170,6 +215,87 @@
       <div class="quiet">
         Is this about you, and you would rather not be here?
         <a href="#" id="rMe" style="color:#ffcf8a">Ask for this lantern to be taken down</a>.
+      </div>
+    </div>
+  </div>
+
+  <!-- I have information (private) -->
+  <div class="sheet" id="tipForm">
+    <div class="card">
+      <h3>I have information</h3>
+      <p class="sub">This goes only to the person searching. Nobody else sees it, and it is
+        not posted on the lantern. If you would rather say it in the open, close this and use
+        "what people know" instead.</p>
+      <label>What do you know?</label>
+      <textarea id="tBody" maxlength="1200" rows="5" placeholder="Where you knew them, when, anything you remember."></textarea>
+      <label>How they can reach you back (optional)</label>
+      <input id="tContact" maxlength="200" placeholder="Only if you want to - they'll see this">
+      <div class="warn">
+        Never send money to anybody who contacts you through this site, and never be asked for
+        it. If someone offers to find a person for a fee, that is a scam. Tell the site owner.
+      </div>
+      <div class="err" id="tErr"></div>
+      <div class="acts">
+        <button id="tCancel">Cancel</button>
+        <button class="go" id="tSend">Send it</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- your messages -->
+  <div class="sheet" id="inbox">
+    <div class="card">
+      <h3>Messages about your searches</h3>
+      <p class="sub">People who walked past your lantern and knew something.</p>
+      <div id="inboxList"></div>
+      <div class="acts"><button class="go" id="inboxClose">Close</button></div>
+    </div>
+  </div>
+
+  <!-- they've been found -->
+  <div class="sheet" id="foundForm">
+    <div class="card">
+      <h3>They've been found 🕯️</h3>
+      <p class="sub">Their lantern turns gold and stays lit, and the story goes in the mill
+        where people can read it. That is the thing that makes anyone else believe this works.</p>
+      <label>What happened? (optional, but it's the part people read)</label>
+      <textarea id="fdNote" maxlength="600" rows="4" placeholder="Someone walking past recognised the name. We spoke last Tuesday, first time in 22 years."></textarea>
+      <div class="err" id="fdErr"></div>
+      <div class="acts">
+        <button id="fdCancel">Not yet</button>
+        <button class="go" id="fdSave">They've been found</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- inside the mill: the reunions -->
+  <div class="sheet" id="millSheet">
+    <div class="card">
+      <h3>Inside the mill</h3>
+      <p class="sub">The searches that ended. This is the only room here that isn't sad.</p>
+      <div id="millList"></div>
+      <div class="acts"><button class="go" id="millClose">Back outside</button></div>
+    </div>
+  </div>
+
+  <!-- the campfire -->
+  <div class="sheet" id="fireSheet">
+    <div class="card">
+      <h3>The campfire 🔥</h3>
+      <p class="sub">Not for posting about who you're looking for - that's the trail. This is
+        where people who are searching leave what they've learned about searching. Take one,
+        leave one.</p>
+      <div id="fireList"></div>
+      <textarea id="fireBox" maxlength="600" rows="3"
+        placeholder="What you wish someone had told you when you started. Which records you can ask for, what a DNA test does and doesn't tell you, how to approach someone who might not want to be found."></textarea>
+      <div class="warn">
+        Nobody at this fire should ever ask you for money. If they do, it's a scam - tell the
+        site owner and it comes down.
+      </div>
+      <div class="err" id="fireErr"></div>
+      <div class="acts">
+        <button id="fireClose">Leave the fire</button>
+        <button class="go" id="fireSend">Leave what you know</button>
       </div>
     </div>
   </div>
@@ -249,6 +375,61 @@ const sky = new THREE.Mesh(
   })() })
 );
 scene.add(sky);
+
+// ---------- the rabbit in the stars ----------
+// Not a picture hung in the sky - a constellation, drawn the way people have always drawn
+// animals up there. Faint from the trail with the mist in the way; climb the ridge and get
+// above it and he is over the whole valley.
+const rabbitSky = new THREE.Group();
+(function buildRabbitConstellation(){
+  // outline traced anticlockwise: haunch, back, ears, head, chest, front paw, tail
+  const OUTLINE = [
+    [-46,-14],[-38,-24],[-24,-27],[-10,-24],[-2,-16],[4,-4],[2,10],[-2,22],
+    [4,26],[10,14],[14,2],[22,-2],[30,2],[34,10],[32,20],[28,26],
+    [34,22],[38,12],[40,0],[36,-10],[26,-16],[12,-20],[0,-22],[-14,-30],
+    [-30,-32],[-44,-26],[-52,-16],[-54,-4],[-48,-2],[-46,-14],
+  ];
+  const EYE = [26, 6];
+  const SCALE = 8.6, LIFT = 640, DEPTH = -880;
+  const toWorld = ([x,y]) => new THREE.Vector3(x*SCALE, LIFT + y*SCALE, DEPTH);
+
+  const starTex = (function(){
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const g = cv.getContext('2d');
+    const grd = g.createRadialGradient(32,32,0,32,32,32);
+    grd.addColorStop(0,'rgba(255,255,255,1)');
+    grd.addColorStop(0.3,'rgba(255,120,110,0.85)');
+    grd.addColorStop(1,'rgba(255,60,60,0)');
+    g.fillStyle = grd; g.fillRect(0,0,64,64);
+    const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+  })();
+
+  // the joining lines, so it reads as a drawn shape and not scattered stars
+  const pts = OUTLINE.map(toWorld);
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(pts),
+    new THREE.LineBasicMaterial({ color: 0xff4d4d, transparent: true, opacity: 0.34, fog: false })
+  );
+  rabbitSky.add(line);
+
+  OUTLINE.forEach((p, i) => {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: starTex, color: 0xff5a5a, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+    s.position.copy(toWorld(p));
+    s.scale.setScalar(i % 3 === 0 ? 34 : 23);
+    s.userData.twinkle = i * 1.7;
+    rabbitSky.add(s);
+  });
+
+  const eye = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: starTex, color: 0xff1a1a, transparent: true,
+    blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  eye.position.copy(toWorld(EYE)); eye.scale.setScalar(78); eye.userData.twinkle = 0.4;
+  eye.userData.isEye = true;
+  rabbitSky.add(eye);
+  scene.add(rabbitSky);
+})();
 
 function ridgeTexture(seed, height, shade, alpha){
   const cv = document.createElement('canvas'); cv.width = 2048; cv.height = 512;
@@ -368,6 +549,9 @@ function refreshTrees(ci, cj){
         if(Math.abs(x - trailX(z)) < 5) continue;        // keep the trail walkable
         const s = 0.7 + hash(i,j,k+80)*0.8;
         const y = heightAt(x, z);
+        // nothing grows on the tops. Climb above the treeline and the sky opens - which is
+        // what makes the ridge worth climbing, for the valley lights and for the rabbit.
+        if(y > 10.5) continue;
         dummy.position.set(x, y + 3.5*s, z); dummy.scale.set(s,s,s);
         dummy.rotation.set(0, hash(i,j,k+120)*6.28, 0); dummy.updateMatrix();
         trunks.setMatrixAt(n, dummy.matrix);
@@ -536,6 +720,81 @@ function clearLanterns(){
 }
 const reloadLanterns = () => { clearLanterns(); return loadLanterns(); };
 
+// ---------- the rabbit who takes you there ----------
+// Searching a dark valley for one name by walking is hopeless, so the rabbit does it.
+// You type a name, he turns up, and you follow him. It is the search and the mascot
+// doing one job, which is the only reason he is here at all.
+const rabbit = new THREE.Group();
+(function buildRabbit(){
+  const dark = new THREE.MeshStandardMaterial({color:0x0a0a0d, roughness:.95});
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 12), dark);
+  body.scale.set(1, 0.86, 1.35); body.position.y = 0.42; rabbit.add(body);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 14, 12), dark);
+  head.position.set(0, 0.72, -0.42); rabbit.add(head);
+  for(const sx of [-0.11, 0.11]){
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.075, 0.52, 7), dark);
+    ear.position.set(sx, 1.06, -0.44); ear.rotation.x = -0.16; rabbit.add(ear);
+  }
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8),
+    new THREE.MeshStandardMaterial({color:0x16161c, roughness:1}));
+  tail.position.set(0, 0.5, 0.5); rabbit.add(tail);
+  // the one red eye from the drawing
+  const eye = new THREE.Mesh(new THREE.SphereGeometry(0.062, 10, 10),
+    new THREE.MeshBasicMaterial({color:0xff2020}));
+  eye.position.set(0.19, 0.76, -0.56); rabbit.add(eye);
+  const eyeGlow = new THREE.PointLight(0xff2a2a, 1.6, 5, 2);
+  eyeGlow.position.copy(eye.position); rabbit.add(eyeGlow);
+  rabbit.visible = false;
+  scene.add(rabbit);
+})();
+
+// Where he is taking you, and how far along he is. The camera is carried with him rather
+// than left behind, because being led somewhere you cannot keep up with is worse than a list.
+let guide = null;   // { target, from, to, t, arrived }
+function sendRabbitTo(d){
+  const p = placeOf(d.seq);
+  const stand = { x: p.x + (trailX(p.z) - p.x > 0 ? -2.4 : 2.4), z: p.z + 6.5 };
+  guide = {
+    data: d,
+    from: { x: camera.position.x, z: camera.position.z },
+    to: stand,
+    t: 0,
+    dur: Math.max(2.6, Math.min(7, Math.hypot(stand.x - camera.position.x, stand.z - camera.position.z) / 14)),
+  };
+  rabbit.visible = true;
+  showHint('Follow the rabbit…', 4000);
+}
+function stopGuiding(){ guide = null; rabbit.visible = false; }
+
+function updateGuide(dt, t){
+  if(!guide) return;
+  guide.t = Math.min(1, guide.t + dt / guide.dur);
+  const e = guide.t < 0.5 ? 2*guide.t*guide.t : -1 + (4 - 2*guide.t)*guide.t;  // ease in/out
+  const x = guide.from.x + (guide.to.x - guide.from.x) * e;
+  const z = guide.from.z + (guide.to.z - guide.from.z) * e;
+  // the rabbit runs a little ahead of you, and hops
+  const ahead = 5.5 * (1 - guide.t*0.55);
+  const dx = guide.to.x - guide.from.x, dz = guide.to.z - guide.from.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const rx = x + dx/len*ahead, rz = z + dz/len*ahead;
+  rabbit.position.set(rx, heightAt(rx, rz) + Math.abs(Math.sin(t*7))*0.42, rz);
+  rabbit.rotation.y = Math.atan2(dx, dz) + Math.PI;
+
+  camera.position.x = x; camera.position.z = z;
+  const face = Math.atan2(rx - x, rz - z) + Math.PI;
+  let diff = ((face - yaw + Math.PI) % (Math.PI*2) + Math.PI*2) % (Math.PI*2) - Math.PI;
+  yaw += diff * Math.min(1, dt*3.5);
+  // and bring your eyes back down to him - if you were looking at the sky when you searched,
+  // being led by a rabbit you cannot see is just the screen moving on its own
+  pitch += (-0.06 - pitch) * Math.min(1, dt*3);
+
+  if(guide.t >= 1){
+    const d = guide.data;
+    stopGuiding();
+    openReader(d);
+  }
+}
+
 // ---------- controls ----------
 const keys = {};
 addEventListener('keydown', e=> keys[e.key.toLowerCase()] = true);
@@ -654,9 +913,17 @@ function openReader(d){
   F('rQuiet').textContent = quiet > 200
     ? 'Nobody has confirmed this search in a long while, so the lantern is burning low.'
     : '';
-  F('rStill').style.display = BS.isMine(d) ? 'inline-block' : 'none';
-  F('rEdit').style.display  = BS.isMine(d) ? 'inline-block' : 'none';
+  const mine = BS.isMine(d);
+  F('rFound').style.display = d.status === 'found' && d.foundNote ? 'block' : 'none';
+  if(d.status === 'found' && d.foundNote) F('rFound').textContent = '🕯️ ' + d.foundNote;
+  F('rStill').style.display = mine && d.status !== 'found' ? 'inline-block' : 'none';
+  F('rFoundBtn').style.display = mine && d.status !== 'found' ? 'inline-block' : 'none';
+  F('rTip').style.display = !mine ? 'inline-block' : 'none';
+  F('rEdit').style.display  = mine ? 'inline-block' : 'none';
   F('rRemove').style.display = BS.canRemove(d) ? 'inline-block' : 'none';
+  F('rFoundBtn').onclick = ()=>{ reader.style.display='none'; F('fdErr').textContent=''; F('fdNote').value=''; foundForm.style.display='flex'; };
+  F('rTip').onclick = ()=>{ reader.style.display='none'; F('tErr').textContent=''; tipForm.style.display='flex'; };
+  loadComments(d);
   F('rStill').onclick = async ()=>{
     try{ await BS.stillLooking(d); await reloadLanterns(); reader.style.display='none';
          showHint('Thank you - the lantern is burning bright again.'); }
@@ -693,6 +960,294 @@ F('mSend').onclick = async ()=>{
   meForm.style.display='none'; F('mReason').value='';
   showHint('Sent. The person who runs the site will look at it.', 5000);
 };
+
+// ---------- what people know ----------
+const tipForm = F('tipForm'), foundForm = F('foundForm'), findForm = F('findForm');
+const millSheet = F('millSheet'), fireSheet = F('fireSheet'), inbox = F('inbox');
+const fmtWhen = (iso)=>{ try{ return new Date(iso).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}); }catch(e){ return ''; } };
+
+async function loadComments(d){
+  const list = F('rCommentList');
+  list.innerHTML = '<div class="quiet">Loading…</div>';
+  let rows = [];
+  try{ rows = await BS.getComments(d); }catch(e){ rows = []; }
+  F('rCommentsTitle').textContent = rows.length
+    ? `What people know (${rows.length})`
+    : 'What people know';
+  if(!rows.length){
+    list.innerHTML = '<div class="quiet">Nobody has said anything yet. If you knew them, even a little, say so - half a memory is more than they have now.</div>';
+  } else {
+    list.innerHTML = '';
+    rows.forEach(c=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'border:1px solid #302a22;border-radius:10px;padding:10px 12px;margin-bottom:8px;background:#0b0a08';
+      row.innerHTML = `<div style="font-size:12px;opacity:.55;margin-bottom:5px"></div>
+        <div style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>`;
+      row.children[0].textContent = `${c.author || 'Someone'} · ${fmtWhen(c.created_at)}`;
+      row.children[1].textContent = c.body;
+      if(c.mine || (BS.user && BS.user.isOwner)){
+        const del = document.createElement('button');
+        del.textContent = 'Remove'; del.className = 'del';
+        del.style.cssText = 'margin-top:8px;cursor:pointer;font:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #6b3340;background:#241318;color:#ffb3b3';
+        del.onclick = async ()=>{ try{ await BS.removeComment(c, d); loadComments(d); }catch(e){ alert(e.message); } };
+        row.appendChild(del);
+      }
+      list.appendChild(row);
+    });
+  }
+}
+
+F('rCommentSend').onclick = async ()=>{
+  const d = lanternObjs[readingId] && lanternObjs[readingId].data;
+  const body = F('rCommentBox').value.trim();
+  if(!d || !body) return;
+  const ok = await BS.ensureAuth(); if(!ok) return;
+  try{
+    await BS.addComment(d, body);
+    F('rCommentBox').value = '';
+    await loadComments(d);
+    d.comments = (d.comments || 0) + 1;
+  }catch(e){ alert(e.message); }
+};
+
+F('tCancel').onclick = ()=>{ tipForm.style.display='none'; F('tBody').value=''; F('tContact').value=''; };
+F('tSend').onclick = async ()=>{
+  const d = lanternObjs[readingId] && lanternObjs[readingId].data;
+  const body = F('tBody').value.trim();
+  if(!body){ F('tErr').textContent = 'Please write what you know first.'; return; }
+  const ok = await BS.ensureAuth(); if(!ok) return;
+  try{
+    await BS.sendTip(d, body, F('tContact').value.trim());
+    tipForm.style.display='none'; F('tBody').value=''; F('tContact').value='';
+    showHint('Sent. Only the person searching will see it.', 5000);
+  }catch(e){ F('tErr').textContent = e.message; }
+};
+
+F('fdCancel').onclick = ()=>{ foundForm.style.display='none'; };
+F('fdSave').onclick = async ()=>{
+  const d = lanternObjs[readingId] && lanternObjs[readingId].data;
+  try{
+    await BS.markFound(d, F('fdNote').value.trim());
+    foundForm.style.display='none';
+    await reloadLanterns();
+    showHint('Their lantern is gold now, and the story is in the mill.', 6000);
+  }catch(e){ F('fdErr').textContent = e.message; }
+};
+
+// ---------- messages left for you ----------
+async function refreshInbox(){
+  const btn = F('inboxBtn');
+  let tips = [];
+  try{ tips = await BS.getTips(); }catch(e){ tips = []; }
+  const unread = tips.filter(t=>!t.read_at).length;
+  btn.style.display = tips.length ? 'block' : 'none';
+  btn.textContent = unread ? `✉️ Messages (${unread})` : '✉️ Messages';
+  return tips;
+}
+F('inboxBtn').onclick = async ()=>{
+  const tips = await refreshInbox();
+  const list = F('inboxList');
+  list.innerHTML = tips.length ? '' : '<div class="quiet">Nothing yet.</div>';
+  tips.forEach(t=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'border:1px solid #302a22;border-radius:10px;padding:11px 13px;margin-bottom:9px;background:#0b0a08';
+    row.innerHTML = `<div style="font-size:12px;opacity:.55;margin-bottom:5px"></div>
+      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>
+      <div style="font-size:13px;margin-top:8px;color:#ffcf8a"></div>`;
+    row.children[0].textContent = `About ${t.looking_for || 'your lantern'} · from ${t.author || 'someone'} · ${fmtWhen(t.created_at)}`;
+    row.children[1].textContent = t.body;
+    row.children[2].textContent = t.contact ? `They said you can reach them: ${t.contact}` : '';
+    list.appendChild(row);
+    BS.markTipRead(t);
+  });
+  inbox.style.display = 'flex';
+};
+F('inboxClose').onclick = ()=>{ inbox.style.display='none'; refreshInbox(); };
+
+// ---------- find someone ----------
+F('findBtn').onclick = ()=>{ findForm.style.display='flex'; F('qName').focus(); };
+F('qClose').onclick = ()=>{ findForm.style.display='none'; };
+F('qGo').onclick = runSearch;
+['qName','qArea','qYear'].forEach(id=> F(id).addEventListener('keydown', e=>{ if(e.key==='Enter') runSearch(); }));
+
+function runSearch(){
+  const name = F('qName').value.trim().toLowerCase();
+  const area = F('qArea').value.trim().toLowerCase();
+  const year = F('qYear').value.trim().toLowerCase();
+  const hits = lanternObjs.map(l=>l.data).filter(d=>{
+    if(name && !String(d.name||'').toLowerCase().includes(name)) return false;
+    if(area && !String(d.lastArea||'').toLowerCase().includes(area)) return false;
+    if(year && !String(d.lostYear||'').toLowerCase().includes(year)) return false;
+    return true;
+  });
+  const box = F('qResults');
+  if(!lanternObjs.length){
+    box.innerHTML = '<div class="quiet">There are no lanterns on the trail yet.</div>'; return;
+  }
+  if(!hits.length){
+    box.innerHTML = '<div class="quiet">Nobody by that name here. That is not nothing - it means you can be the one who hangs it.</div>';
+    return;
+  }
+  box.innerHTML = '';
+  hits.slice(0, 25).forEach(d=>{
+    const row = document.createElement('button');
+    row.style.cssText = 'display:block;width:100%;text-align:left;cursor:pointer;font:inherit;margin-bottom:8px;padding:11px 13px;border-radius:10px;border:1px solid #3a332a;background:#0b0a08;color:var(--cream)';
+    row.innerHTML = `<div style="font-weight:600"></div><div style="font-size:12px;opacity:.6;margin-top:3px"></div>`;
+    row.children[0].textContent = (d.status==='found' ? '🕯️ ' : '') + (d.name || 'Someone');
+    row.children[1].textContent = [d.relation, d.lastArea, d.lostYear && `since ${d.lostYear}`].filter(Boolean).join(' · ');
+    row.onclick = ()=>{ findForm.style.display='none'; sendRabbitTo(d); };
+    box.appendChild(row);
+  });
+  if(hits.length > 25) box.innerHTML += '<div class="quiet">Showing the first 25.</div>';
+}
+
+// ---------- the mill and the fire ----------
+const FIRE_POS = { x: trailX(-16) + 11, z: -16 };
+let fireFlame = null, fireLight = null;
+(function buildCampfire(){
+  const grp = new THREE.Group();
+  grp.position.set(FIRE_POS.x, heightAt(FIRE_POS.x, FIRE_POS.z), FIRE_POS.z);
+  for(let i=0;i<7;i++){                                  // sticks leaned into a cone
+    const st = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.09,1.5,5),
+      new THREE.MeshStandardMaterial({color:0x2b2118, roughness:1}));
+    const a = i/7*6.283;
+    st.position.set(Math.cos(a)*0.35, 0.55, Math.sin(a)*0.35);
+    st.rotation.set(Math.cos(a)*0.42, 0, Math.sin(a)*0.42);
+    grp.add(st);
+  }
+  fireFlame = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.1, 9),
+    new THREE.MeshBasicMaterial({color:0xffa63c}));
+  fireFlame.position.y = 0.75; grp.add(fireFlame);
+  const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: GLOW_TEX, color: 0xff8a2c, transparent:true,
+    blending: THREE.AdditiveBlending, depthWrite:false, fog:true }));
+  glow.position.y = 0.8; glow.scale.setScalar(5.5); grp.add(glow);
+  fireLight = new THREE.PointLight(0xff9436, 5.5, 26, 2);
+  fireLight.position.y = 1.0; grp.add(fireLight);
+  // two logs to sit on, so it reads as somewhere people stop rather than a bonfire
+  for(const [lx, lz, rot] of [[1.6,0.5,0.3],[-1.5,-0.9,-0.5]]){
+    const log = new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.26,2.2,7),
+      new THREE.MeshStandardMaterial({color:0x241c14, roughness:1}));
+    log.position.set(lx, 0.26, lz); log.rotation.set(0, rot, Math.PI/2); grp.add(log);
+  }
+  scene.add(grp);
+})();
+
+// You go into both by walking, the same way you crossed the treeline - one verb for the
+// whole site, because being asked to tap a banner is what stranded him three times.
+const MILL_DOOR = { x: 64 - Math.sin(-0.5)*0, z: -150 + 18 };
+let placeHold = 0, activePlace = null;
+const placeHint = F('placeHint');
+placeHint.onclick = ()=>{ if(activePlace) enterPlace(activePlace); };
+
+function enterPlace(which){
+  placeHold = 0;
+  if(which === 'mill') openMill();
+  else openFire();
+}
+
+function updatePlaces(dt){
+  if(!started || guide){ placeHint.style.display='none'; activePlace=null; return; }
+  const anySheetOpen = [reader, hangForm, meForm, findForm, tipForm, foundForm, millSheet, fireSheet, inbox]
+    .some(el => getComputedStyle(el).display !== 'none');
+  if(anySheetOpen){ placeHint.style.display='none'; activePlace=null; placeHold=0; return; }
+
+  const dFire = Math.hypot(camera.position.x - FIRE_POS.x, camera.position.z - FIRE_POS.z);
+  const dMill = Math.hypot(camera.position.x - MILL_DOOR.x, camera.position.z - MILL_DOOR.z);
+  let which = null;
+  if(dFire < 9) which = 'fire';
+  else if(dMill < 26) which = 'mill';
+
+  activePlace = which;
+  if(!which){ placeHint.style.display='none'; placeHold=0; return; }
+  placeHint.style.display = 'block';
+  placeHint.innerHTML = which === 'fire'
+    ? '🔥 Sit at the campfire<br><span style="opacity:.7;font-size:12px">keep walking towards it — or tap here</span>'
+    : '🏚️ Go inside the mill<br><span style="opacity:.7;font-size:12px">where the reunions are kept — keep walking, or tap here</span>';
+
+  const pushing = !!(keys['w'] || keys['arrowup'] || move.f);
+  const close = which === 'fire' ? dFire < 4.6 : dMill < 15;
+  if(pushing && close){
+    placeHold += dt;
+    placeHint.style.boxShadow = `0 0 ${20 + placeHold*40}px rgba(255,190,90,${0.3 + placeHold*0.5})`;
+    if(placeHold > 1.0) enterPlace(which);
+  } else {
+    placeHold = 0;
+    placeHint.style.boxShadow = '0 0 30px rgba(255,170,70,.25)';
+  }
+}
+
+async function openMill(){
+  const list = F('millList');
+  list.innerHTML = '<div class="quiet">Loading…</div>';
+  millSheet.style.display = 'flex';
+  let rows = [];
+  try{ rows = await BS.getReunions(); }catch(e){ rows = []; }
+  if(!rows.length){
+    list.innerHTML = '<div class="quiet">Nobody has been found yet. When somebody is, their story is kept in here, and it is the thing that will make the next person believe it is worth hanging a lantern.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  rows.forEach(r=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'border:1px solid #5c4415;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#171207';
+    row.innerHTML = `<div style="font-weight:600;color:#ffcf8a"></div>
+      <div style="font-size:12px;opacity:.6;margin:3px 0 8px"></div>
+      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>`;
+    row.children[0].textContent = '🕯️ ' + (r.name || 'Someone') + ' — found';
+    row.children[1].textContent = [r.relation, r.last_area, r.lost_year && `out of contact since ${r.lost_year}`].filter(Boolean).join(' · ');
+    row.children[2].textContent = r.found_note || '';
+    list.appendChild(row);
+  });
+}
+F('millClose').onclick = ()=>{ millSheet.style.display='none'; };
+
+async function openFire(){
+  const list = F('fireList');
+  list.innerHTML = '<div class="quiet">Loading…</div>';
+  F('fireErr').textContent = '';
+  fireSheet.style.display = 'flex';
+  await drawFire();
+}
+async function drawFire(){
+  const list = F('fireList');
+  let rows = [];
+  try{ rows = await BS.getCampfire(); }catch(e){ rows = []; }
+  if(!rows.length){
+    list.innerHTML = '<div class="quiet">Nothing left here yet. If you have been looking for someone a long time, you know things the person who arrives tomorrow does not.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  rows.forEach(n=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'border:1px solid #302a22;border-radius:10px;padding:11px 13px;margin-bottom:9px;background:#0b0a08';
+    row.innerHTML = `<div style="font-size:12px;opacity:.55;margin-bottom:5px"></div>
+      <div style="font-size:14px;line-height:1.6;white-space:pre-wrap"></div>`;
+    row.children[0].textContent = `${n.author || 'Someone'} · ${fmtWhen(n.created_at)}`;
+    row.children[1].textContent = n.body;
+    if(n.mine || (BS.user && BS.user.isOwner)){
+      const del = document.createElement('button');
+      del.textContent = 'Remove';
+      del.style.cssText = 'margin-top:8px;cursor:pointer;font:inherit;font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #6b3340;background:#241318;color:#ffb3b3';
+      del.onclick = async ()=>{ try{ await BS.removeCampfireNote(n); drawFire(); }catch(e){ alert(e.message); } };
+      row.appendChild(del);
+    }
+    list.appendChild(row);
+  });
+}
+F('fireClose').onclick = ()=>{ fireSheet.style.display='none'; F('fireBox').value=''; };
+F('fireSend').onclick = async ()=>{
+  const body = F('fireBox').value.trim();
+  if(!body){ F('fireErr').textContent = 'Write what you have learned first.'; return; }
+  const ok = await BS.ensureAuth(); if(!ok) return;
+  try{
+    await BS.addCampfireNote(body);
+    F('fireBox').value=''; F('fireErr').textContent='';
+    await drawFire();
+  }catch(e){ F('fireErr').textContent = e.message; }
+};
+
+// ---------- your own lanterns ----------
 
 // ---------- your own lanterns ----------
 const minePanel = BS.minePanel({
@@ -781,13 +1336,14 @@ function animate(){
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
-  if(started){
+  if(started && !guide){
     const speed = 12*dt;
     const fwd = ((keys['w']||keys['arrowup']||move.f)?1:0) - ((keys['s']||keys['arrowdown']||move.b)?1:0);
     const strafe = ((keys['d']||keys['arrowright']||move.r)?1:0) - ((keys['a']||keys['arrowleft']||move.l)?1:0);
     camera.position.x += (Math.sin(yaw)*-fwd + Math.cos(yaw)*strafe)*speed;
     camera.position.z += (Math.cos(yaw)*-fwd - Math.sin(yaw)*strafe)*speed;
   }
+  updateGuide(dt, t);
   // your feet stay on the ground, ridge or valley floor
   const gh = heightAt(camera.position.x, camera.position.z);
   camera.position.y += (gh + 1.7 - camera.position.y) * Math.min(1, dt*8);
@@ -808,6 +1364,18 @@ function animate(){
   // the horizon travels with you; only the height is fixed, so hills stay hills
   sky.position.set(camera.position.x, 0, camera.position.z);
   ridges.position.set(camera.position.x, 0, camera.position.z);
+  rabbitSky.position.set(camera.position.x, 0, camera.position.z);
+
+  // He burns through as you climb out of the mist, which is the whole reason to go up.
+  const skyClear = Math.min(1, Math.max(0.3, (camera.position.y - 1) / 9));
+  for(const s of rabbitSky.children){
+    if(s.isSprite){
+      const tw = 0.82 + Math.sin(t*1.4 + s.userData.twinkle)*0.18;
+      s.material.opacity = skyClear * (s.userData.isEye ? 1 : 0.95) * tw;
+    } else if(s.isLine){
+      s.material.opacity = skyClear * 0.42;
+    }
+  }
 
   for(const l of lanternObjs){
     l.scroll.lookAt(camera.position.x, l.scroll.getWorldPosition(new THREE.Vector3()).y, camera.position.z);
@@ -822,6 +1390,12 @@ function animate(){
     l.scroll.material.opacity = far < 26 ? 1 : Math.max(0.06, 1 - (far-26)/55);
   }
   maybeCreak(dt);
+  updatePlaces(dt);
+  if(fireFlame){
+    const f = 0.86 + Math.sin(t*9)*0.09 + Math.sin(t*17.3)*0.05;
+    fireFlame.scale.set(f, 0.9 + f*0.22, f);
+    fireLight.intensity = 5.5*f;
+  }
 
   renderer.render(scene, camera);
 }
@@ -841,7 +1415,8 @@ camera.position.set(trailX(14), heightAt(trailX(14), 14) + 1.7, 14);
 refreshGround(0, 0); refreshTrees(0, 0);
 animate();
 
-BS.init().then(loadLanterns).then((arr)=>{
+BS.init().then(loadLanterns).then(async (arr)=>{
+  refreshInbox();
   // arriving from a shared link: walk straight to that lantern
   const want = new URLSearchParams(location.search).get('l');
   if(!want) return;

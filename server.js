@@ -71,6 +71,13 @@ const decorate = (row, me) => {
   const { owner_id, ...rest } = row;
   return { ...rest, mine: !!(me && owner_id && owner_id === me.id) };
 };
+// Comments and campfire notes record who wrote them, not who owns them, so they need
+// their own version - handing the first one `owner_id` quietly marks everything "not mine"
+// and the Remove button never appears on your own words.
+const decorateAuthored = (row, me) => {
+  const { author_id, ...rest } = row;
+  return { ...rest, mine: !!(me && author_id && author_id === me.id) };
+};
 
 // ---- auth routes ----
 app.post('/api/register', async (req, res) => {
@@ -211,11 +218,13 @@ app.get('/api/lanterns', async (req, res) => {
   const me = currentUser(req);
   const { rows } = await pool.query(
     `SELECT l.id,l.seq,l.name,l.relation,l.age_now,l.last_area,l.lost_year,l.note,l.status,
-            l.owner_id,u.display_name AS owner,
-            EXTRACT(EPOCH FROM (now()-l.confirmed_at))/86400 AS quiet_days
+            l.found_note,l.owner_id,u.display_name AS owner,
+            EXTRACT(EPOCH FROM (now()-l.confirmed_at))/86400 AS quiet_days,
+            (SELECT COUNT(*) FROM lantern_comments c WHERE c.lantern_id = l.id) AS comment_count
        FROM lanterns l LEFT JOIN users u ON u.id=l.owner_id ORDER BY l.seq`
   );
-  res.json({ lanterns: rows.map((r) => decorate({ ...r, quiet_days: Math.round(+r.quiet_days) }, me)) });
+  res.json({ lanterns: rows.map((r) => decorate(
+    { ...r, quiet_days: Math.round(+r.quiet_days), comment_count: +r.comment_count }, me)) });
 });
 
 app.post('/api/lanterns', requireAuth, async (req, res) => {
@@ -288,6 +297,143 @@ app.post('/api/lanterns/:id/takedown', async (req, res) => {
   if (!rows.length) return res.json({ ok: true });
   const reason = String((req.body || {}).reason || '').trim().slice(0, 400);
   await pool.query('INSERT INTO takedowns (lantern_id, reason) VALUES ($1,$2)', [req.params.id, reason]);
+  res.json({ ok: true });
+});
+
+// ---- what people walking past know ----
+app.get('/api/lanterns/:id/comments', async (req, res) => {
+  const me = currentUser(req);
+  const { rows } = await pool.query(
+    `SELECT c.id, c.body, c.created_at, c.author_id, u.display_name AS author
+       FROM lantern_comments c LEFT JOIN users u ON u.id = c.author_id
+      WHERE c.lantern_id = $1 ORDER BY c.created_at`, [req.params.id]
+  );
+  res.json({ comments: rows.map((r) => decorateAuthored(r, me ? { id: me.id } : null)) });
+});
+
+app.post('/api/lanterns/:id/comments', requireAuth, async (req, res) => {
+  const body = String((req.body || {}).body || '').trim().slice(0, 600);
+  if (!body) return res.status(400).json({ error: 'Please write something first.' });
+  const refusal = refuseContactDetail({ body });
+  if (refusal) return res.status(400).json({ error: refusal });
+  const { rows: l } = await pool.query('SELECT id FROM lanterns WHERE id=$1', [req.params.id]);
+  if (!l.length) return res.status(404).json({ error: 'That lantern is no longer there.' });
+  const { rows } = await pool.query(
+    `INSERT INTO lantern_comments (lantern_id, author_id, body) VALUES ($1,$2,$3) RETURNING *`,
+    [req.params.id, req.user.id, body]
+  );
+  res.json({ comment: { ...decorateAuthored(rows[0], req.user), author: req.user.displayName } });
+});
+
+// Own comment, or the site owner taking down something cruel.
+app.delete('/api/comments/:id', requireAuth, async (req, res) => {
+  const { rows } = await pool.query('SELECT author_id FROM lantern_comments WHERE id=$1', [req.params.id]);
+  if (!rows.length) return res.json({ ok: true });
+  if (rows[0].author_id !== req.user.id && !req.user.isAdmin) {
+    return res.status(403).json({ error: 'You can only remove your own.' });
+  }
+  await pool.query('DELETE FROM lantern_comments WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// ---- "I have information" ----
+// Private, and deliberately so. Posting your own contact details on a public page is how
+// people searching get found by scammers instead; this way the message reaches the searcher
+// and nobody else, and they choose what to give back.
+app.post('/api/lanterns/:id/tip', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const body = String(b.body || '').trim().slice(0, 1200);
+  const contact = String(b.contact || '').trim().slice(0, 200);
+  if (!body) return res.status(400).json({ error: 'Please write what you know first.' });
+  const { rows: l } = await pool.query('SELECT owner_id FROM lanterns WHERE id=$1', [req.params.id]);
+  if (!l.length) return res.status(404).json({ error: 'That lantern is no longer there.' });
+  if (l[0].owner_id === req.user.id) return res.status(400).json({ error: 'That is your own lantern.' });
+  await pool.query(
+    'INSERT INTO lantern_tips (lantern_id, author_id, body, contact) VALUES ($1,$2,$3,$4)',
+    [req.params.id, req.user.id, body, contact || null]
+  );
+  res.json({ ok: true });
+});
+
+// Everything left for the lanterns you are the one searching on.
+app.get('/api/tips', requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT t.id, t.body, t.contact, t.created_at, t.read_at, t.lantern_id,
+            l.name AS looking_for, u.display_name AS author
+       FROM lantern_tips t
+       JOIN lanterns l ON l.id = t.lantern_id
+       LEFT JOIN users u ON u.id = t.author_id
+      WHERE l.owner_id = $1 ORDER BY t.created_at DESC`, [req.user.id]
+  );
+  res.json({ tips: rows });
+});
+
+app.post('/api/tips/:id/read', requireAuth, async (req, res) => {
+  await pool.query(
+    `UPDATE lantern_tips t SET read_at = now()
+       FROM lanterns l WHERE l.id = t.lantern_id AND t.id = $1 AND l.owner_id = $2`,
+    [req.params.id, req.user.id]
+  );
+  res.json({ ok: true });
+});
+
+// ---- found ----
+// The whole point of the place, and the only thing that will convince anyone else to post.
+app.post('/api/lanterns/:id/found', requireAuth, async (req, res) => {
+  const { rows } = await pool.query('SELECT owner_id FROM lanterns WHERE id=$1', [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: 'That lantern is no longer there.' });
+  if (rows[0].owner_id !== req.user.id) return res.status(403).json({ error: 'Only the person searching can say that.' });
+  const note = String((req.body || {}).note || '').trim().slice(0, 600);
+  const refusal = refuseContactDetail({ note });
+  if (refusal) return res.status(400).json({ error: refusal });
+  const upd = await pool.query(
+    `UPDATE lanterns SET status='found', found_at=now(), found_note=$2, confirmed_at=now()
+      WHERE id=$1 RETURNING *`, [req.params.id, note || null]
+  );
+  res.json({ lantern: decorate({ ...upd.rows[0], quiet_days: 0 }, req.user) });
+});
+
+// The reunion stories, which live in the mill.
+app.get('/api/reunions', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT id, name, relation, last_area, lost_year, found_note, found_at
+       FROM lanterns WHERE status='found' ORDER BY found_at DESC NULLS LAST LIMIT 200`
+  );
+  res.json({ reunions: rows });
+});
+
+// ---- the campfire ----
+// Not another place to post about a missing person: the place where people who are
+// searching hand on what they have learned about searching. Take one, leave one.
+app.get('/api/campfire', async (req, res) => {
+  const me = currentUser(req);
+  const { rows } = await pool.query(
+    `SELECT n.id, n.body, n.created_at, n.author_id, u.display_name AS author
+       FROM campfire_notes n LEFT JOIN users u ON u.id = n.author_id
+      ORDER BY n.created_at DESC LIMIT 200`
+  );
+  res.json({ notes: rows.map((r) => decorateAuthored(r, me ? { id: me.id } : null)) });
+});
+
+app.post('/api/campfire', requireAuth, async (req, res) => {
+  const body = String((req.body || {}).body || '').trim().slice(0, 600);
+  if (!body) return res.status(400).json({ error: 'Please write something first.' });
+  const refusal = refuseContactDetail({ body });
+  if (refusal) return res.status(400).json({ error: refusal });
+  const { rows } = await pool.query(
+    'INSERT INTO campfire_notes (author_id, body) VALUES ($1,$2) RETURNING *',
+    [req.user.id, body]
+  );
+  res.json({ note: { ...decorateAuthored(rows[0], req.user), author: req.user.displayName } });
+});
+
+app.delete('/api/campfire/:id', requireAuth, async (req, res) => {
+  const { rows } = await pool.query('SELECT author_id FROM campfire_notes WHERE id=$1', [req.params.id]);
+  if (!rows.length) return res.json({ ok: true });
+  if (rows[0].author_id !== req.user.id && !req.user.isAdmin) {
+    return res.status(403).json({ error: 'You can only remove your own.' });
+  }
+  await pool.query('DELETE FROM campfire_notes WHERE id=$1', [req.params.id]);
   res.json({ ok: true });
 });
 

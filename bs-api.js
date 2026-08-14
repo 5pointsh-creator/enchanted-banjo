@@ -91,6 +91,7 @@
   const lanternFromServer = (l) => ({
     id: l.id, seq: l.seq, name: l.name, relation: l.relation, ageNow: l.age_now,
     lastArea: l.last_area, lostYear: l.lost_year, note: l.note, status: l.status,
+    foundNote: l.found_note, comments: l.comment_count || 0,
     quietDays: l.quiet_days || 0, owner: l.owner, mine: l.mine,
   });
   const lanternToServer = (l) => ({
@@ -133,6 +134,76 @@
   async function requestTakedown(l, reason) {
     if (mode === 'live') { await api(`/api/lanterns/${l.id}/takedown`, { method: 'POST', body: JSON.stringify({ reason }) }); return; }
   }
+  // ---------- what people know ----------
+  // Demo mode keeps all of this on the device so the preview copy still behaves like the
+  // real thing; nothing here reaches anybody else until the site has a database behind it.
+  const demoKey = (base, id) => `${base}:${id}`;
+  async function getComments(l) {
+    if (mode === 'live') { const d = await api(`/api/lanterns/${l.id}/comments`); return d.comments; }
+    return readList(demoKey('banjoSpiritLanternComments', l.seq));
+  }
+  async function addComment(l, body) {
+    if (mode === 'live') {
+      const d = await api(`/api/lanterns/${l.id}/comments`, { method: 'POST', body: JSON.stringify({ body }) });
+      return d.comment;
+    }
+    const key = demoKey('banjoSpiritLanternComments', l.seq);
+    const arr = readList(key);
+    const row = { id: Date.now(), body, author: 'You', created_at: new Date().toISOString(), mine: true };
+    arr.push(row); writeList(key, arr); return row;
+  }
+  async function removeComment(c, l) {
+    if (mode === 'live') { await api(`/api/comments/${c.id}`, { method: 'DELETE' }); return; }
+    const key = demoKey('banjoSpiritLanternComments', l.seq);
+    writeList(key, readList(key).filter((x) => x.id !== c.id));
+  }
+  async function sendTip(l, body, contact) {
+    if (mode === 'live') { await api(`/api/lanterns/${l.id}/tip`, { method: 'POST', body: JSON.stringify({ body, contact }) }); return; }
+    const arr = readList('banjoSpiritTips');
+    arr.push({ id: Date.now(), lantern_id: l.seq, looking_for: l.name, body, contact, created_at: new Date().toISOString() });
+    writeList('banjoSpiritTips', arr);
+  }
+  async function getTips() {
+    if (mode !== 'live') return readList('banjoSpiritTips');
+    if (!user) return [];          // asking signed-out only earns a 401 in the console
+    try { const d = await api('/api/tips'); return d.tips; } catch (e) { return []; }
+  }
+  async function markTipRead(t) {
+    if (mode === 'live') { try { await api(`/api/tips/${t.id}/read`, { method: 'POST' }); } catch (e) {} }
+  }
+  async function markFound(l, note) {
+    if (mode === 'live') {
+      const d = await api(`/api/lanterns/${l.id}/found`, { method: 'POST', body: JSON.stringify({ note }) });
+      return lanternFromServer(d.lantern);
+    }
+    return localEdit('banjoSpiritLanterns', l, { status: 'found', foundNote: note, quietDays: 0 });
+  }
+  async function getReunions() {
+    if (mode !== 'live') {
+      return readList('banjoSpiritLanterns').filter((l) => l.status === 'found')
+        .map((l) => ({ id: l.seq, name: l.name, relation: l.relation, last_area: l.lastArea,
+                       lost_year: l.lostYear, found_note: l.foundNote }));
+    }
+    const d = await api('/api/reunions'); return d.reunions;
+  }
+  async function getCampfire() {
+    if (mode !== 'live') return readList('banjoSpiritCampfire');
+    const d = await api('/api/campfire'); return d.notes;
+  }
+  async function addCampfireNote(body) {
+    if (mode === 'live') {
+      const d = await api('/api/campfire', { method: 'POST', body: JSON.stringify({ body }) });
+      return d.note;
+    }
+    const arr = readList('banjoSpiritCampfire');
+    const row = { id: Date.now(), body, author: 'You', created_at: new Date().toISOString(), mine: true };
+    arr.unshift(row); writeList('banjoSpiritCampfire', arr); return row;
+  }
+  async function removeCampfireNote(n) {
+    if (mode === 'live') { await api(`/api/campfire/${n.id}`, { method: 'DELETE' }); return; }
+    writeList('banjoSpiritCampfire', readList('banjoSpiritCampfire').filter((x) => x.id !== n.id));
+  }
+
   async function getTakedowns() {
     if (mode !== 'live') return [];
     try { const d = await api('/api/takedowns'); return d.takedowns; } catch (e) { return []; }
@@ -457,6 +528,8 @@
     updateTree, removeTree, updateStar, removeStar, isMine, canRemove, minePanel,
     getLanterns, addLantern, updateLantern, removeLantern, stillLooking,
     requestTakedown, getTakedowns, resolveTakedown,
+    getComments, addComment, removeComment, sendTip, getTips, markTipRead,
+    markFound, getReunions, getCampfire, addCampfireNote, removeCampfireNote,
     get user() { return user; }, get mode() { return mode; } };
 
   // Share/invite widget appears on every page that loads this script, no init needed.
