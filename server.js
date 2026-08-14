@@ -174,7 +174,7 @@ app.post('/api/stars', requireAuth, async (req, res) => {
   res.json({ star: decorate(rows[0], req.user) });
 });
 
-// ---- the lantern trail: looking for someone who is still alive ----
+// ---- Paper Valley: looking for someone who is still alive ----
 // Nothing here is a memorial. These are living people, and most of them never agreed to
 // be listed, so the scroll takes short set answers rather than a blank box - and anything
 // that could put somebody at a front door is refused before it is ever saved.
@@ -377,12 +377,12 @@ app.get('/lantern/:id', async (req, res) => {
       row = rows[0] || null;
     } catch (e) { console.error(e); }
   }
-  const target = `/lanterns.html?l=${encodeURIComponent(req.params.id)}`;
-  const title = row ? `Looking for ${row.name} — Banjo Spirits` : 'The lantern trail — Banjo Spirits';
+  const target = `/paper-valley.html?l=${encodeURIComponent(req.params.id)}`;
+  const title = row ? `Looking for ${row.name} — Banjo Spirits` : 'Paper Valley — Banjo Spirits';
   const bits = row
     ? [row.relation && `${row.relation}.`, row.last_area && `Last known around ${row.last_area}.`,
        row.lost_year && `Out of contact since ${row.lost_year}.`, row.note].filter(Boolean).join(' ')
-    : 'A trail of lanterns for people searching for someone who is still out there.';
+    : 'Paper Valley - a trail of lanterns for people searching for someone who is still out there.';
   res.set('Content-Type', 'text/html; charset=utf-8').send(
 `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <title>${escHtml(title)}</title>

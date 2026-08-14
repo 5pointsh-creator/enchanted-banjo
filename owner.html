@@ -51,10 +51,10 @@
   }
   if(state.user.isOwner){
     body.innerHTML = '<p>You are the owner of this site.</p>' +
-      '<p>To take something down, open the forest, the sky or the lantern trail, click the one ' +
+      '<p>To take something down, open the forest, the sky or Paper Valley, click the one ' +
       'in question, and use Remove. You can remove anything; everyone else can only remove their own.</p>' +
       '<p><a href="plant.html">Go to the forest</a> &nbsp;·&nbsp; <a href="sky.html">Go to the sky</a>' +
-      ' &nbsp;·&nbsp; <a href="lanterns.html">Go to the lantern trail</a></p>' +
+      ' &nbsp;·&nbsp; <a href="paper-valley.html">Go to Paper Valley</a></p>' +
       '<div id="takedowns"></div>';
     renderTakedowns();
     return;
@@ -70,7 +70,7 @@
       return;
     }
     box.innerHTML = '<h1 style="font-size:17px;margin:18px 0 8px">Takedown requests</h1>' +
-      '<p>Someone has asked to be removed from the lantern trail. Open the trail, find that ' +
+      '<p>Someone has asked to be removed from Paper Valley. Open the valley, find that ' +
       'lantern and take it down, then mark it done here.</p>';
     list.forEach((t) => {
       const row = document.createElement('div');
@@ -78,7 +78,7 @@
       row.innerHTML =
         '<div style="font-weight:600;margin-bottom:4px"></div>' +
         '<div style="font-size:13px;opacity:.7;margin-bottom:10px;white-space:pre-wrap"></div>' +
-        '<a style="font-size:13px" href="lanterns.html?l=' + encodeURIComponent(t.lantern_id) + '">Open that lantern</a>' +
+        '<a style="font-size:13px" href="paper-valley.html?l=' + encodeURIComponent(t.lantern_id) + '">Open that lantern</a>' +
         ' &nbsp; <button style="width:auto;padding:7px 12px;font-size:13px">Mark done</button>';
       row.children[0].textContent = t.name || 'Unnamed lantern';
       row.children[1].textContent = t.reason || 'No reason given.';

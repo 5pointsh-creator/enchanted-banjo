@@ -85,7 +85,7 @@
     if (mode === 'live') { await api(`/api/stars/${star.id}`, { method: 'DELETE' }); return; }
     localRemove('banjoSpiritStars', star);
   }
-  // ---------- the lantern trail ----------
+  // ---------- Paper Valley ----------
   // A lantern never carries a place of its own: seq is its position along the trail, and
   // the world works out where that is. Nobody can pick a spot, so nothing is ever scattered.
   const lanternFromServer = (l) => ({

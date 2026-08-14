@@ -53,7 +53,7 @@ async function migrate() {
     ALTER TABLE trees ADD COLUMN IF NOT EXISTS song TEXT;
     ALTER TABLE stars ADD COLUMN IF NOT EXISTS song TEXT;
   `);
-  // The lantern trail: people looking for someone who is still alive.
+  // Paper Valley: people looking for someone who is still alive.
   // There is no x/z here on purpose. Lanterns are never scattered - each one takes the
   // next place along the trail, so the walk is always lit and the trail grows outwards
   // as people arrive. seq decides where it stands, and the world works it out from that.
