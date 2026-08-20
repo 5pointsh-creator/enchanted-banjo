@@ -468,5 +468,6 @@ animate(); BS.init().then(async()=>{ await load(); seedIfEmpty(); });
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
 document.getElementById('enter').addEventListener('click',()=>{document.getElementById('start').style.display='none';started=true;});
 </script>
+<script src="portal.js"></script>
 </body>
 </html>
