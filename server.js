@@ -790,6 +790,7 @@ If you are at the end of it, please talk to someone tonight. In the US call or t
 <b>988</b> — the Suicide &amp; Crisis Lifeline, free, 24 hours. Elsewhere:
 <a href="https://findahelpline.com" rel="nofollow">findahelpline.com</a>.
 </footer>
+<script src="/portal.js" defer></script>
 </body></html>`);
 });
 const NUMBER_WORDS = ['nothing','one thing','two things','three things','four things','five things',
@@ -850,7 +851,18 @@ app.get('/lantern/:id', async (req, res) => {
 });
 
 // ---- static site (same HTML the Pages preview serves) ----
-app.use(express.static(path.join(__dirname), { extensions: ['html'] }));
+// A page fetched ahead of a portal is only worth fetching if the browser is allowed to
+// keep it: with no lifetime at all it has to come back and ask again on the way in, which
+// is the round trip the whole thing was meant to avoid. A minute is long enough to cover
+// the walk from one place to another and short enough that a deploy is visible almost at
+// once. Only the HTML - the scripts keep asking every time, so a fix to them is never
+// sitting stale in somebody's browser.
+app.use(express.static(path.join(__dirname), {
+  extensions: ['html'],
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'public, max-age=60');
+  },
+}));
 
 app.listen(PORT, () => console.log(`Banjo Spirits running on :${PORT}`));
 

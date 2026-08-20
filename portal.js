@@ -34,6 +34,25 @@
   var reduced = window.matchMedia &&
                 window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // The portal used to be pure cost: nothing about the next page began loading until the
+  // animation had finished and the browser was told to leave. So every tenth of a second
+  // of ceremony was a tenth of a second added to the wait. It should have been the other
+  // way round from the start - the journey is exactly the window in which the arrival
+  // ought to be getting ready. So the moment a finger goes down on a portal link, before
+  // the tap has even been counted as a click, the destination starts loading behind the
+  // animation. On browsers that can do it the whole page is built in the background,
+  // scripts and all, and the portal opens onto something already there.
+  var canSpeculate = typeof HTMLScriptElement !== 'undefined' &&
+                     HTMLScriptElement.supports &&
+                     HTMLScriptElement.supports('speculationrules');
+  var canHint = (function () {
+    try {
+      var l = document.createElement('link');
+      return !!(l.relList && l.relList.supports && l.relList.supports('prefetch'));
+    } catch (e) { return false; }
+  })();
+  var warmed = {};
+
   function doorFor(href) {
     try {
       var path = new URL(href, location.href).pathname.replace(/^\/+/, '');
@@ -170,6 +189,42 @@
     run(door, true, first ? FIRST_IN_MS : IN_MS, function () { location.href = href; });
   }
 
+  // ---- getting the far side ready ----------------------------------------
+  // Chrome and Edge will build the page properly if asked - not just fetch the file but
+  // run it, so it is finished and waiting. "conservative" means they only start when a
+  // finger actually goes down on one of these links, never on the chance somebody might
+  // tap it, so hovering around the page costs nothing and nobody's data is spent on a
+  // journey they did not take.
+  function speculate(urls) {
+    if (!canSpeculate || !urls.length) return;
+    var s = document.createElement('script');
+    s.type = 'speculationrules';
+    s.textContent = JSON.stringify({
+      prerender: [{ source: 'list', urls: urls, eagerness: 'conservative' }],
+    });
+    document.head.appendChild(s);
+  }
+
+  // Everywhere else, fetch the page itself so it is sitting in the cache by the time the
+  // browser goes looking for it. Less than a prerender, but it turns the arrival from a
+  // round trip into a lookup.
+  function warm(href) {
+    if (canSpeculate || warmed[href]) return;
+    warmed[href] = 1;
+    if (canHint) {
+      var l = document.createElement('link');
+      l.rel = 'prefetch';
+      l.as = 'document';
+      l.href = href;
+      document.head.appendChild(l);
+      return;
+    }
+    // Safari understands neither of the above, so ask for the page outright. Only ever
+    // instead of the hint, never as well as it - doing both means the same page comes
+    // down the wire twice, which on somebody's phone is their data spent for nothing.
+    try { fetch(href, { credentials: 'same-origin' }).catch(function () {}); } catch (e) {}
+  }
+
   // ---- wiring -------------------------------------------------------------
   function arrive() {
     var name;
@@ -180,25 +235,65 @@
     if (door) run(door, false, OUT_MS, function () {});
   }
 
+  function portalLink(el) {
+    var a = el && el.closest && el.closest('a[href]');
+    if (!a || a.target === '_blank' || a.hasAttribute('download')) return null;
+    try { if (new URL(a.href, location.href).origin !== location.origin) return null; }
+    catch (e) { return null; }
+    return doorFor(a.getAttribute('href')) ? a : null;
+  }
+
   function wire() {
+    // Hand the browser the list of doors on this page once, up front.
+    var urls = [], seen = {};
+    var links = document.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      var a = portalLink(links[i]);
+      if (!a || seen[a.href]) continue;
+      seen[a.href] = 1;
+      urls.push(new URL(a.href, location.href).pathname);
+    }
+    speculate(urls);
+
+    // The head start. A tap is a finger going down and then coming up, and the browser
+    // waits for the second half before it calls it a click - so starting here buys the
+    // destination a tenth of a second before the portal has even opened.
+    document.addEventListener('pointerdown', function (ev) {
+      var a = portalLink(ev.target);
+      if (a) warm(a.href);
+    }, { passive: true });
+
     document.addEventListener('click', function (ev) {
       // let people open things in a new tab, and leave modified clicks alone
       if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey ||
           ev.shiftKey || ev.altKey) return;
-      var a = ev.target.closest && ev.target.closest('a[href]');
-      if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
-      try { if (new URL(a.href, location.href).origin !== location.origin) return; }
-      catch (e) { return; }
+      var a = portalLink(ev.target);
+      if (!a) return;
       var door = doorFor(a.getAttribute('href'));
-      if (!door) return;
+      warm(a.href);            // in case the tap arrived without a pointerdown
       ev.preventDefault();
       travel(a.href, door);
     }, false);
   }
 
+  // A page built in the background is running minutes-in-browser-time before anybody
+  // arrives on it - so if it played its coming-out animation at load, it would play it to
+  // an empty room and be over before the portal ever opened. Worse, it would take the note
+  // left in sessionStorage with it, and the real arrival would find nothing to answer.
+  // So while it is still being built ahead of time, it waits, and does its half of the
+  // journey at the moment somebody actually lands on it.
+  function start() {
+    wire();
+    if (document.prerendering) {
+      document.addEventListener('prerenderingchange', function () { arrive(); }, { once: true });
+    } else {
+      arrive();
+    }
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { arrive(); wire(); });
-  } else { arrive(); wire(); }
+    document.addEventListener('DOMContentLoaded', start);
+  } else { start(); }
 
   window.BSPortal = { travel: travel, doorFor: doorFor };
 })();
