@@ -675,6 +675,126 @@ app.get('/wheel/:id', async (req, res) => {
 <script>location.replace(${JSON.stringify(target)});</script></body></html>`);
 });
 
+// ---- the night book ----
+// Everything on the wheel is drawn on a canvas, which means a search engine reads the
+// whole page as blank. All those words and not one of them findable. So this page is
+// rendered as plain HTML ON THE SERVER - if it were assembled in the browser like the
+// wheel is, it would be just as invisible and there would be no point building it.
+//
+// A night runs from one eight o'clock to the next, in the ride's own timezone. Adding
+// four hours before truncating shifts the 20:00 boundary onto midnight, so the grouping
+// falls out of one expression and follows daylight saving without any help.
+// ::text on purpose. node-postgres turns a bare `date` into a JS Date, which then gets
+// re-read in the server's own timezone and lands on the wrong day; a plain 'YYYY-MM-DD'
+// string cannot drift.
+const NIGHT_BOUNDARY =
+  "date_trunc('day', (n.created_at AT TIME ZONE 'America/New_York') + interval '4 hours')::date::text";
+
+app.get(['/night-book', '/night-book.html'], async (req, res) => {
+  let nights = [];
+  if (dbReady) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT n.id, n.body, n.song, n.signed_as, n.created_at, c.name AS car,
+                ${NIGHT_BOUNDARY} AS night
+           FROM wheel_notes n JOIN wheel_cars c ON c.id = n.car_id
+          WHERE n.created_at > now() - interval '60 days'
+          ORDER BY night DESC, n.created_at`
+      );
+      const { rows: replies } = await pool.query(
+        `SELECT r.note_id, r.body, r.song, r.signed_as
+           FROM wheel_replies r
+          WHERE r.note_id = ANY($1::int[]) ORDER BY r.created_at`,
+        [rows.map((r) => r.id)]
+      );
+      const byNote = new Map();
+      for (const r of replies) {
+        if (!byNote.has(r.note_id)) byNote.set(r.note_id, []);
+        byNote.get(r.note_id).push(r);
+      }
+      const grouped = new Map();
+      for (const r of rows) {
+        const key = String(r.night);
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push({ ...r, replies: byNote.get(r.id) || [] });
+      }
+      nights = [...grouped.entries()].map(([night, notes]) => ({ night, notes }));
+    } catch (e) { console.error(e); }
+  }
+
+  const dateLabel = (iso) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB',
+    { weekday: 'long', day: 'numeric', month: 'long' });
+  const count = (n) => n === 1 ? 'one thing' : NUMBER_WORDS[n] || String(n) + ' things';
+  const songBit = (sng) => sng
+    ? `<a class="song" rel="nofollow" href="https://duckduckgo.com/?q=${encodeURIComponent(sng + ' song')}">&#9834; ${escHtml(sng)}</a>`
+    : '';
+
+  const body = nights.length ? nights.map((nt) => `
+    <section>
+      <h2>${escHtml(dateLabel(nt.night))}</h2>
+      <p class="carried">The wheel carried ${escHtml(count(nt.notes.length))} up.</p>
+      ${nt.notes.map((n) => `
+        <article>
+          <p class="car">${escHtml(n.car)}</p>
+          <p class="said">${escHtml(n.body)}</p>
+          ${songBit(n.song)}
+          ${n.replies.length ? `<div class="back">${n.replies.map((r) => `
+            <p>${r.body ? escHtml(r.body) : ''} ${songBit(r.song)}</p>`).join('')}</div>` : ''}
+        </article>`).join('')}
+    </section>`).join('')
+    : '<p class="empty">The wheel has not carried anything up yet. Come back after eight.</p>';
+
+  res.set('Content-Type', 'text/html; charset=utf-8').send(
+`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Night Book — 5 Days at Banjo Spirits</title>
+<meta name="description" content="What the wheel carried up each night: what people are going through, in their own words, and the songs that helped.">
+<link rel="canonical" href="https://www.banjospirits.com/night-book">
+<meta property="og:site_name" content="Banjo Spirits">
+<meta property="og:title" content="The Night Book — 5 Days at Banjo Spirits">
+<meta property="og:description" content="What the wheel carried up each night, in people's own words.">
+<meta property="og:image" content="https://www.banjospirits.com/tour-poster.jpg">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0718;color:#efe6ff;font-family:"Segoe UI",system-ui,sans-serif;
+       line-height:1.7;padding:34px 20px 70px}
+  main{max-width:660px;margin:0 auto}
+  h1{font-size:26px;color:#ffeccd;margin-bottom:6px}
+  .sub{opacity:.62;font-size:14px;margin-bottom:30px}
+  .sub a{color:#c7b3ff}
+  section{margin-bottom:38px}
+  h2{font-size:17px;color:#ffdca8;border-bottom:1px solid #2a1f45;padding-bottom:7px}
+  .carried{font-size:12.5px;opacity:.55;margin:6px 0 16px}
+  article{border-left:2px solid #2e2350;padding:2px 0 2px 14px;margin-bottom:18px}
+  .car{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;opacity:.5}
+  /* somebody will paste a long URL or lean on one key; without this it runs off the page */
+  .said{font-size:15px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .back p{overflow-wrap:anywhere}
+  .song{overflow-wrap:anywhere}
+  .song{display:inline-block;margin-top:6px;font-size:12.5px;color:#ffdca8;
+        text-decoration:none;border-bottom:1px dotted #6b5794}
+  .back{margin-top:9px;padding-left:12px;border-left:1px solid #251b42;font-size:13.5px;opacity:.8}
+  .empty{opacity:.6}
+  footer{max-width:660px;margin:44px auto 0;padding-top:16px;border-top:1px solid #2a1f45;
+         font-size:12px;opacity:.6}
+  footer a{color:#c7b3ff}
+</style>
+</head><body><main>
+<h1>The Night Book</h1>
+<p class="sub">Every night at eight the wheel turns and carries up whatever was written that
+day. This is what it carried. <a href="/wheel.html">Go to the wheel</a>.</p>
+${body}
+</main>
+<footer>
+If you are at the end of it, please talk to someone tonight. In the US call or text
+<b>988</b> — the Suicide &amp; Crisis Lifeline, free, 24 hours. Elsewhere:
+<a href="https://findahelpline.com" rel="nofollow">findahelpline.com</a>.
+</footer>
+</body></html>`);
+});
+const NUMBER_WORDS = ['nothing','one thing','two things','three things','four things','five things',
+  'six things','seven things','eight things','nine things','ten things','eleven things','twelve things'];
+
 // ---- becoming the site owner ----
 // Whoever runs the site needs to be able to take down something cruel, but there is no
 // email to send a code to and environment variables have already proved too easy to mistype.
