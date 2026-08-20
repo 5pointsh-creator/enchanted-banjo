@@ -490,6 +490,143 @@ function editRoutes(table, key, fields) {
 editRoutes('trees', 'tree', ['name', 'message', 'song']);
 editRoutes('stars', 'star', ['name', 'message', 'song']);
 
+// ---- the wheel ("5 Days") ----
+// A car is a feeling, not a person, so the same twelve cars hold everybody carrying the
+// same thing. Reading is open to anyone; writing needs an account, the same as the forest,
+// because a reply left under somebody's worst day has to be answerable to something.
+// What is SHOWN is anonymous unless the writer chooses to sign it.
+
+const MAX_NOTE = 1200;
+const MAX_REPLY = 600;
+const MAX_SONG = 160;
+
+const wheelPublic = (row, me) => {
+  const { author_id, ...rest } = row;
+  return { ...rest, mine: !!(me && author_id && author_id === me.id) };
+};
+
+app.get('/api/wheel', async (req, res) => {
+  const { rows } = await pool.query(
+    `SELECT c.id, c.name, c.kind, c.seq, c.built_in,
+            COUNT(n.id)::int AS notes,
+            MAX(n.created_at)  AS latest
+       FROM wheel_cars c
+       LEFT JOIN wheel_notes n ON n.car_id = c.id
+      GROUP BY c.id
+      ORDER BY c.seq`
+  );
+  res.json({ cars: rows });
+});
+
+app.get('/api/wheel/:carId/notes', async (req, res) => {
+  const me = currentUser(req);
+  const { rows: notes } = await pool.query(
+    `SELECT id, car_id, signed_as, body, song, author_id, created_at
+       FROM wheel_notes WHERE car_id=$1 ORDER BY created_at DESC LIMIT 200`,
+    [req.params.carId]
+  );
+  if (!notes.length) return res.json({ notes: [] });
+  // one query for every reply in the car, then grouped in memory - a query per note
+  // would be a dozen round trips for a car anyone actually writes in
+  const { rows: replies } = await pool.query(
+    `SELECT id, note_id, signed_as, body, song, author_id, created_at
+       FROM wheel_replies WHERE note_id = ANY($1::int[]) ORDER BY created_at`,
+    [notes.map((n) => n.id)]
+  );
+  const byNote = new Map();
+  for (const r of replies) {
+    if (!byNote.has(r.note_id)) byNote.set(r.note_id, []);
+    byNote.get(r.note_id).push(wheelPublic(r, me));
+  }
+  res.json({
+    notes: notes.map((n) => ({ ...wheelPublic(n, me), replies: byNote.get(n.id) || [] })),
+  });
+});
+
+// Everything written today, in the order it was written. This is what the wheel carries
+// up one car at a time during the nightly turn.
+app.get('/api/wheel/today', async (req, res) => {
+  const me = currentUser(req);
+  const { rows } = await pool.query(
+    `SELECT n.id, n.car_id, c.name AS car, n.signed_as, n.body, n.song, n.author_id, n.created_at
+       FROM wheel_notes n JOIN wheel_cars c ON c.id = n.car_id
+      WHERE n.created_at > now() - interval '24 hours'
+      ORDER BY n.created_at`
+  );
+  res.json({ notes: rows.map((r) => wheelPublic(r, me)) });
+});
+
+app.post('/api/wheel/notes', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const body = String(b.body || '').trim().slice(0, MAX_NOTE);
+  const song = String(b.song || '').trim().slice(0, MAX_SONG);
+  const signedAs = String(b.signedAs || '').trim().slice(0, 40) || null;
+  if (!body) return res.status(400).json({ error: 'Write something first.' });
+
+  let carId = +b.carId || 0;
+
+  // Hanging a new car: what somebody is carrying had no name on the wheel yet. It goes
+  // on the end rather than into the alternating run, so a new one can never drop two
+  // heavy cars next to each other.
+  const newCar = String(b.newCar || '').trim().slice(0, 40);
+  if (!carId && newCar) {
+    const dup = await pool.query('SELECT id FROM wheel_cars WHERE lower(name)=lower($1)', [newCar]);
+    if (dup.rows.length) {
+      carId = dup.rows[0].id;
+    } else {
+      const { rows: seqRows } = await pool.query('SELECT COALESCE(MAX(seq),-1)+1 AS next FROM wheel_cars');
+      const { rows } = await pool.query(
+        'INSERT INTO wheel_cars (name, kind, seq, built_in, owner_id) VALUES ($1,$2,$3,FALSE,$4) RETURNING id',
+        [newCar, 'heavy', seqRows[0].next, req.user.id]
+      );
+      carId = rows[0].id;
+    }
+  }
+  if (!carId) return res.status(400).json({ error: 'Pick a car, or name a new one.' });
+
+  const car = await pool.query('SELECT id FROM wheel_cars WHERE id=$1', [carId]);
+  if (!car.rows.length) return res.status(404).json({ error: 'No such car.' });
+
+  const { rows } = await pool.query(
+    `INSERT INTO wheel_notes (car_id, author_id, signed_as, body, song)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id, car_id, signed_as, body, song, author_id, created_at`,
+    [carId, req.user.id, signedAs, body, song || null]
+  );
+  res.json({ note: { ...wheelPublic(rows[0], req.user), replies: [] } });
+});
+
+app.post('/api/wheel/notes/:id/replies', requireAuth, async (req, res) => {
+  const b = req.body || {};
+  const body = String(b.body || '').trim().slice(0, MAX_REPLY);
+  const song = String(b.song || '').trim().slice(0, MAX_SONG);
+  const signedAs = String(b.signedAs || '').trim().slice(0, 40) || null;
+  // A song on its own is a complete reply here - sometimes there is nothing to say and
+  // you just want to hand somebody something to listen to.
+  if (!body && !song) return res.status(400).json({ error: 'Say something, or send a song.' });
+
+  const note = await pool.query('SELECT id FROM wheel_notes WHERE id=$1', [req.params.id]);
+  if (!note.rows.length) return res.status(404).json({ error: 'That note is gone.' });
+
+  const { rows } = await pool.query(
+    `INSERT INTO wheel_replies (note_id, author_id, signed_as, body, song)
+     VALUES ($1,$2,$3,$4,$5) RETURNING id, note_id, signed_as, body, song, author_id, created_at`,
+    [req.params.id, req.user.id, signedAs, body || null, song || null]
+  );
+  res.json({ reply: wheelPublic(rows[0], req.user) });
+});
+
+for (const [table, what] of [['wheel_notes', 'note'], ['wheel_replies', 'reply']]) {
+  app.delete(`/api/${table.replace('_', '/')}/:id`, requireAuth, async (req, res) => {
+    const { rows } = await pool.query(`SELECT author_id FROM ${table} WHERE id=$1`, [req.params.id]);
+    if (!rows.length) return res.json({ ok: true });
+    if (rows[0].author_id !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ error: `You can only remove your own ${what}.` });
+    }
+    await pool.query(`DELETE FROM ${table} WHERE id=$1`, [req.params.id]);
+    res.json({ ok: true });
+  });
+}
+
 // ---- becoming the site owner ----
 // Whoever runs the site needs to be able to take down something cruel, but there is no
 // email to send a code to and environment variables have already proved too easy to mistype.

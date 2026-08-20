@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5 Days — Banjo Spirits</title>
+<meta name="description" content="A Ferris wheel at night. Every car carries something people are going through, and a song that helped. Free.">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#07040c}
+  body{font-family:"Segoe UI",system-ui,sans-serif;color:#efe6ff}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  /* the name of the ride, and a line telling a first-time visitor what this is */
+  #intro{position:fixed;left:0;right:0;top:20px;text-align:center;pointer-events:none;
+         font-size:14px;opacity:.72;text-shadow:0 2px 12px #000;padding:0 20px;line-height:1.6;
+         transition:opacity .5s}
+  canvas{cursor:pointer}
+  /* the car you opened, read beside the wheel that brought it to you */
+  #panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:rgba(12,7,20,0.94);
+         border-left:1px solid #3a2b58;transform:translateX(100%);transition:transform .45s ease;
+         display:flex;flex-direction:column;z-index:5}
+  #panel.open{transform:translateX(0)}
+  #phead{padding:18px 20px 12px;border-bottom:1px solid #2a1f45}
+  #ptitle{font-size:20px;font-weight:700;color:#ffeccd}
+  #pcount{font-size:12px;opacity:.6;margin-top:3px}
+  #pclose{position:absolute;top:14px;right:16px;background:none;border:none;color:#c7b3ff;
+          font-size:22px;cursor:pointer;line-height:1}
+  #plist{flex:1;overflow-y:auto;padding:14px 20px 8px}
+  .note{border:1px solid #2e2350;border-radius:12px;padding:12px 13px;margin-bottom:12px;
+        background:#150e26}
+  .note .who{font-size:11px;opacity:.5;margin-bottom:5px}
+  .note .body{font-size:14px;line-height:1.65;white-space:pre-wrap;color:#efe6ff}
+  .song{display:inline-block;margin-top:9px;font-size:12px;padding:5px 10px;border-radius:8px;
+        background:#20163a;border:1px solid #46356e;color:#ffdca8;text-decoration:none}
+  .replies{margin-top:10px;border-top:1px solid #251b42;padding-top:8px}
+  .reply{font-size:13px;line-height:1.6;opacity:.85;margin-bottom:7px}
+  .reply .who{font-size:11px;opacity:.55}
+  .rbox{display:flex;gap:6px;margin-top:8px}
+  .rbox input{flex:1;padding:8px 10px;border-radius:9px;border:1px solid #3a2b58;background:#0e0718;
+              color:#efe6ff;font:inherit;font-size:13px}
+  .rbox button{padding:8px 12px;border:none;border-radius:9px;background:#4a2f8e;color:#fff;
+               font:inherit;font-size:13px;cursor:pointer}
+  #pfoot{padding:12px 20px 16px;border-top:1px solid #2a1f45;font-size:11.5px;opacity:.62;
+         line-height:1.6}
+  #pfoot a{color:#c7b3ff}
+  #board{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:4;
+         padding:11px 22px;border:none;border-radius:12px;cursor:pointer;font:inherit;
+         font-size:14px;background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;
+         box-shadow:0 6px 24px rgba(90,40,190,.45)}
+  #write{position:fixed;inset:0;background:rgba(6,3,12,.86);z-index:6;display:none;
+         align-items:center;justify-content:center;padding:20px}
+  #write.open{display:flex}
+  #wcard{width:min(460px,100%);background:#140c26;border:1px solid #4a2f6e;border-radius:16px;
+         padding:20px}
+  #wcard h2{font-size:18px;margin-bottom:4px;color:#ffeccd}
+  #wcard p.sub{font-size:12.5px;opacity:.65;margin-bottom:12px;line-height:1.6}
+  #wcard label{display:block;font-size:12px;opacity:.7;margin:10px 0 4px}
+  #wcard select,#wcard textarea,#wcard input{width:100%;padding:10px;border-radius:10px;
+         border:1px solid #4a2f6e;background:#0e0718;color:#efe6ff;font:inherit;font-size:14px}
+  #wcard textarea{min-height:110px;resize:vertical;line-height:1.6}
+  #wrow{display:flex;gap:8px;margin-top:14px}
+  #wrow button{flex:1;padding:11px;border:none;border-radius:11px;font:inherit;cursor:pointer}
+  #wgo{background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff}
+  #wcancel{background:#241a3c;color:#c9b8ee}
+  #wmsg{font-size:13px;margin-top:10px;min-height:18px}
+  #wmsg.err{color:#ff9aa2} #wmsg.ok{color:#9df5c0}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="intro">Twelve cars. Each one carries something people are going through — and a song that helped.</div>
+<button id="board">Board the wheel</button>
+
+<div id="panel">
+  <div id="phead">
+    <button id="pclose" aria-label="Close">×</button>
+    <div id="ptitle">—</div>
+    <div id="pcount"></div>
+  </div>
+  <div id="plist"></div>
+  <div id="pfoot">
+    If you are at the end of it, please talk to someone tonight.
+    In the US call or text <b>988</b> — the Suicide &amp; Crisis Lifeline, free, 24 hours.
+    Elsewhere: <a href="https://findahelpline.com" target="_blank" rel="noopener">findahelpline.com</a>.
+  </div>
+</div>
+
+<div id="write"><div id="wcard">
+  <h2>Put something on the wheel</h2>
+  <p class="sub">It goes up anonymously. Nobody sees who wrote it unless you choose to sign it.</p>
+  <label for="wcar">Which car</label>
+  <select id="wcar"></select>
+  <label for="wnew">…or hang a new one (leave blank if you picked a car above)</label>
+  <input id="wnew" maxlength="40" placeholder="Name the thing nobody named yet" autocomplete="off">
+  <label for="wbody">What you are carrying</label>
+  <textarea id="wbody" maxlength="1200" placeholder="In your own words."></textarea>
+  <label for="wsong">A song that helped <span style="opacity:.6">(optional)</span></label>
+  <input id="wsong" maxlength="160" placeholder="Artist — Title" autocomplete="off">
+  <label for="wsign">Sign it <span style="opacity:.6">(optional — leave blank to stay anonymous)</span></label>
+  <input id="wsign" maxlength="40" placeholder="A first name, or nothing at all" autocomplete="off">
+  <div id="wrow"><button id="wcancel">Not now</button><button id="wgo">Send it up</button></div>
+  <div id="wmsg"></div>
+</div></div>
+<script>
+(function(){
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+
+  // The twelve are hung alternating heavy, light, heavy, light. The wheel then does the
+  // work on its own: however long you watch, a run of hard cars can never come round
+  // together, because there is always an easier one between them.
+  const CARS = [
+    { name: 'Lonely',                    kind: 'heavy' },
+    { name: 'Songs That Got Me Through', kind: 'light' },
+    { name: 'Hate My Job',               kind: 'heavy' },
+    { name: 'Something Good Happened',   kind: 'light' },
+    { name: 'Not Enough Money',          kind: 'heavy' },
+    { name: 'What I’m Listening To',    kind: 'light' },
+    { name: 'Worn Out',                  kind: 'heavy' },
+    { name: 'Somebody Was Kind To Me',   kind: 'light' },
+    { name: 'Missing Someone',           kind: 'heavy' },
+    { name: 'Starting Over',             kind: 'heavy' },
+    { name: 'Scared About What’s Coming', kind: 'heavy' },
+    { name: 'Not Well',                  kind: 'heavy' },
+  ];
+
+  const RIDE_NAME = '5 DAYS';
+
+  let W = 0, H = 0, DPR = 1;
+  let cx = 0, cy = 0, R = 0;      // hub centre and rim radius
+  let groundY = 0;                 // where the ride stands
+  let angle = 0;                   // where the wheel has turned to
+  const SPEED = 0.055;             // radians per second - a real wheel is slow
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    // Everything is measured off the ground line, not off the middle of the screen.
+    // The ride has to stand on something, and the boarding platform and its arch need
+    // clear air beneath the wheel - otherwise the sign draws straight through the cars.
+    R  = Math.min(W * 0.40, H * 0.27);
+    cx = W / 2;
+    // 1.95 radii of clear air below the hub: the cars hang outside the rim and the sign
+    // board stands over the platform, so anything tighter draws the board through a car.
+    // The whole ride is then centred as one object, otherwise a narrow phone leaves a
+    // third of the screen empty above the wheel.
+    const assembly = R * 3.05;
+    const top = Math.max(H * 0.03, (H - assembly) / 2);
+    cy = top + R * 0.18 + R;
+    groundY = cy + R * 1.95;
+    buildSky();
+  }
+
+  // ---- the sky -------------------------------------------------------------
+  // Fixed stars, generated once per resize. They must not twinkle in time with the
+  // bulbs or the whole picture starts to strobe.
+  let stars = [];
+  function buildSky(){
+    stars = [];
+    const n = Math.round((W * H) / 9000);
+    for(let i=0;i<n;i++){
+      stars.push({
+        x: Math.random()*W,
+        y: Math.random()*H*0.78,
+        r: Math.random()*1.1 + 0.25,
+        a: Math.random()*0.5 + 0.18,
+        ph: Math.random()*Math.PI*2,
+      });
+    }
+  }
+
+  function drawSky(t){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,   '#0a0718');
+    g.addColorStop(0.55,'#120a24');
+    g.addColorStop(1,   '#1a0f2b');
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    for(const s of stars){
+      const tw = 0.75 + 0.25*Math.sin(t*0.7 + s.ph);
+      ctx.globalAlpha = s.a * tw;
+      ctx.fillStyle = '#dfd2ff';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---- bulbs ---------------------------------------------------------------
+  // A filament bulb is a small hot core inside a much larger soft halo, and it never
+  // sits perfectly still. The flicker is deliberately tiny - enough to feel like gas
+  // and tungsten rather than an LED, not enough to be noticed as movement.
+  function bulb(x, y, r, warmth, t, seed){
+    const flick = 0.90 + 0.10*Math.sin(t*7.3 + seed*12.9) * Math.sin(t*3.1 + seed*4.7);
+    const a = warmth * flick;
+    if(a <= 0.02) return;
+
+    const halo = ctx.createRadialGradient(x,y,0, x,y, r*9);
+    halo.addColorStop(0,   'rgba(255,205,135,'+(0.70*a)+')');
+    halo.addColorStop(0.28,'rgba(255,168,88,'+(0.30*a)+')');
+    halo.addColorStop(0.62,'rgba(255,140,60,'+(0.09*a)+')');
+    halo.addColorStop(1,   'rgba(255,130,55,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x,y,r*9,0,Math.PI*2); ctx.fill();
+
+    // hot core - almost white in the middle, the way a filament reads at night
+    ctx.fillStyle = 'rgba(255,247,228,'+Math.min(1,1.0*a)+')';
+    ctx.beginPath(); ctx.arc(x,y,r*1.15,0,Math.PI*2); ctx.fill();
+  }
+
+
+  // ---- the moon ------------------------------------------------------------
+  // Drawn at tonight's REAL phase, not a decorative crescent. He wants to tie moon
+  // phases to the wheel later on, so the moon needs to already know what it is -
+  // otherwise the whole thing has to be rebuilt the day that idea arrives.
+  //
+  // Phase runs 0 (new) .. 0.5 (full) .. 1 (new again), measured from a known new moon
+  // and the mean synodic month. Good to a few hours, which is far past what a drawing
+  // of it needs.
+  const SYNODIC = 29.530588853;
+  const NEW_MOON = Date.UTC(2000, 0, 6, 18, 14) / 86400000;   // 6 Jan 2000, a known new moon
+  function moonPhase(now){
+    const days = now.getTime()/86400000 - NEW_MOON;
+    const p = (days / SYNODIC) % 1;
+    return p < 0 ? p + 1 : p;
+  }
+
+  function drawMoon(t){
+    const p  = moonPhase(new Date());
+    // Deliberately small and cool. It is the thing the ride stands under, not a second
+    // subject competing with the wheel for the eye.
+    const mr = Math.max(14, R*0.19);
+    const mx = W - mr*2.9, my = mr*2.7;
+
+    // halo
+    const halo = ctx.createRadialGradient(mx,my,mr*0.6, mx,my,mr*3.4);
+    halo.addColorStop(0,'rgba(214,226,255,0.085)');
+    halo.addColorStop(1,'rgba(190,205,255,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(mx,my,mr*3.4,0,Math.PI*2); ctx.fill();
+
+    // the unlit disc - faint, so a new moon is still a presence in the sky
+    ctx.fillStyle = 'rgba(150,160,205,0.10)';
+    ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2); ctx.fill();
+
+    // the lit part. The terminator is an ellipse, not an offset circle: the width of
+    // that ellipse is what turns a crescent into a gibbous as the month goes on.
+    const f = (1 - Math.cos(2*Math.PI*p)) / 2;     // 0 new .. 1 full
+    const a = mr * (1 - 2*f);                       // signed semi-axis of the terminator
+    const waxing = p < 0.5;
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2); ctx.clip();
+
+    const g = ctx.createRadialGradient(mx-mr*0.3,my-mr*0.35,mr*0.1, mx,my,mr*1.2);
+    g.addColorStop(0,'#efe9dc'); g.addColorStop(1,'#c9c3e2');
+    ctx.fillStyle = g;
+
+    // The lit face is bounded by the bright limb on one side and the terminator on the
+    // other. That terminator is a half-ellipse whose width runs from +r (new) through
+    // 0 (quarter) to -r (full), so sampling both boundaries and joining them draws every
+    // phase with the same few lines - and new and full fall out as the two end cases
+    // instead of needing to be special-cased.
+    ctx.beginPath();
+    const N = 64, dir = waxing ? 1 : -1;
+    for(let i=0;i<=N;i++){                      // down the bright limb
+      const th = -Math.PI/2 + (i/N)*Math.PI;
+      ctx.lineTo(mx + dir*mr*Math.cos(th), my + mr*Math.sin(th));
+    }
+    for(let i=N;i>=0;i--){                      // and back along the terminator
+      const th = -Math.PI/2 + (i/N)*Math.PI;
+      ctx.lineTo(mx + dir*a*Math.cos(th), my + mr*Math.sin(th));
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // a few seas, kept very soft
+    ctx.globalAlpha = 0.10; ctx.fillStyle = '#6b6f96';
+    const seas = [[-0.30,-0.22,0.30],[0.18,-0.05,0.22],[-0.10,0.30,0.26],[0.32,0.30,0.15]];
+    for(const [ox,oy,rr] of seas){
+      ctx.beginPath(); ctx.arc(mx+ox*mr, my+oy*mr, rr*mr, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // ---- the ride ------------------------------------------------------------
+  function drawGround(){
+    const gy = groundY;
+    const g = ctx.createLinearGradient(0,gy-10,0,H);
+    g.addColorStop(0,'#150d22'); g.addColorStop(1,'#0b0714');
+    ctx.fillStyle = g; ctx.fillRect(0, gy-10, W, H-(gy-10));
+    ctx.strokeStyle = 'rgba(190,150,255,0.10)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,gy-10); ctx.lineTo(W,gy-10); ctx.stroke();
+  }
+
+  function drawLegs(){
+    const footY = groundY;
+    const spread = R * 0.78;
+    ctx.lineCap = 'round';
+    // One raked leg each side and a single tie between them. Fewer members read as more
+    // solid than a lattice does at this size - a lattice just turns into visual noise
+    // behind the cars.
+    ctx.strokeStyle = '#3a3152'; ctx.lineWidth = Math.max(4, R*0.038);
+    for(const dir of [-1, 1]){
+      ctx.beginPath();
+      ctx.moveTo(cx + dir*R*0.05, cy);
+      ctx.lineTo(cx + dir*spread, footY);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#332c49'; ctx.lineWidth = Math.max(2, R*0.018);
+    const ty = footY - (footY-cy)*0.22;
+    ctx.beginPath();
+    ctx.moveTo(cx - spread*0.80, ty);
+    ctx.lineTo(cx + spread*0.80, ty);
+    ctx.stroke();
+  }
+
+  function drawRimAndSpokes(t){
+    // rim
+    ctx.strokeStyle = '#4b3f68'; ctx.lineWidth = Math.max(3, R*0.028);
+    ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle = '#3b3154'; ctx.lineWidth = Math.max(2, R*0.016);
+    ctx.beginPath(); ctx.arc(cx,cy,R*0.93,0,Math.PI*2); ctx.stroke();
+
+    // spokes - two per car, crossing the hub, like real tension spokes
+    ctx.strokeStyle = 'rgba(150,125,200,0.34)';
+    ctx.lineWidth = Math.max(1, R*0.008);
+    for(let i=0;i<CARS.length;i++){
+      const a = angle + (i/CARS.length)*Math.PI*2;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a)*R*0.14, cy + Math.sin(a)*R*0.14);
+      ctx.lineTo(cx + Math.cos(a)*R,      cy + Math.sin(a)*R);
+      ctx.stroke();
+    }
+
+    // the chase. Bulbs run round the rim in a travelling band, which is what a fairground
+    // wheel actually does - it is the movement people recognise, more than the wheel itself.
+    const N = 60;
+    for(let i=0;i<N;i++){
+      const a = angle*0.6 + (i/N)*Math.PI*2;
+      const x = cx + Math.cos(a)*R, y = cy + Math.sin(a)*R;
+      const phase = (i/N + t*0.16) % 1;
+      const band  = 0.45 + 0.55*Math.pow(Math.max(0, Math.cos(phase*Math.PI*2)), 2);
+      bulb(x, y, Math.max(1.6, R*0.013), band, t, i);
+    }
+  }
+
+  function drawHub(t){
+    const hr = R*0.185;
+    // disc
+    const g = ctx.createRadialGradient(cx,cy-hr*0.3,hr*0.1, cx,cy,hr);
+    g.addColorStop(0,'#241a3c'); g.addColorStop(1,'#150e26');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx,cy,hr,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#5a4a80'; ctx.lineWidth = Math.max(2, R*0.014);
+    ctx.beginPath(); ctx.arc(cx,cy,hr,0,Math.PI*2); ctx.stroke();
+
+    // ring of bulbs around the hub - these do NOT turn with the wheel, so the name
+    // stays put and readable while everything else rotates behind it
+    const N = 26;
+    for(let i=0;i<N;i++){
+      const a = (i/N)*Math.PI*2;
+      const x = cx + Math.cos(a)*hr, y = cy + Math.sin(a)*hr;
+      const phase = (i/N + t*0.10) % 1;
+      const band  = 0.5 + 0.5*Math.pow(Math.max(0, Math.cos(phase*Math.PI*2)), 2);
+      bulb(x, y, Math.max(1.4, R*0.011), band, t, i+90);
+    }
+
+    // the name
+    const fs = Math.max(13, hr*0.46);
+    ctx.font = '700 '+fs+'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(255,190,120,0.95)'; ctx.shadowBlur = fs*1.5;
+    ctx.fillStyle = '#fff3dd';
+    ctx.fillText(RIDE_NAME, cx, cy);
+    ctx.shadowBlur = 0;
+  }
+
+  function drawCar(x, y, w, h, car, t, i, lit){
+    // hanger - the car swings from a pin on the rim and hangs level, always
+    ctx.strokeStyle = '#4b3f68'; ctx.lineWidth = Math.max(1.5, R*0.010);
+    ctx.beginPath(); ctx.moveTo(x, y - h*0.95); ctx.lineTo(x, y - h*0.42); ctx.stroke();
+
+    // body
+    const warm = car.kind === 'light';
+    const g = ctx.createLinearGradient(0, y-h*0.4, 0, y+h*0.5);
+    if(warm){ g.addColorStop(0,'#3c2a4e'); g.addColorStop(1,'#241635'); }
+    else    { g.addColorStop(0,'#2b2242'); g.addColorStop(1,'#1a1230'); }
+    ctx.fillStyle = g;
+    roundRect(x-w/2, y-h*0.42, w, h*0.9, Math.min(w,h)*0.22);
+    ctx.fill();
+    ctx.strokeStyle = lit ? 'rgba(255,206,150,0.85)' : '#544471';
+    ctx.lineWidth = Math.max(1.4, R*0.009); ctx.stroke();
+
+    // canopy
+    ctx.fillStyle = warm ? '#6b4a86' : '#4a3a68';
+    roundRect(x-w*0.56, y-h*0.60, w*1.12, h*0.22, h*0.10);
+    ctx.fill();
+
+    // two bulbs on the canopy edge
+    const b = lit ? 1 : 0.55;
+    bulb(x-w*0.42, y-h*0.46, Math.max(1.2, R*0.009), b, t, i*3+1);
+    bulb(x+w*0.42, y-h*0.46, Math.max(1.2, R*0.009), b, t, i*3+2);
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,   x+w,y+h, r);
+    ctx.arcTo(x+w,y+h, x,  y+h, r);
+    ctx.arcTo(x,  y+h, x,  y,   r);
+    ctx.arcTo(x,  y,   x+w,y,   r);
+    ctx.closePath();
+  }
+
+  function drawCars(t){
+    const w = R*0.30, h = R*0.24;
+    // draw the far side first so the near cars overlap them correctly
+    const placed = CARS.map((c,i)=>{
+      const a = angle + (i/CARS.length)*Math.PI*2 - Math.PI/2;
+      return { c, i, a, y: cy + Math.sin(a)*R };
+    });
+    // Only ever ONE car in the light. Picking the highest car rather than testing each
+    // against a threshold means two neighbours can never both light as they pass the top.
+    let topIdx = 0;
+    for(let k=1;k<placed.length;k++) if(placed[k].y < placed[topIdx].y) topIdx = k;
+    const order = placed.slice().sort((p,q)=> p.y - q.y);
+
+    for(const o of order){
+      const x = cx + Math.cos(o.a)*R;
+      const y = cy + Math.sin(o.a)*R;
+      // "at the top" - the car currently being carried into the light
+      const lit = litOverride >= 0 ? (o.i === litOverride) : (o.i === placed[topIdx].i);
+      drawCar(x, y + h*0.62, w, h, o.c, t, o.i, lit);
+
+      if(lit && (litOverride < 0 || mode === 'holding')){
+        const fs = Math.max(12, R*0.055);
+        ctx.font = '600 '+fs+'px "Segoe UI", system-ui, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 10;
+        ctx.fillStyle = 'rgba(255,236,206,0.96)';
+        ctx.fillText(o.c.name, x, y - h*0.5);
+        ctx.shadowBlur = 0;
+      }
+    }
+  }
+
+  function drawPlatform(t){
+    const gy = groundY;
+    const pw = R*0.98, ph = R*0.10;
+
+    // deck
+    ctx.fillStyle = '#221838';
+    roundRect(cx-pw/2, gy-ph, pw, ph, ph*0.28); ctx.fill();
+    ctx.strokeStyle = '#493a66'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // A marquee board rather than a bare arch. A travelling fair signs its rides on a
+    // painted board ringed with bulbs, and that is the thing that reads as "fairground"
+    // from across a field - the lettering has to sit inside the lights, not above them.
+    const bw = R*1.02, bh = R*0.30;
+    const bx = cx - bw/2, by = gy - ph - R*0.16 - bh;
+
+    // posts holding the board up
+    ctx.strokeStyle = '#3a3152'; ctx.lineWidth = Math.max(3, R*0.020);
+    for(const dir of [-1,1]){
+      ctx.beginPath();
+      ctx.moveTo(cx + dir*bw*0.40, gy-ph);
+      ctx.lineTo(cx + dir*bw*0.40, by+bh);
+      ctx.stroke();
+    }
+
+    // board face
+    const g = ctx.createLinearGradient(0,by,0,by+bh);
+    g.addColorStop(0,'#2c1f48'); g.addColorStop(1,'#1a1130');
+    ctx.fillStyle = g;
+    roundRect(bx, by, bw, bh, bh*0.30); ctx.fill();
+    ctx.strokeStyle = '#5a4a80'; ctx.lineWidth = Math.max(2, R*0.012);
+    ctx.stroke();
+
+    // bulbs right round the border, chasing the same way as the rim
+    const per = [];
+    const r0 = bh*0.30, N = 34;
+    for(let i=0;i<N;i++){
+      const u = i/N;
+      // walk the rounded rectangle as a simple perimeter
+      const w2 = bw - 2*r0, h2 = bh - 2*r0, total = 2*(w2+h2) + 2*Math.PI*r0;
+      let d = u*total, px, py;
+      if(d < w2){ px = bx+r0+d; py = by; }
+      else if((d-=w2) < Math.PI*r0/2){ const a=d/r0; px=bx+bw-r0+Math.sin(a)*r0; py=by+r0-Math.cos(a)*r0; }
+      else if((d-=Math.PI*r0/2) < h2){ px = bx+bw; py = by+r0+d; }
+      else if((d-=h2) < Math.PI*r0/2){ const a=d/r0; px=bx+bw-r0+Math.cos(a)*r0; py=by+bh-r0+Math.sin(a)*r0; }
+      else if((d-=Math.PI*r0/2) < w2){ px = bx+bw-r0-d; py = by+bh; }
+      else if((d-=w2) < Math.PI*r0/2){ const a=d/r0; px=bx+r0-Math.sin(a)*r0; py=by+bh-r0+Math.cos(a)*r0; }
+      else if((d-=Math.PI*r0/2) < h2){ px = bx; py = by+bh-r0-d; }
+      else { const a=(d-h2)/r0; px=bx+r0-Math.cos(a)*r0; py=by+r0-Math.sin(a)*r0; }
+      per.push({px,py,u});
+    }
+    for(let i=0;i<per.length;i++){
+      const phase = (per[i].u + t*0.13) % 1;
+      const band = 0.45 + 0.55*Math.pow(Math.max(0, Math.cos(phase*Math.PI*2)), 2);
+      bulb(per[i].px, per[i].py, Math.max(1.3, R*0.011), band, t, i+40);
+    }
+
+    // the name, inside the lights
+    const fs = Math.max(14, bh*0.46);
+    ctx.font = '700 '+fs+'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.shadowColor='rgba(255,190,120,0.9)'; ctx.shadowBlur=fs*1.2;
+    ctx.fillStyle='#ffeccd';
+    ctx.fillText(RIDE_NAME, cx, by + bh*0.50);
+    ctx.shadowBlur=0;
+  }
+
+  // ---- loop ----------------------------------------------------------------
+  let last = 0;
+  function frame(ms){
+    const t = ms/1000;
+    const dt = last ? Math.min(0.05, t-last) : 0;
+    last = t;
+
+    if(mode === 'free'){
+      angle += SPEED * dt;
+    } else if(mode === 'seeking' || mode === 'boarding' || mode === 'lifting'){
+      stepSeek(dt);
+    } else if(mode === 'holding'){
+      if(ms >= holdUntil){ litOverride = -1; mode = 'free'; }
+    }
+    // 'open' turns nothing: the car you are reading stays where the wheel put it
+
+    drawSky(t);
+    drawMoon(t);
+    drawGround();
+    drawLegs();
+    drawPlatform(t);
+    drawRimAndSpokes(t);
+    drawCars(t);
+    drawHub(t);
+
+    requestAnimationFrame(frame);
+  }
+
+  // ---- riding it ----------------------------------------------------------
+  // The wheel only ever turns one way, like a real one. Everything the page does is
+  // therefore expressed as "keep going forward until this car is where I want it" -
+  // opening a car, and the ceremony after writing, are the same movement with
+  // different stopping points.
+  const TAU = Math.PI*2;
+  const norm = (a) => ((a % TAU) + TAU) % TAU;
+  const angleForTop    = (i) => norm(-(i/CARS.length)*TAU);
+  const angleForBottom = (i) => norm(Math.PI - (i/CARS.length)*TAU);
+
+  let mode = 'free';        // free | seeking | open | boarding | lifting | holding
+  let target = 0, after = null, holdUntil = 0, openIdx = -1, litOverride = -1;
+
+  function seek(to, then){ target = norm(to); after = then || null; mode = 'seeking'; }
+
+  function stepSeek(dt){
+    const remaining = norm(target - angle);
+    // Fetching a car is a deliberate movement, not the idle drift - a wheel operator
+    // runs it round properly and then eases it in. Proportional to what is left, with a
+    // floor so the last few degrees still arrive, and a cap so it never looks flung.
+    const speed = Math.max(1.15, Math.min(6.5, remaining*2.6));
+    if(remaining < 0.012){
+      angle = target;
+      const nxt = after; after = null;
+      if(nxt) nxt(); else mode = 'open';
+      return;
+    }
+    angle += Math.min(speed*dt, remaining);
+  }
+
+  // ---- talking to the site ------------------------------------------------
+  // The same page is also served as a still preview with no server behind it, so every
+  // call degrades to "look, don't touch" rather than throwing.
+  let live = false, me = null;
+  async function api(path, opts){
+    const r = await fetch(path, Object.assign({ credentials:'same-origin' }, opts||{}));
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.error || 'Something went wrong.');
+    return d;
+  }
+  async function boot(){
+    try{
+      const d = await api('/api/wheel');
+      if(d.cars && d.cars.length){
+        CARS.length = 0;
+        for(const c of d.cars) CARS.push({ id:c.id, name:c.name, kind:c.kind, notes:c.notes });
+        live = true;
+      }
+      try{ me = (await api('/api/me')).user; }catch(e){ me = null; }
+    }catch(e){ live = false; }
+    const board = document.getElementById('board');
+    if(!live) board.style.display = 'none';
+    fillCarPicker();
+  }
+
+  // ---- the panel ----------------------------------------------------------
+  const panel = document.getElementById('panel');
+  const plist = document.getElementById('plist');
+  const esc = (x) => String(x==null?'':x).replace(/[&<>"']/g, c => (
+    {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const when = (iso) => { const d=new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString(undefined,{day:'numeric',month:'short'}); };
+  // A song is a name on a ticket that opens a search - never an embedded player, which
+  // would drag in somebody else's licensing, tracking and branding.
+  const songLink = (sng) => sng
+    ? '<a class="song" target="_blank" rel="noopener" href="https://duckduckgo.com/?q='
+      + encodeURIComponent(sng + ' song') + '">\u266a ' + esc(sng) + '</a>' : '';
+
+  function renderNotes(car, notes){
+    document.getElementById('ptitle').textContent = car.name;
+    document.getElementById('pcount').textContent =
+      notes.length ? notes.length + (notes.length===1?' person in this car':' people in this car')
+                   : 'Nobody has written in this car yet.';
+    plist.innerHTML = notes.map(n => `
+      <div class="note" data-id="${n.id}">
+        <div class="who">${n.signed_as ? esc(n.signed_as) : 'Anonymous'} · ${when(n.created_at)}</div>
+        <div class="body">${esc(n.body)}</div>
+        ${songLink(n.song)}
+        <div class="replies">${
+          (n.replies||[]).map(r => `
+            <div class="reply">
+              <div class="who">${r.signed_as ? esc(r.signed_as) : 'Anonymous'}</div>
+              ${r.body ? esc(r.body) : ''} ${songLink(r.song)}
+            </div>`).join('')
+        }
+        ${live && me ? `<div class="rbox">
+            <input placeholder="Say something, or send a song back" maxlength="600">
+            <button>Send</button></div>` : ''}
+        </div>
+      </div>`).join('') || '<p style="opacity:.6;font-size:13px">Be the first.</p>';
+
+    plist.querySelectorAll('.note').forEach(el => {
+      const btn = el.querySelector('.rbox button'); if(!btn) return;
+      const inp = el.querySelector('.rbox input');
+      btn.onclick = async () => {
+        const v = inp.value.trim(); if(!v) return;
+        btn.disabled = true;
+        try{
+          // A reply that is only a song is a whole reply here, so anything that looks
+          // like "Artist - Title" and nothing else is sent as the song, not as chatter.
+          const looksLikeSong = /.+\s[-\u2013\u2014]\s.+/.test(v) && v.length < 80;
+          await api('/api/wheel/notes/' + el.dataset.id + '/replies', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(looksLikeSong ? { song:v } : { body:v }),
+          });
+          inp.value=''; openCar(openIdx, true);
+        }catch(e){ inp.value=''; inp.placeholder = e.message; }
+        btn.disabled = false;
+      };
+    });
+  }
+
+  async function openCar(i, quiet){
+    openIdx = i;
+    const car = CARS[i];
+    panel.classList.add('open');
+    document.getElementById('intro').style.opacity = 0;
+    if(!quiet){ document.getElementById('ptitle').textContent = car.name; plist.innerHTML=''; }
+    if(!live || !car.id){
+      document.getElementById('pcount').textContent = 'Preview only - writing is not switched on yet.';
+      return;
+    }
+    try{
+      const d = await api('/api/wheel/' + car.id + '/notes');
+      renderNotes(car, d.notes || []);
+    }catch(e){ document.getElementById('pcount').textContent = e.message; }
+  }
+
+  function closePanel(){
+    panel.classList.remove('open');
+    document.getElementById('intro').style.opacity = '';
+    openIdx = -1;
+    if(mode === 'open') mode = 'free';
+  }
+  document.getElementById('pclose').onclick = closePanel;
+
+  // ---- clicking a car -----------------------------------------------------
+  cv.addEventListener('click', (ev) => {
+    if(mode === 'boarding' || mode === 'lifting' || mode === 'holding') return;
+    const rect = cv.getBoundingClientRect();
+    const mx = ev.clientX - rect.left, my = ev.clientY - rect.top;
+    const w = R*0.30, h = R*0.24;
+    let hit = -1;
+    for(let i=0;i<CARS.length;i++){
+      const a = angle + (i/CARS.length)*TAU - Math.PI/2;
+      const x = cx + Math.cos(a)*R, y = cy + Math.sin(a)*R + h*0.62;
+      if(Math.abs(mx-x) < w*0.72 && Math.abs(my-y) < h*0.80){ hit = i; break; }
+    }
+    if(hit < 0) return;
+    // the wheel brings the car to you, rather than a box appearing from nowhere
+    seek(angleForTop(hit), () => { mode='open'; openCar(hit); });
+  });
+
+  // ---- writing ------------------------------------------------------------
+  const wrap = document.getElementById('write');
+  function fillCarPicker(){
+    const sel = document.getElementById('wcar');
+    sel.innerHTML = CARS.map((c,i)=>`<option value="${i}">${esc(c.name)}</option>`).join('');
+    if(openIdx >= 0) sel.value = openIdx;
+  }
+  document.getElementById('board').onclick = () => {
+    if(!me){
+      document.getElementById('wmsg').className='msg err';
+      document.getElementById('wmsg').textContent='Sign in first, using the button on the main site, then come back.';
+    }
+    fillCarPicker(); wrap.classList.add('open');
+  };
+  document.getElementById('wcancel').onclick = () => wrap.classList.remove('open');
+
+  document.getElementById('wgo').onclick = async () => {
+    const msg = document.getElementById('wmsg');
+    const body = document.getElementById('wbody').value.trim();
+    if(!body){ msg.className='err'; msg.textContent='Write something first.'; return; }
+    const idx = +document.getElementById('wcar').value;
+    const payload = {
+      body,
+      song: document.getElementById('wsong').value.trim(),
+      signedAs: document.getElementById('wsign').value.trim(),
+    };
+    const newCar = document.getElementById('wnew').value.trim();
+    if(newCar) payload.newCar = newCar; else payload.carId = CARS[idx].id;
+
+    msg.className=''; msg.textContent='Sending it up…';
+    try{
+      await api('/api/wheel/notes', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload),
+      });
+    }catch(e){ msg.className='err'; msg.textContent=e.message; return; }
+
+    wrap.classList.remove('open');
+    document.getElementById('wbody').value='';
+    document.getElementById('wsong').value='';
+    document.getElementById('wnew').value='';
+    msg.textContent='';
+
+    const d = await api('/api/wheel').catch(()=>null);
+    if(d && d.cars){
+      CARS.length=0;
+      for(const c of d.cars) CARS.push({id:c.id,name:c.name,kind:c.kind,notes:c.notes});
+    }
+    const target_i = newCar ? CARS.findIndex(c => c.name.toLowerCase()===newCar.toLowerCase())
+                            : idx;
+    ceremony(Math.max(0, target_i));
+  };
+
+  // The ceremony. On a real wheel you board at the bottom, so the car comes down to the
+  // platform to be filled, and then it is carried up. It stops at the top with its own
+  // lights full and the rest of the wheel dim, holds a moment, and then the ride carries
+  // on as if nothing happened - which is the point of it.
+  function ceremony(i){
+    closePanel();
+    mode = 'boarding';
+    seek(angleForBottom(i), () => {
+      mode = 'lifting';
+      litOverride = i;
+      seek(angleForTop(i), () => {
+        mode = 'holding';
+        holdUntil = performance.now() + 2600;
+      });
+    });
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  boot();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

@@ -86,6 +86,55 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS lantern_comments_lantern_idx ON lantern_comments (lantern_id);
   `);
+  // ---- the wheel ("5 Days") ----
+  // A car is a FEELING, not a person: twelve of them, and everybody carrying the same
+  // thing rides in the same car. That is what keeps the wheel finite while the notes
+  // inside it are not - a wheel with one car per person would need a thousand cars.
+  // Cars live in the database rather than in the page because riders can hang a new one
+  // when nothing on the wheel fits what they are carrying.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wheel_cars (
+      id         SERIAL PRIMARY KEY,
+      name       TEXT NOT NULL,
+      kind       TEXT NOT NULL DEFAULT 'heavy',
+      seq        INTEGER NOT NULL,
+      built_in   BOOLEAN NOT NULL DEFAULT FALSE,
+      owner_id   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS wheel_cars_seq_idx ON wheel_cars (seq);
+  `);
+  // Written anonymously by default. On this subject people write the truth or they write
+  // nothing, so the display name is optional and stored separately from the account.
+  // `song` is the song that helped, kept as plain text - never an embedded player.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wheel_notes (
+      id         SERIAL PRIMARY KEY,
+      car_id     INTEGER NOT NULL REFERENCES wheel_cars(id) ON DELETE CASCADE,
+      author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      signed_as  TEXT,
+      body       TEXT NOT NULL,
+      song       TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS wheel_notes_car_idx ON wheel_notes (car_id);
+    CREATE INDEX IF NOT EXISTS wheel_notes_day_idx ON wheel_notes (created_at);
+  `);
+  // A reply can carry a song back. That is the whole point of replies here: somebody
+  // writes that they are at the bottom, and a stranger sends them something to listen to.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS wheel_replies (
+      id         SERIAL PRIMARY KEY,
+      note_id    INTEGER NOT NULL REFERENCES wheel_notes(id) ON DELETE CASCADE,
+      author_id  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      signed_as  TEXT,
+      body       TEXT,
+      song       TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS wheel_replies_note_idx ON wheel_replies (note_id);
+  `);
+
   // And what they would rather not say in public. This is what replaces posting your own
   // social media on a page anyone can read: the message comes here, and only the person
   // searching sees it. They decide afterwards whether to hand over anything else.
@@ -137,6 +186,37 @@ async function migrate() {
   `);
   // whoever runs the site can take down something cruel; nobody else can
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;`);
+
+  await seedWheelCars();
+}
+
+// The twelve the wheel opens with, hung heavy, light, heavy, light. The order is the
+// design: however long somebody watches, two hard cars can never crest together, because
+// there is always an easier one between them. Riders can hang more, so this only ever
+// runs when the wheel is empty.
+const OPENING_CARS = [
+  ['Lonely',                     'heavy'],
+  ['Songs That Got Me Through',  'light'],
+  ['Hate My Job',                'heavy'],
+  ['Something Good Happened',    'light'],
+  ['Not Enough Money',           'heavy'],
+  ['What I\u2019m Listening To','light'],
+  ['Worn Out',                   'heavy'],
+  ['Somebody Was Kind To Me',    'light'],
+  ['Missing Someone',            'heavy'],
+  ['Starting Over',              'heavy'],
+  ['Scared About What\u2019s Coming', 'heavy'],
+  ['Not Well',                   'heavy'],
+];
+async function seedWheelCars(){
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM wheel_cars');
+  if (rows[0].n > 0) return;
+  for (let i = 0; i < OPENING_CARS.length; i++) {
+    await pool.query(
+      'INSERT INTO wheel_cars (name, kind, seq, built_in) VALUES ($1,$2,$3,TRUE)',
+      [OPENING_CARS[i][0], OPENING_CARS[i][1], i]
+    );
+  }
 }
 
 // Printed in the deploy log on the first start only, and only while nobody owns the site
