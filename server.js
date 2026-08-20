@@ -556,6 +556,17 @@ app.get('/api/wheel/today', async (req, res) => {
   res.json({ notes: rows.map((r) => wheelPublic(r, me)) });
 });
 
+app.get('/api/wheel/note/:id', async (req, res) => {
+  const me = currentUser(req);
+  const { rows } = await pool.query(
+    `SELECT n.id, n.car_id, c.name AS car, n.signed_as, n.body, n.song, n.author_id, n.created_at
+       FROM wheel_notes n JOIN wheel_cars c ON c.id = n.car_id
+      WHERE n.id=$1`, [req.params.id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'That note is gone.' });
+  res.json({ note: wheelPublic(rows[0], me) });
+});
+
 app.post('/api/wheel/notes', requireAuth, async (req, res) => {
   const b = req.body || {};
   const body = String(b.body || '').trim().slice(0, MAX_NOTE);
@@ -626,6 +637,43 @@ for (const [table, what] of [['wheel_notes', 'note'], ['wheel_replies', 'reply']
     res.json({ ok: true });
   });
 }
+
+// One note, given its own address. A link pasted into a group has to arrive as
+// something worth opening - the car it belongs to and the words themselves - or nobody
+// taps it. The page itself is only a set of tags and a redirect; the wheel does the rest.
+app.get('/wheel/:id', async (req, res) => {
+  let row = null;
+  if (dbReady) {
+    try {
+      const { rows } = await pool.query(
+        `SELECT n.id, n.body, n.song, c.name AS car
+           FROM wheel_notes n JOIN wheel_cars c ON c.id = n.car_id
+          WHERE n.id=$1`, [req.params.id]
+      );
+      row = rows[0] || null;
+    } catch (e) { console.error(e); }
+  }
+  const target = `/wheel.html?n=${encodeURIComponent(req.params.id)}`;
+  const title = row ? `${row.car} — 5 Days at Banjo Spirits` : '5 Days — Banjo Spirits';
+  // Kept short on purpose. A share is an invitation to come and sit with somebody,
+  // not a way of republishing the whole of what they said.
+  const excerpt = row
+    ? String(row.body).replace(/\s+/g, ' ').slice(0, 180) + (row.body.length > 180 ? '…' : '')
+    : 'A Ferris wheel at night. Every car carries something people are going through.';
+  res.set('Content-Type', 'text/html; charset=utf-8').send(
+`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>${escHtml(title)}</title>
+<meta name="description" content="${escHtml(excerpt)}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Banjo Spirits">
+<meta property="og:title" content="${escHtml(title)}">
+<meta property="og:description" content="${escHtml(excerpt)}">
+<meta property="og:image" content="https://www.banjospirits.com/tour-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0;url=${escHtml(target)}">
+</head><body><p>Taking you to the wheel… <a href="${escHtml(target)}">continue</a></p>
+<script>location.replace(${JSON.stringify(target)});</script></body></html>`);
+});
 
 // ---- becoming the site owner ----
 // Whoever runs the site needs to be able to take down something cruel, but there is no
