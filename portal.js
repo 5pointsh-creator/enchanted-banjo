@@ -24,7 +24,12 @@
     '':                  { rim: [150, 120, 210], core: [235, 225, 255], name: 'home' },
   };
 
-  var IN_MS = 900, OUT_MS = 700, KEY = 'bs_portal_arrival';
+  // The first time somebody goes through, it is the thing they came for and it wants
+  // room to breathe. By the fourth or fifth trip it is a door they are trying to get
+  // through, and every extra tenth of a second is a toll. So it plays long once and
+  // brisk thereafter, which is the only way to have it both ways.
+  var FIRST_IN_MS = 1500, IN_MS = 850, OUT_MS = 700;
+  var KEY = 'bs_portal_arrival', SEEN = 'bs_portal_seen';
 
   var reduced = window.matchMedia &&
                 window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -156,8 +161,13 @@
 
   function travel(href, door) {
     if (reduced) { location.href = href; return; }
-    try { sessionStorage.setItem(KEY, door.name); } catch (e) {}
-    run(door, true, IN_MS, function () { location.href = href; });
+    var first = true;
+    try {
+      first = !sessionStorage.getItem(SEEN);
+      sessionStorage.setItem(SEEN, '1');
+      sessionStorage.setItem(KEY, door.name);
+    } catch (e) {}
+    run(door, true, first ? FIRST_IN_MS : IN_MS, function () { location.href = href; });
   }
 
   // ---- wiring -------------------------------------------------------------
