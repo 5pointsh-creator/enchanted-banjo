@@ -46,6 +46,11 @@
   #pfoot{padding:12px 20px 16px;border-top:1px solid #2a1f45;font-size:11.5px;opacity:.62;
          line-height:1.6}
   #pfoot a{color:#c7b3ff}
+  #countdown{position:fixed;left:0;right:0;top:52px;text-align:center;pointer-events:none;
+             font-size:12.5px;opacity:.5;text-shadow:0 2px 10px #000;padding:0 20px}
+  #nightly{position:fixed;left:0;right:0;top:50%;text-align:center;pointer-events:none;
+           font-size:17px;color:#ffeccd;opacity:0;transition:opacity .8s;z-index:3;
+           text-shadow:0 2px 18px #000;padding:0 24px}
   #board{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:4;
          padding:11px 22px;border:none;border-radius:12px;cursor:pointer;font:inherit;
          font-size:14px;background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;
@@ -73,6 +78,8 @@
 <canvas id="c"></canvas>
 <div id="intro">Twelve cars. Each one carries something people are going through — and a song that helped.</div>
 <button id="board">Board the wheel</button>
+<div id="countdown"></div>
+<div id="nightly"></div>
 
 <div id="panel">
   <div id="phead">
@@ -196,7 +203,8 @@
   // and tungsten rather than an LED, not enough to be noticed as movement.
   function bulb(x, y, r, warmth, t, seed){
     const flick = 0.90 + 0.10*Math.sin(t*7.3 + seed*12.9) * Math.sin(t*3.1 + seed*4.7);
-    const a = warmth * flick;
+    // during the nightly turn the chase stops travelling and the whole ride burns full
+    const a = (mode === 'nightly' ? Math.max(warmth, 0.92) : warmth) * flick;
     if(a <= 0.02) return;
 
     const halo = ctx.createRadialGradient(x,y,0, x,y, r*9);
@@ -529,6 +537,14 @@
       stepSeek(dt);
     } else if(mode === 'holding'){
       if(ms >= holdUntil){ litOverride = -1; mode = 'free'; }
+    } else if(mode === 'nightly'){
+      const step = NIGHTLY_SPEED * dt;
+      angle += step;
+      nightlyLeft -= step;
+      if(nightlyLeft <= 0){
+        mode = 'free';
+        say('That was tonight. The wheel keeps turning.', 6000);
+      }
     }
     // 'open' turns nothing: the car you are reading stays where the wheel put it
 
@@ -799,9 +815,86 @@
     });
   }
 
+  // ---- the nightly turn ---------------------------------------------------
+  // Eight o'clock on ONE clock, not on everybody's own. A person alone at 8pm is half of
+  // what this place is for, so the value of it is that the same wheel turns for everybody
+  // at the same instant - somebody in Ohio at eight in the evening and somebody in
+  // Australia at ten in the morning are watching the same turn.
+  //
+  // Ohio is US Eastern, and Eastern moves for daylight saving twice a year. Rather than
+  // carry an offset that goes wrong in March, ask the browser what the time is THERE.
+  const RIDE_TZ = 'America/New_York';
+  const RIDE_HOUR = 20;
+
+  function clockThere(d){
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: RIDE_TZ, hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    }).formatToParts(d);
+    const g = (t) => +parts.find(x => x.type === t).value;
+    let h = g('hour');
+    if (h === 24) h = 0;                    // some engines say 24 for midnight
+    return { h, m: g('minute'), s: g('second') };
+  }
+
+  function secondsUntilTurn(){
+    const t = clockThere(new Date());
+    let secs = (RIDE_HOUR*3600) - (t.h*3600 + t.m*60 + t.s);
+    if (secs <= 0) secs += 24*3600;
+    return secs;
+  }
+
+  function prettyWait(secs){
+    const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60);
+    if (h > 0) return h + (h===1?' hour ':' hours ') + m + (m===1?' minute':' minutes');
+    if (m > 0) return m + (m===1?' minute':' minutes');
+    return secs + ' seconds';
+  }
+
+  // one full revolution, every light full, each car flaring as it crests
+  let nightlyLeft = 0;
+  const NIGHTLY_SPEED = 0.36;
+
+  function startNightly(){
+    closePanel();
+    document.getElementById('write').classList.remove('open');
+    mode = 'nightly';
+    nightlyLeft = TAU;
+    litOverride = -1;
+    say('The wheel is turning. Everything written today is going up.');
+  }
+
+  const banner = document.getElementById('nightly');
+  let sayTimer = 0;
+  function say(text, ms){
+    banner.textContent = text;
+    banner.style.opacity = 1;
+    clearTimeout(sayTimer);
+    if (ms) sayTimer = setTimeout(() => { banner.style.opacity = 0; }, ms);
+  }
+
+  function tickClock(){
+    // during the turn the countdown would sit there still reading "in 21 hours", so it
+    // steps out of the way and lets the banner say what is happening
+    if (mode === 'nightly'){
+      document.getElementById('countdown').textContent = '';
+      document.getElementById('intro').style.opacity = 0;
+      return;
+    }
+    if (openIdx < 0) document.getElementById('intro').style.opacity = '';
+    const secs = secondsUntilTurn();
+    if (secs <= 1){ startNightly(); return; }
+    const line = document.getElementById('countdown');
+    line.textContent = secs <= 3600
+      ? 'The wheel turns for everyone in ' + prettyWait(secs) + '.'
+      : 'Every night at 8pm Eastern the wheel turns for everyone at once — in ' + prettyWait(secs) + '.';
+  }
+
   window.addEventListener('resize', resize);
   resize();
   boot();
+  tickClock();
+  setInterval(tickClock, 1000);
   requestAnimationFrame(frame);
 })();
 </script>
