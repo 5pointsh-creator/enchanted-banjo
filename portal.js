@@ -28,7 +28,7 @@
   // room to breathe. By the fourth or fifth trip it is a door they are trying to get
   // through, and every extra tenth of a second is a toll. So it plays long once and
   // brisk thereafter, which is the only way to have it both ways.
-  var FIRST_IN_MS = 1500, IN_MS = 850, OUT_MS = 700;
+  var FIRST_IN_MS = 2500, IN_MS = 1200, OUT_MS = 700;
   var KEY = 'bs_portal_arrival', SEEN = 'bs_portal_seen';
 
   var reduced = window.matchMedia &&
