@@ -11,9 +11,13 @@
   html,body{height:100%;overflow:hidden;background:#07040c}
   body{font-family:"Segoe UI",system-ui,sans-serif;color:#efe6ff}
   canvas{display:block;width:100%;height:100%;touch-action:none}
-  /* the name of the ride, and a line telling a first-time visitor what this is */
-  #intro{position:fixed;left:0;right:0;top:20px;text-align:center;pointer-events:none;
-         font-size:14px;opacity:.72;text-shadow:0 2px 12px #000;padding:0 20px;line-height:1.6;
+  /* The line telling a first-time visitor what this is, and the one counting down to the
+     turn. They live in one box and stack naturally: pinning the second at a fixed distance
+     from the top only works while the first is exactly one line, and on a phone it wraps
+     to two - so the countdown was landing on top of it. */
+  #introwrap{position:fixed;left:0;right:0;top:20px;z-index:2;text-align:center;
+             pointer-events:none;padding:0 20px}
+  #intro{font-size:14px;opacity:.72;text-shadow:0 2px 12px #000;line-height:1.6;
          transition:opacity .5s}
   canvas{cursor:pointer}
   /* the car you opened, read beside the wheel that brought it to you */
@@ -47,14 +51,19 @@
   #pfoot{padding:12px 20px 16px;border-top:1px solid #2a1f45;font-size:11.5px;opacity:.62;
          line-height:1.6}
   #pfoot a{color:#c7b3ff}
-  #countdown{position:fixed;left:0;right:0;top:52px;text-align:center;pointer-events:none;
-             font-size:12.5px;opacity:.5;text-shadow:0 2px 10px #000;padding:0 20px}
+  #countdown{margin-top:6px;font-size:12.5px;opacity:.5;text-shadow:0 2px 10px #000;
+             line-height:1.5}
   #nightly{position:fixed;left:0;right:0;top:50%;text-align:center;pointer-events:none;
            font-size:17px;color:#ffeccd;opacity:0;transition:opacity .8s;z-index:3;
            text-shadow:0 2px 18px #000;padding:0 24px}
   #booklink{position:fixed;left:16px;bottom:18px;z-index:4;font-size:12.5px;opacity:.55;
             color:#c7b3ff;text-decoration:none;border-bottom:1px dotted #5a4a80}
   #booklink:hover{opacity:.85}
+  /* On a narrow screen the centred button reaches back far enough to sit on top of this
+     link, since both were pinned to the same distance from the bottom. Lift it clear. */
+  @media (max-width:560px){
+    #booklink{bottom:66px}
+  }
   #board{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:4;
          padding:11px 22px;border:none;border-radius:12px;cursor:pointer;font:inherit;
          font-size:14px;background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;
@@ -80,9 +89,11 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="intro">Twelve cars. Each one carries something people are going through — and a song that helped.</div>
+<div id="introwrap">
+  <div id="intro">Twelve cars. Each one carries something people are going through — and a song that helped.</div>
+  <div id="countdown"></div>
+</div>
 <button id="board">Board the wheel</button>
-<div id="countdown"></div>
 <a id="booklink" href="night-book">The Night Book ▸</a>
 <div id="nightly"></div>
 
@@ -147,7 +158,17 @@
   let angle = 0;                   // where the wheel has turned to
   const SPEED = 0.055;             // radians per second - a real wheel is slow
 
+  // How far down the writing at the top actually reaches. Measured rather than assumed,
+  // because it depends on how the sentences wrap, and read only when it can change -
+  // never per frame, which would force a layout on every tick.
+  let headerBottom = 0;
+  function measureHeader(){
+    const el = document.getElementById('introwrap');
+    headerBottom = el ? el.getBoundingClientRect().bottom : 0;
+  }
+
   function resize(){
+    measureHeader();
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = cv.clientWidth; H = cv.clientHeight;
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
@@ -247,7 +268,9 @@
     // Deliberately small and cool. It is the thing the ride stands under, not a second
     // subject competing with the wheel for the eye.
     const mr = Math.max(14, R*0.19);
-    const mx = W - mr*2.9, my = mr*2.7;
+    // Hangs below whatever the two lines of writing actually needed. On a phone they wrap
+    // to four lines and a moon placed at a fixed height sits behind the words.
+    const mx = W - mr*2.9, my = Math.max(mr*2.7, headerBottom + mr*0.9);
 
     // halo
     const halo = ctx.createRadialGradient(mx,my,mr*0.6, mx,my,mr*3.4);
@@ -893,6 +916,7 @@
     line.textContent = secs <= 3600
       ? 'The wheel turns for everyone in ' + prettyWait(secs) + '.'
       : 'Every night at 8pm Eastern the wheel turns for everyone at once — in ' + prettyWait(secs) + '.';
+    measureHeader();   // the wording changes length, so the block can change height
   }
 
   window.addEventListener('resize', resize);
