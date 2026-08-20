@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test 4 — Banjo Spirits</title>
+<meta name="description" content="A quiet place to remember someone. Play the banjo, walk through the forest, plant a tree or dedicate a star in their memory. Free to use.">
+<link rel="canonical" href="https://www.banjospirits.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Banjo Spirits">
+<meta property="og:title" content="Banjo Spirits — Play in the Forest">
+<meta property="og:description" content="A quiet place to remember someone. Plant a tree or dedicate a star in their memory. Free to use.">
+<meta property="og:url" content="https://banjospirits.com/">
+<meta property="og:image" content="https://banjospirits.com/tour-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{ --glow:#b26bff; --glow2:#7a3cff; --cream:#efe6ff; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,sans-serif;
+    background:#0c0710;
+    color:var(--cream);
+    display:flex;flex-direction:column;align-items:center;
+    min-height:100%;overflow-x:hidden;
+  }
+  header{text-align:center;padding:22px 16px 6px}
+  h1{
+    font-size:clamp(24px,4.5vw,40px);font-weight:700;letter-spacing:.5px;
+    background:linear-gradient(180deg,#e9d4ff,#9b5cff);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .sub{opacity:.7;font-size:14px;margin-top:6px}
+
+  .stage{
+    position:relative;
+    height:min(82vh,1180px);
+    display:flex;align-items:center;justify-content:center;
+    margin-top:4px;
+  }
+  .frame{position:relative;height:100%}
+  .frame img{height:100%;width:auto;display:block;border-radius:10px}
+
+  /* SVG overlay maps 1:1 to the photo via matching aspect ratio */
+  svg.overlay{
+    position:absolute;inset:0;width:100%;height:100%;
+    touch-action:none;
+  }
+  .hit{fill:transparent;stroke:transparent;stroke-width:46;cursor:pointer}
+  .wire{
+    fill:none;stroke:url(#stringGrad);stroke-linecap:round;
+    filter:url(#glow);pointer-events:none;opacity:.9;
+  }
+  .ripple{fill:none;stroke:var(--glow);pointer-events:none}
+
+  .note-pop{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    background:rgba(140,80,255,.92);color:#fff;font-weight:700;
+    padding:6px 16px;border-radius:999px;font-size:15px;opacity:0;
+    transition:opacity .25s;pointer-events:none;
+  }
+
+  .panel{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:18px 12px 6px}
+  .chip{
+    background:linear-gradient(180deg,#2a1740,#170b26);
+    border:1px solid var(--glow2);border-radius:12px;color:var(--cream);
+    padding:11px 16px;font-size:14px;cursor:pointer;font-family:inherit;
+    transition:transform .1s,box-shadow .2s;min-width:64px;
+  }
+  .chip:hover{box-shadow:0 0 16px rgba(140,80,255,.55);transform:translateY(-2px)}
+  .chip:active{transform:translateY(0)}
+  .chip small{display:block;opacity:.6;font-size:11px;margin-top:2px}
+
+  .keys{margin:10px 16px 30px;font-size:13px;opacity:.62;text-align:center;max-width:520px;line-height:1.7}
+  kbd{
+    background:#241436;border:1px solid #4a2f6e;border-radius:5px;
+    padding:1px 7px;font-family:inherit;font-size:12px;color:#d9c7ff
+  }
+  .start-hint{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(10,6,16,.35);cursor:pointer;font-size:15px;letter-spacing:.5px;
+    backdrop-filter:blur(1px);text-align:center;padding:20px
+  }
+  .start-hint span{background:rgba(140,80,255,.85);padding:12px 22px;border-radius:14px}
+</style>
+</head>
+<body>
+<p style="background:#1c1030;color:#efe6ff;font:16px system-ui;padding:10px;margin:0;text-align:center">TEST 4 WORKS — front page without the banjo code</p>
+  <div id="welcome" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+     background:rgba(6,3,12,.82);backdrop-filter:blur(4px);padding:20px">
+    <div style="background:#160c26;border:1px solid #4a2f6e;border-radius:18px;padding:26px 24px;max-width:440px;text-align:center;
+       box-shadow:0 0 40px rgba(120,60,220,.35)">
+      <div style="font-size:34px;margin-bottom:6px">🌲✨</div>
+      <h2 style="color:#e9d4ff;font-size:22px;margin-bottom:12px">Welcome to Banjo Spirits</h2>
+      <p style="opacity:.88;font-size:15px;line-height:1.6;margin-bottom:12px">
+        This is a gentle memorial place — a forest and a starlit sky where you can remember
+        someone you love.
+      </p>
+      <p style="opacity:.88;font-size:15px;line-height:1.6;margin-bottom:12px">
+        🌱 Plant a memorial tree, or ⭐ dedicate a star, and write a few words for them.
+        Each one becomes a lasting tribute you can visit anytime.
+      </p>
+      <p style="opacity:.88;font-size:15px;line-height:1.6;margin-bottom:12px">
+        🏮 And if the person you are missing is still out there somewhere — a brother, a
+        birth mother, a lost lover — Paper Valley is a trail of lanterns for anyone in
+        hopes of reconnecting with the ones we never forgot.
+      </p>
+      <p style="opacity:.65;font-size:13px;line-height:1.6;margin-bottom:20px">
+        It's a keepsake, not a real plant — a quiet corner of the internet that's theirs, forever.
+      </p>
+      <button id="welcomeBtn" style="background:linear-gradient(180deg,#7a3cff,#5322b0);border:none;color:#fff;
+         padding:12px 28px;border-radius:12px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;
+         box-shadow:0 0 18px rgba(140,80,255,.5)">Step inside ▸</button>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var w=document.getElementById('welcome');
+      try{ if(!localStorage.getItem('bsWelcomed')) w.style.display='flex'; }catch(e){ w.style.display='flex'; }
+      document.getElementById('welcomeBtn').addEventListener('click',function(){
+        w.style.display='none'; try{ localStorage.setItem('bsWelcomed','1'); }catch(e){}
+      });
+    })();
+  </script>
+
+  <header>
+    <h1>Banjo Spirits</h1>
+    <div class="sub" style="max-width:640px;margin:0 auto;line-height:1.5">
+      A place of remembrance. Plant a memorial tree or dedicate a star in memory of
+      someone you love — and visit them whenever you need to.
+    </div>
+    <div class="sub" style="max-width:640px;margin:8px auto 0;font-size:13px;opacity:.7;line-height:1.5">
+      Every tree and star here is a lasting digital tribute, kept safe forever in this
+      forest and sky. (Not a real plant — a keepsake you can always return to.)
+    </div>
+  </header>
+
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:4px 16px 18px">
+    <a href="plant.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#3fae6b,#1f7d47);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 0 18px rgba(60,200,120,.45)">
+       🌱 Plant a Tree ▸</a>
+    <a href="sky.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#4a5bd6,#2a2f8f);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 0 18px rgba(120,140,255,.45)">
+       ⭐ Dedicate a Star ▸</a>
+    <a href="forest.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 0 18px rgba(140,80,255,.5)">
+       🌲 Walk the 3D Forest ▸</a>
+    <a href="paper-valley.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#c8842f,#8a4f16);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 0 18px rgba(255,160,60,.45)">
+       🏮 Paper Valley ▸</a>
+    <a href="wheel.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#8a5cc8,#4a2d7a);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;font-weight:600;box-shadow:0 0 18px rgba(255,190,120,.45)">
+       🎡 5 Days ▸</a>
+  </div>
+
+  <!-- short tour. Only a still is loaded up front; the video itself is fetched on tap,
+       so nobody on a phone pays for it unless they actually want to watch. -->
+  <div style="max-width:600px;margin:6px auto 16px;padding:0 16px">
+    <button id="tourBox" aria-label="Play a short tour of Banjo Spirits"
+       style="position:relative;display:block;width:100%;padding:0;border:1px solid #4a2f6e;border-radius:16px;
+       overflow:hidden;background:none;cursor:pointer;line-height:0;box-shadow:0 0 22px rgba(120,60,220,.28)">
+      <img src="tour-poster.jpg" alt="" style="width:100%;display:block">
+      <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+         justify-content:center;gap:10px;background:rgba(10,6,16,.34)">
+        <span style="width:58px;height:58px;border-radius:50%;background:rgba(140,80,255,.92);
+           display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(140,80,255,.6)">
+          <span style="color:#fff;font-size:22px;margin-left:4px">▶</span>
+        </span>
+        <span style="color:#efe6ff;font-size:14px;line-height:1.4;background:rgba(10,6,16,.55);
+           padding:7px 14px;border-radius:10px">See the forest in 70 seconds</span>
+      </span>
+    </button>
+  </div>
+  <script>
+    document.getElementById('tourBox').addEventListener('click', function(){
+      this.innerHTML = '<video src="banjo-spirits-tour.mp4" poster="tour-poster.jpg" controls autoplay ' +
+                       'playsinline style="width:100%;display:block"></video>';
+      this.style.cursor = 'default';
+    }, { once: true });
+  </script>
+
+  <div style="text-align:center;max-width:640px;margin:2px auto 6px;font-size:14px;opacity:.82;line-height:1.5">
+    🎵 And when you need a quiet moment, play the memorial banjo below — pluck the glowing strings for a little peace.
+  </div>
+
+  <div class="stage">
+    <div class="frame">
+      <img src="banjo.jpg" alt="Banjo in an enchanted forest" draggable="false">
+      <div class="note-pop" id="pop"></div>
+      <svg class="overlay" viewBox="0 0 1024 1536" preserveAspectRatio="xMidYMid meet" id="ov">
+        <defs>
+          <linearGradient id="stringGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#e9d4ff"/>
+            <stop offset="1" stop-color="#b26bff"/>
+          </linearGradient>
+          <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="3.2" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- visible glowing strings + wide invisible hit zones (built by JS) -->
+        <g id="wires"></g>
+        <g id="hits"></g>
+        <g id="ripples"></g>
+      </svg>
+      <div class="start-hint" id="startHint"><span>🔊 Tap to enable sound, then play</span></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel">
+    <button class="chip" data-strum="down">Strum ↓<small>Space</small></button>
+    <button class="chip" data-chord="G">G<small>chord</small></button>
+    <button class="chip" data-chord="C">C<small>chord</small></button>
+    <button class="chip" data-chord="D">D<small>chord</small></button>
+    <button class="chip" data-chord="Em">Em<small>chord</small></button>
+  </div>
+
+  <div class="keys">
+    Keyboard: <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> pluck the four strings &nbsp;·&nbsp;
+    <kbd>Space</kbd> strum &nbsp;·&nbsp; <kbd>G</kbd><kbd>C</kbd><kbd>D</kbd> chords.
+    <br>Or click a string / drag across them to swipe-strum.
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:6px 16px 30px">
+    <a href="plant.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#3fae6b,#1f7d47);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;box-shadow:0 0 18px rgba(60,200,120,.45)">
+       🌱 Plant a Tree ▸</a>
+    <a href="sky.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#4a5bd6,#2a2f8f);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;box-shadow:0 0 18px rgba(120,140,255,.45)">
+       ⭐ Dedicate a Star ▸</a>
+    <a href="forest.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#7a3cff,#5322b0);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;box-shadow:0 0 18px rgba(140,80,255,.5)">
+       🌲 Walk the 3D Forest ▸</a>
+    <a href="paper-valley.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#c8842f,#8a4f16);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;box-shadow:0 0 18px rgba(255,160,60,.45)">
+       🏮 Paper Valley ▸</a>
+    <a href="wheel.html" style="display:inline-block;padding:12px 22px;
+       background:linear-gradient(180deg,#8a5cc8,#4a2d7a);color:#fff;text-decoration:none;
+       border-radius:12px;font-size:15px;box-shadow:0 0 18px rgba(255,190,120,.45)">
+       🎡 5 Days ▸</a>
+  </div>
+
+  <p style="text-align:center;font-size:13px;opacity:.55;margin:0 16px 26px">
+    <a href="night-book" style="color:#c7b3ff">The Night Book</a> — what the wheel carried up each night.
+  </p>
+
+  <script src="bs-api.js"></script>
+<script src="portal.js"></script>
+</body>
+</html>
