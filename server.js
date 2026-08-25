@@ -866,6 +866,25 @@ app.use(express.static(path.join(__dirname), {
 
 app.listen(PORT, () => console.log(`Banjo Spirits running on :${PORT}`));
 
+// Two rows were left in the database while it was being tested, and they have been
+// sitting in the forest and the sky ever since where every visitor could read them.
+// They are matched on the id AND on the exact name they were given, so this cannot
+// take down anything a real person planted, and once they are gone it does nothing.
+async function removeTestRows() {
+  const leftovers = [
+    ['trees', 1, 'TEST tree - delete me'],
+    ['stars', 1, 'TEST star - delete me'],
+  ];
+  for (const [table, id, name] of leftovers) {
+    try {
+      const r = await pool.query(`DELETE FROM ${table} WHERE id=$1 AND name=$2`, [id, name]);
+      if (r.rowCount) console.log(`Removed the leftover test row from ${table}.`);
+    } catch (e) {
+      console.warn(`Could not remove the test row from ${table}: ${e.message}`);
+    }
+  }
+}
+
 // Keep trying: the database is often attached minutes after the first deploy.
 function connect() {
   migrate()
@@ -877,6 +896,7 @@ function connect() {
       dbReady = true;
       console.log('Database connected - accounts and shared dedications are live.');
       console.log('Session key source: ' + secretSource);
+      await removeTestRows();
       const code = await ensureOwnerCode();
       if (code) {
         console.log('');
