@@ -1,12 +1,11 @@
 {
-  "name": "project",
+  "name": "banjo-spirits",
   "version": "1.0.0",
   "description": "Banjo Spirits - interactive memorial forest and star sky",
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "build": "node canary.js && tsc",
-    "prepare": "node canary.js"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=18"
