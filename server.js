@@ -816,8 +816,142 @@ app.post('/api/claim-owner', requireAuth, async (req, res) => {
 // A search posted to a group disappears the same day. Given its own address, the lantern
 // can be pasted anywhere and shows who is being looked for, so the people who post are
 // also the people who bring others back. Crawlers read the tags; a person is sent on in.
+// ---- the shelf of candles ----
+// A candle is lit FOR one person and goes out on its own. The clock is the whole design:
+// the shelf can only ever show what is alight, so it stays a shrine and never silts up
+// into a warehouse. Nothing runs on a timer - a candle nobody re-lights simply stops
+// being returned.
+const BURN_DAYS = 5;
+const CANDLE_SHELF = 12;          // how many the shelf holds. The count carries the rest.
+// The folk colours, not the church ones. Each line says what the candle is FOR, never
+// what it will DO - a memorial site that promises outcomes loses the trust it runs on.
+// Black is deliberately absent: in that tradition it is protection, but in America it
+// reads as hex work, and beside a white candle lit for somebody's mother it is the one
+// colour that makes a person uneasy. Protection went to blue, peace stayed purple.
+const CANDLE_COLOURS = {
+  white:  'for remembrance',
+  red:    'for love',
+  green:  'for somebody getting back on their feet',
+  pink:   'for a friend',
+  purple: 'for peace',
+  blue:   'for protection, and safe travel',
+};
+
+const readCandle = (b) => ({
+  name:   String(b.name   || '').trim().slice(0, 60),
+  words:  String(b.words  || '').trim().slice(0, 300),
+  piece:  String(b.piece  || '').trim().slice(0, 80),
+  lit_by: String(b.lit_by || '').trim().slice(0, 40),
+  colour: CANDLE_COLOURS[String(b.colour || '').trim()] ? String(b.colour).trim() : 'white',
+});
+
+const publicCandle = (r) => ({
+  id: r.id, name: r.name, words: r.words, colour: r.colour, piece: r.piece,
+  lit_by: r.lit_by || r.owner || null,
+  meaning: CANDLE_COLOURS[r.colour] || CANDLE_COLOURS.white,
+  relit: r.relit,
+  burning: new Date(r.burns_until) > new Date(),
+  hours_left: Math.max(0, Math.round((new Date(r.burns_until) - Date.now()) / 3600000)),
+  lit_at: r.created_at,
+});
+
+app.get('/api/candles', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.*, u.display_name AS owner FROM candles c
+         LEFT JOIN users u ON u.id = c.owner_id
+        WHERE c.burns_until > now()
+        ORDER BY c.created_at DESC LIMIT $1`, [CANDLE_SHELF]
+    );
+    const { rows: tally } = await pool.query(
+      'SELECT COUNT(*)::int AS burning FROM candles WHERE burns_until > now()'
+    );
+    res.json({ candles: rows.map(publicCandle), burning: tally[0].burning, shelf: CANDLE_SHELF,
+               colours: CANDLE_COLOURS, burn_days: BURN_DAYS });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+app.get('/api/candles/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT c.*, u.display_name AS owner FROM candles c
+         LEFT JOIN users u ON u.id = c.owner_id WHERE c.id = $1`, [req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'That candle is not here.' });
+    res.json({ candle: publicCandle(rows[0]) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+// Signing in is NOT required. The person this feature exists for arrives on a link
+// somebody sent them, in the middle of the worst week of their life, and being asked to
+// make an account is exactly where they close the page. An account is kept when there
+// is one, so the candle can still be found later.
+app.post('/api/candles', async (req, res) => {
+  const me = currentUser(req);
+  const f = readCandle(req.body || {});
+  if (!f.name) return res.status(400).json({ error: 'Please put in who the candle is for.' });
+  const refusal = refuseContactDetail({ name: f.name, words: f.words, piece: f.piece });
+  if (refusal) return res.status(400).json({ error: refusal });
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO candles (owner_id, lit_by, name, words, colour, piece, burns_until)
+       VALUES ($1,$2,$3,$4,$5,$6, now() + ($7 || ' days')::interval) RETURNING *`,
+      [me ? me.id : null, f.lit_by || null, f.name, f.words || null, f.colour, f.piece || null, String(BURN_DAYS)]
+    );
+    res.json({ candle: publicCandle(rows[0]) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+// Anyone may re-light, not only whoever lit it first. That is the point: the brother who
+// opens the link keeps his mother's candle going. Re-lighting starts the days again from
+// now rather than adding to what is left, so a candle cannot be stacked up for ever.
+app.post('/api/candles/:id/relight', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE candles SET burns_until = now() + ($2 || ' days')::interval, relit = relit + 1
+        WHERE id = $1 RETURNING *`, [req.params.id, String(BURN_DAYS)]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'That candle is not here.' });
+    res.json({ candle: publicCandle(rows[0]) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
 const escHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// The link somebody sends. It does not land you on the shelf - it lands you on HER
+// candle, with her name on it, and the flame still going. Server-rendered so the name
+// and the words show up in the message preview before anybody has even tapped it.
+app.get('/candle/:id', async (req, res) => {
+  let row = null;
+  if (dbReady) {
+    try {
+      const { rows } = await pool.query(
+        'SELECT id,name,words,colour,piece FROM candles WHERE id=$1', [req.params.id]
+      );
+      row = rows[0] || null;
+    } catch (e) { console.error(e); }
+  }
+  const target = `/candles.html?c=${encodeURIComponent(req.params.id)}`;
+  const meaning = row ? (CANDLE_COLOURS[row.colour] || CANDLE_COLOURS.white) : '';
+  const title = row ? `A candle for ${row.name} — Banjo Spirits` : 'Light a candle — Banjo Spirits';
+  const bits = row
+    ? [`A ${row.colour} candle, ${meaning}.`, row.words, row.piece].filter(Boolean).join(' ')
+    : 'Light a candle for someone you miss. It burns a few days, and anyone can light it again.';
+  res.set('Content-Type', 'text/html; charset=utf-8').send(
+`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>${escHtml(title)}</title>
+<meta name="description" content="${escHtml(bits).slice(0, 300)}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Banjo Spirits">
+<meta property="og:title" content="${escHtml(title)}">
+<meta property="og:description" content="${escHtml(bits).slice(0, 300)}">
+<meta property="og:image" content="https://banjospirits.com/tour-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0;url=${escHtml(target)}">
+</head><body><p>Taking you to the candle… <a href="${escHtml(target)}">continue</a></p>
+<script>location.replace(${JSON.stringify(target)});</script></body></html>`);
+});
 
 app.get('/lantern/:id', async (req, res) => {
   let row = null;

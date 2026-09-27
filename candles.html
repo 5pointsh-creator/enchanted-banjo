@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Light a candle for someone you miss — Banjo Spirits</title>
+<meta name="description" content="Light a candle online for someone who died, or someone you are missing today. Put their name to it, write a few words, and send the link to anyone who knew them. It burns five days and anyone can light it again. Free.">
+<link rel="canonical" href="https://www.banjospirits.com/candles.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Banjo Spirits">
+<meta property="og:title" content="Light a candle for someone you miss">
+<meta property="og:description" content="A shelf in the forest. Light one for someone, write a few words, and send the link to the people who knew them.">
+<meta property="og:url" content="https://banjospirits.com/candles.html">
+<meta property="og:image" content="https://banjospirits.com/tour-poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{background:#07040c;color:#d9c7ff;font-family:"Segoe UI",system-ui,sans-serif;
+       background-image:
+         radial-gradient(120% 80% at 50% 12%, rgba(150,70,230,.18), transparent 62%),
+         linear-gradient(180deg,#160a24 0%, #14081f 40%, #07040c 100%);
+       background-attachment:fixed}
+
+  a{color:#cbb0ff}
+  .wrap{max-width:1120px;margin:0 auto;padding:18px 16px 60px}
+
+  .topnav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .topnav a{background:rgba(36,20,54,.72);border:1px solid #4a2f6e;border-radius:12px;
+            padding:8px 13px;color:#d9c7ff;font-size:13px;text-decoration:none}
+
+  h1{font-size:27px;color:#efe6ff;font-weight:600;letter-spacing:.2px}
+  .lede{margin-top:7px;font-size:15px;color:#a892d4;line-height:1.6;max-width:640px}
+
+  .cols{display:grid;grid-template-columns:1fr 372px;gap:22px;margin-top:22px;align-items:start}
+  /* A grid item defaults to min-width:auto, so one wide child - the share box, whose
+     input carries a default intrinsic width - drags the whole column past the screen
+     edge on a phone. These two lines are what keep the panel inside the glass. */
+  .cols > *{min-width:0}
+  @media (max-width:900px){
+    .cols{grid-template-columns:1fr}
+    /* Arriving on a link somebody sent, the candle IS the errand. On a narrow screen
+       the shelf would push it under the fold, so the candle goes first and the shelf
+       sits beneath it. Lighting a fresh one puts them back the usual way round. */
+    body.showing-one .panel{order:1}
+    body.showing-one .wall{order:2}
+  }
+
+  /* ---- the shelf ---- */
+  .wall{position:relative;background:linear-gradient(180deg, rgba(36,20,54,.62), rgba(18,9,30,.72));
+        border:1px solid rgba(160,110,255,.16);border-radius:10px 10px 4px 4px;
+        box-shadow:0 30px 70px rgba(0,0,0,.55);padding:18px 18px 0;min-height:430px;
+        display:flex;flex-direction:column}
+  .pieces{display:block;width:100%;max-width:520px;margin:4px auto 0;opacity:.5}
+  .shelfarea{margin-top:auto}
+  .jars{display:flex;justify-content:center;align-items:flex-end;gap:10px;
+        flex-wrap:nowrap;overflow-x:auto;padding:0 4px}
+  .jar{flex:0 0 auto;background:none;border:0;cursor:pointer;padding:0;display:block}
+  .plank{height:18px;border-radius:3px;margin:0 -4px;
+         background:linear-gradient(180deg,#3a2742,#241634);
+         box-shadow:0 8px 26px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.07)}
+  .tally{text-align:center;font-size:14px;color:#b9a3e0;padding:14px 4px 16px}
+
+  /* ---- the panel ---- */
+  .panel{background:rgba(20,11,33,.9);border:1px solid rgba(160,110,255,.22);
+         border-radius:14px;padding:20px;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+  .panel h2{font-size:21px;color:#efe6ff;font-weight:600}
+  .panel .sub{margin-top:5px;font-size:13.5px;color:#a892d4;line-height:1.55}
+  .lbl{font-size:11px;letter-spacing:.9px;text-transform:uppercase;color:#9b83c9;
+       margin:16px 0 8px;display:block}
+  input,textarea{width:100%;background:rgba(0,0,0,.32);border:1px solid rgba(160,110,255,.18);
+       border-radius:9px;padding:10px 12px;font-size:15px;color:#efe6ff;font-family:inherit}
+  input::placeholder,textarea::placeholder{color:#6f5d93}
+  textarea{resize:vertical;min-height:74px;line-height:1.5}
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{display:flex;align-items:center;gap:7px;border:1px solid rgba(160,110,255,.22);
+        border-radius:999px;padding:6px 11px 6px 8px;font-size:12.5px;color:#cbb9ee;
+        background:rgba(255,255,255,.02);cursor:pointer}
+  .chip.on{border-color:rgba(190,150,255,.75);background:rgba(140,80,255,.16);color:#f0e6ff}
+  .dot{width:11px;height:11px;border-radius:50%;box-shadow:0 0 7px currentColor}
+  .meaning{margin-top:9px;font-size:12.5px;color:#9b83c9}
+  .btn{margin-top:18px;width:100%;background:linear-gradient(180deg,#7a3cff,#5322b0);
+       color:#fff;font-size:15px;font-weight:600;padding:12px;border:0;border-radius:10px;
+       cursor:pointer;font-family:inherit;box-shadow:0 10px 26px rgba(122,60,255,.35)}
+  .btn[disabled]{opacity:.55;cursor:default}
+  .btn.ghost{background:none;border:1px solid rgba(160,110,255,.35);color:#d9c7ff;box-shadow:none}
+  .note{margin-top:11px;font-size:12.5px;color:#9b83c9;line-height:1.5;text-align:center}
+  .err{margin-top:11px;font-size:13px;color:#ffb0a0;line-height:1.5}
+
+  /* ---- one candle ---- */
+  .one{text-align:center;padding:10px 4px 4px}
+  .one .who{font-size:25px;color:#efe6ff;margin-top:10px}
+  .one .said{margin:12px auto 0;max-width:460px;font-size:16px;line-height:1.65;color:#d5c4f2}
+  .one .piece{margin-top:12px;overflow-wrap:anywhere;font-size:13.5px;color:#9b83c9;font-style:italic}
+  .one .state{margin-top:14px;font-size:13px;color:#9b83c9}
+  .share{margin-top:16px;display:flex;gap:8px}
+  .share input{font-size:13px;min-width:0}
+  .share button{flex:0 0 auto;padding:10px 14px;border-radius:9px;border:1px solid rgba(160,110,255,.35);
+                background:rgba(140,80,255,.16);color:#f0e6ff;font-size:13px;cursor:pointer;font-family:inherit}
+  .foot{margin-top:26px;text-align:center;font-size:12.5px;color:#7e6aa6;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav class="topnav">
+    <a href="index.html">🪕 Banjo Spirits</a>
+    <a href="forest.html">🌲 Walk the woods</a>
+    <a href="sky.html">✨ Look up at the sky</a>
+    <a href="paper-valley.html">🏮 Paper Valley</a>
+  </nav>
+
+  <h1 id="pageTitle">The shelf in the forest</h1>
+  <p class="lede" id="pageLede">
+    A candle lit for one person. Say who it is for, write a few words if you want to,
+    and you will get a link you can send to anyone else who knew them. It burns five days,
+    then goes out on its own, and anybody can light it again.
+  </p>
+
+  <div class="cols">
+
+    <div class="wall">
+      <!-- The three pieces, on the wall behind. Nobody places them and nobody collects
+           them; they are here to say what kind of place this is without a word. -->
+      <svg class="pieces" viewBox="0 0 660 250" aria-label="A St Christopher medal, a Mass card and a set of beads on the wall">
+        <g fill="none" stroke="#e2cfff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <g transform="translate(150,112)">
+            <line x1="0" y1="-64" x2="0" y2="-42"/>
+            <circle cx="0" cy="0" r="42"/><circle cx="0" cy="0" r="35" opacity=".55"/>
+            <path d="M-13,22 L-3,-12 L11,-12 L19,22 Z"/>
+            <circle cx="4" cy="-20" r="7"/>
+            <path d="M-5,-29 A11,11 0 0 1 13,-29" opacity=".7"/>
+            <line x1="-24" y1="-14" x2="-24" y2="24" opacity=".8"/>
+          </g>
+          <g transform="translate(330,104)">
+            <rect x="-44" y="-52" width="88" height="112" rx="4"/>
+            <line x1="0" y1="-34" x2="0" y2="4"/><line x1="-15" y1="-20" x2="15" y2="-20"/>
+            <line x1="-26" y1="26" x2="26" y2="26" opacity=".6"/>
+            <line x1="-26" y1="38" x2="26" y2="38" opacity=".6"/>
+            <line x1="-26" y1="50" x2="8" y2="50" opacity=".6"/>
+          </g>
+          <g transform="translate(512,104)">
+            <line x1="0" y1="-62" x2="0" y2="-46"/>
+            <ellipse cx="0" cy="0" rx="40" ry="46" opacity=".35"/>
+            <g fill="#e2cfff" stroke="none" opacity=".85">
+              <circle cx="0" cy="-46" r="3.4"/><circle cx="17" cy="-42" r="3.4"/>
+              <circle cx="31" cy="-30" r="3.4"/><circle cx="39" cy="-13" r="3.4"/>
+              <circle cx="40" cy="6" r="3.4"/><circle cx="33" cy="24" r="3.4"/>
+              <circle cx="19" cy="38" r="3.4"/><circle cx="0" cy="45" r="3.4"/>
+              <circle cx="-19" cy="38" r="3.4"/><circle cx="-33" cy="24" r="3.4"/>
+              <circle cx="-40" cy="6" r="3.4"/><circle cx="-39" cy="-13" r="3.4"/>
+              <circle cx="-31" cy="-30" r="3.4"/><circle cx="-17" cy="-42" r="3.4"/>
+            </g>
+            <line x1="0" y1="45" x2="0" y2="66"/><line x1="0" y1="72" x2="0" y2="96"/>
+            <line x1="-9" y1="81" x2="9" y2="81"/>
+          </g>
+        </g>
+      </svg>
+
+      <div class="shelfarea">
+        <div class="jars" id="jars"></div>
+        <div class="plank"></div>
+        <div class="tally" id="tally">…</div>
+      </div>
+    </div>
+
+    <div class="panel" id="panel"></div>
+
+  </div>
+
+  <p class="foot">
+    Free, and it always will be. A candle is for one person &mdash; it is not a thing to collect.
+  </p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var COLOURS = {
+    white:  { hex:'#f0ecff', glass:'rgba(240,236,255,.30)', edge:'rgba(255,255,255,.34)', says:'for remembrance' },
+    red:    { hex:'#e24048', glass:'rgba(226,64,72,.34)',   edge:'rgba(255,120,120,.34)', says:'for love' },
+    green:  { hex:'#46be6e', glass:'rgba(70,190,110,.30)',  edge:'rgba(120,230,160,.32)', says:'for somebody getting back on their feet' },
+    pink:   { hex:'#f082b4', glass:'rgba(240,130,180,.20)', edge:'rgba(255,170,205,.24)', says:'for a friend' },
+    purple: { hex:'#8a6bff', glass:'rgba(138,107,255,.24)', edge:'rgba(180,150,255,.28)', says:'for peace' },
+    blue:   { hex:'#5a8ceb', glass:'rgba(90,140,235,.20)',  edge:'rgba(140,180,255,.24)', says:'for protection, and safe travel' }
+  };
+  var ORDER = ['white','red','green','pink','purple','blue'];
+
+  var el = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  };
+  var api = function (path, opts) {
+    return fetch(path, Object.assign({ credentials:'same-origin',
+      headers:{ 'Content-Type':'application/json' } }, opts || {}))
+      .then(function (r) {
+        return r.json().catch(function(){ return {}; }).then(function (d) {
+          if (!r.ok) throw new Error(d.error || 'Something went wrong.');
+          return d;
+        });
+      });
+  };
+
+  // A jar. The colour is the GLASS - the light inside is always the same warm flame,
+  // because that is how a real veladora looks on a shelf.
+  var jarSeq = 0;   // gradient ids must be unique per jar or the first one wins for all
+  function jarSVG(colour, lit, h) {
+    var c = COLOURS[colour] || COLOURS.white;
+    h = h || 150;
+    var w = 74;
+    var u = 'j' + (++jarSeq);
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 74 150" aria-hidden="true">' +
+      '<defs>' +
+      '<radialGradient id="g' + u + '"><stop offset="0" stop-color="#ffcf8a" stop-opacity=".55"/>' +
+      '<stop offset="1" stop-color="#ffcf8a" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="f' + u + '"><stop offset="0" stop-color="#fff6d8"/>' +
+      '<stop offset=".45" stop-color="#ffcf6b"/><stop offset="1" stop-color="#ff9a2e" stop-opacity="0"/></radialGradient>' +
+      '</defs>' +
+      (lit ? '<circle cx="37" cy="96" r="37" fill="url(#g' + u + ')"/>' +
+             '<ellipse cx="37" cy="74" rx="12" ry="16" fill="url(#f' + u + ')"/>' : '') +
+      '<rect x="16" y="90" width="42" height="60" rx="5" fill="' + c.glass + '" stroke="' + c.edge + '"/>' +
+      '<ellipse cx="37" cy="90" rx="21" ry="5" fill="none" stroke="' + c.edge + '"/>' +
+      '</svg>';
+  }
+
+  // ---------- the shelf ----------
+  function loadShelf() {
+    return api('/api/candles').then(function (d) {
+      var jars = el('jars'), tally = el('tally');
+      if (!d.candles.length) {
+        jars.innerHTML = jarSVG('white', false) + jarSVG('red', false) + jarSVG('blue', false);
+        tally.textContent = 'Nothing is burning just now. The first one can be yours.';
+        return d;
+      }
+      jars.innerHTML = d.candles.map(function (c) {
+        return '<button class="jar" data-id="' + c.id + '" title="' + esc(c.name) + '">' +
+               jarSVG(c.colour, true) + '</button>';
+      }).join('');
+      Array.prototype.forEach.call(jars.querySelectorAll('.jar'), function (b) {
+        b.addEventListener('click', function () { show(b.getAttribute('data-id')); });
+      });
+      var n = d.burning;
+      tally.textContent = n === 1
+        ? 'One candle burning tonight.'
+        : n + ' candles burning tonight.' +
+          (n > d.candles.length ? ' The ' + d.candles.length + ' most recent are on the shelf.' : '');
+      return d;
+    }).catch(function () {
+      el('tally').textContent = 'The shelf cannot be reached just now.';
+    });
+  }
+
+  // ---------- lighting one ----------
+  var chosen = 'white';
+
+  function lightForm() {
+    document.body.classList.remove('showing-one');
+    el('panel').innerHTML =
+      '<h2>Light a candle</h2>' +
+      '<p class="sub">For one person. It burns five days, then goes out. You will get a link ' +
+      'you can send to anyone who knew them.</p>' +
+      '<label class="lbl" for="who">Who is it for</label>' +
+      '<input id="who" maxlength="60" placeholder="Her name, or what you called her">' +
+      '<span class="lbl">Colour</span>' +
+      '<div class="chips" id="chips">' +
+        ORDER.map(function (k) {
+          return '<span class="chip' + (k === chosen ? ' on' : '') + '" data-c="' + k + '">' +
+                 '<i class="dot" style="background:' + COLOURS[k].hex + ';color:' + COLOURS[k].hex + '"></i>' +
+                 k.charAt(0).toUpperCase() + k.slice(1) + '</span>';
+        }).join('') +
+      '</div>' +
+      '<div class="meaning" id="meaning"></div>' +
+      '<label class="lbl" for="words">A few words, if you want</label>' +
+      '<textarea id="words" maxlength="300" placeholder="She kept the porch light on."></textarea>' +
+      '<label class="lbl" for="piece">A piece, if one fits them</label>' +
+      '<input id="piece" maxlength="80" placeholder="A St Christopher, for a man who drove for a living">' +
+      '<label class="lbl" for="litby">Your name, if you want it on there</label>' +
+      '<input id="litby" maxlength="40" placeholder="Leave it empty to stay unnamed">' +
+      '<button class="btn" id="go">Light it</button>' +
+      '<div class="err" id="err" style="display:none"></div>' +
+      '<div class="note">No account needed. Nothing is charged, now or ever.</div>';
+
+    paintMeaning();
+    Array.prototype.forEach.call(el('chips').children, function (c) {
+      c.addEventListener('click', function () {
+        chosen = c.getAttribute('data-c');
+        Array.prototype.forEach.call(el('chips').children, function (o) {
+          o.className = 'chip' + (o === c ? ' on' : '');
+        });
+        paintMeaning();
+      });
+    });
+    el('go').addEventListener('click', light);
+  }
+
+  // Say what the candle is FOR. Never what it will DO.
+  function paintMeaning() {
+    var k = chosen;
+    el('meaning').textContent = k.charAt(0).toUpperCase() + k.slice(1) + ' — ' + COLOURS[k].says + '.';
+  }
+
+  function light() {
+    var btn = el('go'), err = el('err');
+    var name = el('who').value.trim();
+    err.style.display = 'none';
+    if (!name) {
+      err.textContent = 'Please put in who the candle is for.';
+      err.style.display = 'block';
+      el('who').focus();
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Lighting it…';
+    api('/api/candles', { method:'POST', body: JSON.stringify({
+      name: name, colour: chosen, words: el('words').value.trim(),
+      piece: el('piece').value.trim(), lit_by: el('litby').value.trim()
+    }) }).then(function (d) {
+      history.replaceState(null, '', 'candles.html?c=' + d.candle.id);
+      paintOne(d.candle, true);
+      loadShelf();
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = 'Light it';
+      err.textContent = e.message; err.style.display = 'block';
+    });
+  }
+
+  // ---------- one candle: the screen the link lands on ----------
+  function show(id) {
+    api('/api/candles/' + id).then(function (d) {
+      history.replaceState(null, '', 'candles.html?c=' + id);
+      paintOne(d.candle, false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }).catch(function () { lightForm(); });
+  }
+
+  function paintOne(c, justLit) {
+    document.body.classList.add('showing-one');
+    var link = location.origin + '/candle/' + c.id;
+    var days = Math.max(1, Math.round(c.hours_left / 24));
+    el('pageTitle').textContent = 'A candle for ' + c.name;
+    el('pageLede').textContent = justLit
+      ? 'It is lit. Send the link to anyone else who knew them - they can sit with it, and light one of their own.'
+      : 'Somebody lit this for them. You can keep it going, or light one of your own.';
+
+    el('panel').innerHTML =
+      '<div class="one">' +
+        jarSVG(c.colour, c.burning, 170) +
+        '<div class="who">' + esc(c.name) + '</div>' +
+        (c.words ? '<div class="said">' + esc(c.words) + '</div>' : '') +
+        (c.piece ? '<div class="piece">' + esc(c.piece) + '</div>' : '') +
+        '<div class="state">' +
+          (c.burning
+            ? 'A ' + c.colour + ' candle, ' + esc(c.meaning) + '. Burning for another ' +
+              days + (days === 1 ? ' day' : ' days') + '.'
+            : 'This one has gone out. Anybody can light it again.') +
+          (c.lit_by ? '<br>Lit by ' + esc(c.lit_by) + '.' : '') +
+          (c.relit ? '<br>Lit again ' + c.relit + (c.relit === 1 ? ' time' : ' times') + '.' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="share">' +
+        '<input id="link" readonly value="' + esc(link) + '">' +
+        '<button id="copy">Copy</button>' +
+      '</div>' +
+      '<button class="btn" id="relight">' + (c.burning ? 'Keep it burning' : 'Light it again') + '</button>' +
+      '<button class="btn ghost" id="mine" style="margin-top:9px">Light one of my own</button>' +
+      '<div class="err" id="err" style="display:none"></div>';
+
+    el('copy').addEventListener('click', function () {
+      var f = el('link'); f.select(); f.setSelectionRange(0, 999);
+      var done = function () { el('copy').textContent = 'Copied'; };
+      if (navigator.clipboard) navigator.clipboard.writeText(f.value).then(done, done);
+      else { try { document.execCommand('copy'); } catch (e) {} done(); }
+    });
+    el('relight').addEventListener('click', function () {
+      var b = el('relight'); b.disabled = true; b.textContent = 'Lighting…';
+      api('/api/candles/' + c.id + '/relight', { method:'POST' })
+        .then(function (d) { paintOne(d.candle, false); loadShelf(); })
+        .catch(function (e) {
+          b.disabled = false; b.textContent = 'Keep it burning';
+          el('err').textContent = e.message; el('err').style.display = 'block';
+        });
+    });
+    el('mine').addEventListener('click', function () {
+      history.replaceState(null, '', 'candles.html');
+      el('pageTitle').textContent = 'The shelf in the forest';
+      el('pageLede').textContent = 'A candle lit for one person. Say who it is for, write a few ' +
+        'words if you want to, and you will get a link you can send to anyone else who knew them.';
+      lightForm();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  // ---------- start ----------
+  var asked = new URLSearchParams(location.search).get('c');
+  if (asked) { show(asked); } else { lightForm(); }
+  loadShelf();
+})();
+</script>
+</body>
+</html>

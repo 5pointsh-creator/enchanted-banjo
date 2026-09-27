@@ -184,6 +184,29 @@ async function migrate() {
       value TEXT NOT NULL
     );
   `);
+  // ---- the shelf of candles ----
+  // A candle is for ONE person and it goes out on its own after a few days, which is what
+  // keeps the shelf a shrine instead of a warehouse: it can only ever show what is alight
+  // now. `burns_until` rather than a lit/out flag, so nothing has to run on a timer to put
+  // them out - the clock does it, and a candle nobody re-lights simply stops being listed.
+  // `piece` is the one optional object named in WORDS ("a St Christopher, for a man who
+  // drove for a living"). Nothing is ever hung on anything.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS candles (
+      id          SERIAL PRIMARY KEY,
+      owner_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      lit_by      TEXT,
+      name        TEXT NOT NULL,
+      words       TEXT,
+      colour      TEXT NOT NULL DEFAULT 'white',
+      piece       TEXT,
+      relit       INTEGER NOT NULL DEFAULT 0,
+      burns_until TIMESTAMPTZ NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS candles_burning_idx ON candles (burns_until DESC);
+  `);
+
   // whoever runs the site can take down something cruel; nobody else can
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;`);
 
