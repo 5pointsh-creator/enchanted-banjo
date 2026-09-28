@@ -94,6 +94,8 @@
   .one .piece{margin-top:12px;overflow-wrap:anywhere;font-size:13.5px;color:#9b83c9;font-style:italic}
   .one .state{margin-top:14px;font-size:13px;color:#9b83c9}
   .share{margin-top:16px;display:flex;gap:8px}
+  .btn.send{background:linear-gradient(180deg,#e0a23c,#a8641a);
+            box-shadow:0 10px 26px rgba(224,162,60,.3)}
   .share input{font-size:13px;min-width:0}
   .share button{flex:0 0 auto;padding:10px 14px;border-radius:9px;border:1px solid rgba(160,110,255,.35);
                 background:rgba(140,80,255,.16);color:#f0e6ff;font-size:13px;cursor:pointer;font-family:inherit}
@@ -206,6 +208,10 @@
 
   // A jar. The colour is the GLASS - the light inside is always the same warm flame,
   // because that is how a real veladora looks on a shelf.
+  // Worked out once, here, rather than guessed from the user agent: either the browser
+  // has a share sheet or it has not.
+  var canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
   var jarSeq = 0;   // gradient ids must be unique per jar or the first one wins for all
   function jarSVG(colour, lit, h) {
     var c = COLOURS[colour] || COLOURS.white;
@@ -363,9 +369,26 @@
         '<input id="link" readonly value="' + esc(link) + '">' +
         '<button id="copy">Copy</button>' +
       '</div>' +
-      '<button class="btn" id="relight">' + (c.burning ? 'Keep it burning' : 'Light it again') + '</button>' +
+      // The phone's own share sheet - Messages, Facebook, whatever they have - is one tap
+      // and no copying. Only drawn if the browser really has it, so nothing on a desktop
+      // offers a button that would do nothing. Copy stays for everybody either way.
+      (canShare
+        ? '<button class="btn send" id="send">Send it to somebody</button>'
+        : '') +
+      '<button class="btn' + (canShare && justLit ? ' ghost' : '') + '" id="relight">' +
+        (c.burning ? 'Keep it burning' : 'Light it again') + '</button>' +
       '<button class="btn ghost" id="mine" style="margin-top:9px">Light one of my own</button>' +
       '<div class="err" id="err" style="display:none"></div>';
+
+    if (canShare) {
+      el('send').addEventListener('click', function () {
+        navigator.share({
+          title: 'A candle for ' + c.name,
+          text: c.words ? c.name + ' - ' + c.words : 'A candle for ' + c.name,
+          url: link
+        }).catch(function () { /* they backed out of the sheet; nothing to say */ });
+      });
+    }
 
     el('copy').addEventListener('click', function () {
       var f = el('link'); f.select(); f.setSelectionRange(0, 999);
