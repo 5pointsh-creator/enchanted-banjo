@@ -19,6 +19,17 @@
   html,body{height:100%;overflow:hidden;background:#04060f;font-family:"Segoe UI",system-ui,sans-serif;color:var(--cream)}
   #c{display:block;width:100vw;height:100vh;touch-action:none}
   .hud{position:fixed;left:0;right:0;top:0;pointer-events:none;padding:14px 16px;display:flex;justify-content:space-between;z-index:5}
+
+  /* On a phone the centred "Dedicate a star" button is wide enough to lie on top of
+     the day/night slider, and on a 360px screen on top of the forest link as well.
+     Everything down there shares z-index 9, so the button - last in the document -
+     wins the tap and the other two stop working. Stack them instead: slider above
+     the button, forest link up the left edge under the candle.
+     !important because both carry inline styles, which a plain rule cannot beat. */
+  @media (max-width:900px){
+    #controls{bottom:110px !important}
+    #toForest{top:176px !important;bottom:auto !important;left:16px !important;right:auto !important}
+  }
   .title{font-size:15px;opacity:.9;text-shadow:0 2px 8px #000}
   .title b{background:linear-gradient(180deg,#dfe9ff,#8fb4ff);-webkit-background-clip:text;background-clip:text;color:transparent}
   .help{font-size:12px;opacity:.62;text-align:right;line-height:1.7;text-shadow:0 1px 4px #000}
@@ -76,6 +87,12 @@
   <a id="toForest" href="forest.html" style="position:fixed;right:16px;bottom:24px;z-index:9;pointer-events:auto;
      text-decoration:none;background:rgba(13,18,40,.7);border:1px solid #33436e;border-radius:12px;padding:11px 16px;
      color:#c7d7ff;font-size:14px;backdrop-filter:blur(3px)">🌲 Back to the forest</a>
+
+  <!-- Top left, clear of the hud above and the controls at the bottom. Same place and
+       same colours as the candle link in the forest, so it reads as one door, not two. -->
+  <a href="candles.html" style="position:fixed;left:16px;top:136px;z-index:8;pointer-events:auto;text-decoration:none;
+     background:rgba(46,28,12,.74);border:1px solid #7a5520;border-radius:12px;padding:9px 14px;color:#f0d9a8;
+     font-size:13px;backdrop-filter:blur(3px)">🕯️ Light a candle</a>
 
   <button id="dedicate">✨ Dedicate a star</button>
 
