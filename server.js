@@ -946,7 +946,7 @@ app.get('/candle/:id', async (req, res) => {
 <meta property="og:site_name" content="Banjo Spirits">
 <meta property="og:title" content="${escHtml(title)}">
 <meta property="og:description" content="${escHtml(bits).slice(0, 300)}">
-<meta property="og:image" content="https://banjospirits.com/tour-poster.jpg">
+<meta property="og:image" content="https://www.banjospirits.com/candle-card.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta http-equiv="refresh" content="0;url=${escHtml(target)}">
 </head><body><p>Taking you to the candle… <a href="${escHtml(target)}">continue</a></p>
