@@ -42,7 +42,10 @@
   .rooms{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
   .rooms a{font-size:13.5px;color:#d9c7ff;text-decoration:none;padding:8px 12px;border-radius:999px;
            border:1px solid rgba(160,110,255,.25);background:rgba(36,20,54,.55)}
-  .sound{margin-top:18px;font-size:12.5px;color:#7e6aa6}
+  .moon{margin:22px auto 0;max-width:420px;padding:12px 14px;border-radius:14px;font-size:14.5px;line-height:1.5;
+        color:#dfe6ff;background:rgba(30,36,60,.55);border:1px solid rgba(190,205,255,.18)}
+  .moon.full{color:#fff4d6;background:rgba(70,56,24,.55);border-color:rgba(255,212,121,.45)}
+  .moon .em{font-size:20px;vertical-align:-3px;margin-right:6px}
 
   .tag{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9;
        background:#ffd479;color:#2a1a00;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;
@@ -71,6 +74,10 @@
   </div>
   <div class="free">Free. No account needed.</div>
 
+  <!-- Follows the real moon. Most nights it just says where the moon is; on the night
+       of the full moon it becomes an invitation, so people have a night to come back for. -->
+  <div class="moon" id="moonLine"></div>
+
   <div class="further">
     <p>Other places here</p>
     <div class="rooms">
@@ -78,9 +85,41 @@
       <a href="forest.html">🌲 The forest</a>
       <a href="sky.html">✨ The sky</a>
       <a href="night-book">📖 The Night Book</a>
+      <a href="index.html">🪕 Play the banjo</a>
     </div>
-    <div class="sound">🪕 The banjo plays softly while you are here.</div>
   </div>
 </div>
+<script>
+// Same moon as the wheel page: a known new moon and the mean synodic month, good to a
+// few hours. Phase runs 0 new .. 0.5 full .. 1 new again.
+(function(){
+  var SYNODIC = 29.530588853, NEW_MOON = Date.UTC(2000, 0, 6, 18, 14) / 86400000;
+  var days = Date.now() / 86400000 - NEW_MOON;
+  var p = (days / SYNODIC) % 1; if (p < 0) p += 1;
+  var toFull = Math.round(((0.5 - p + 1) % 1) * SYNODIC);
+  var el = document.getElementById('moonLine');
+  var near = Math.abs(p - 0.5) < 0.025;            // about the one night of the full moon
+  if (near) {
+    el.className = 'moon full';
+    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Light a candle with everyone else.';
+    return;
+  }
+  var names = [
+    [0.025, '🌑', 'a new moon - the darkest night of the month'],
+    [0.216, '🌒', 'a thin crescent, growing'],
+    [0.284, '🌓', 'half lit, growing'],
+    [0.43,  '🌔', 'more than half lit, growing'],
+    [0.475, '🌔', 'almost full'],
+    [0.57,  '🌖', 'just past full'],
+    [0.716, '🌖', 'more than half lit, getting smaller'],
+    [0.784, '🌗', 'half lit, getting smaller'],
+    [0.975, '🌘', 'a thin crescent, fading'],
+    [1.001, '🌑', 'a new moon - the darkest night of the month']
+  ];
+  var n = names.filter(function(x){ return p < x[0]; })[0];
+  var when = toFull === 1 ? 'Full moon tomorrow night.' : 'Full moon in ' + toFull + ' days.';
+  el.innerHTML = '<span class="em">' + n[1] + '</span>Tonight\'s moon: ' + n[2] + '. ' + when;
+})();
+</script>
 </body>
 </html>
