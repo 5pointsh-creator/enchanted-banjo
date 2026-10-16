@@ -42,7 +42,7 @@
   .rooms{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
   .rooms a{font-size:13.5px;color:#d9c7ff;text-decoration:none;padding:8px 12px;border-radius:999px;
            border:1px solid rgba(160,110,255,.25);background:rgba(36,20,54,.55)}
-  .moon{margin:22px auto 0;max-width:420px;padding:12px 14px;border-radius:14px;font-size:14.5px;line-height:1.5;
+  .moon{display:block;text-decoration:none;margin:22px auto 0;max-width:420px;padding:12px 14px;border-radius:14px;font-size:14.5px;line-height:1.5;
         color:#dfe6ff;background:rgba(30,36,60,.55);border:1px solid rgba(190,205,255,.18)}
   .moon.full{color:#fff4d6;background:rgba(70,56,24,.55);border-color:rgba(255,212,121,.45)}
   .moon .em{font-size:20px;vertical-align:-3px;margin-right:6px}
@@ -76,7 +76,7 @@
 
   <!-- Follows the real moon. Most nights it just says where the moon is; on the night
        of the full moon it becomes an invitation, so people have a night to come back for. -->
-  <div class="moon" id="moonLine"></div>
+  <a class="moon" id="moonLine" href="moon-preview.html"></a>
 
   <div class="further">
     <p>Other places here</p>
@@ -101,7 +101,7 @@
   var near = Math.abs(p - 0.5) < 0.025;            // about the one night of the full moon
   if (near) {
     el.className = 'moon full';
-    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Light a candle with everyone else.';
+    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Light a candle with everyone else. <span style="opacity:.7">›</span>';
     return;
   }
   var names = [
@@ -118,7 +118,7 @@
   ];
   var n = names.filter(function(x){ return p < x[0]; })[0];
   var when = toFull === 1 ? 'Full moon tomorrow night.' : 'Full moon in ' + toFull + ' days.';
-  el.innerHTML = '<span class="em">' + n[1] + '</span>Tonight\'s moon: ' + n[2] + '. ' + when;
+  el.innerHTML = '<span class="em">' + n[1] + '</span>Tonight\'s moon: ' + n[2] + '. ' + when + ' <span style="opacity:.7">›</span>';
 })();
 </script>
 </body>
