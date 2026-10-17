@@ -57,6 +57,8 @@
         color:#dfe6ff;background:rgba(30,36,60,.55);border:1px solid rgba(190,205,255,.18)}
   .moon.full{color:#fff4d6;background:rgba(70,56,24,.55);border-color:rgba(255,212,121,.45)}
   .moon .em{font-size:20px;vertical-align:-3px;margin-right:6px}
+  .moon .go{display:block;margin-top:4px;font-size:13px;color:#aab8e8}
+  .moon.full .go{color:#ffd479}
 
 </style>
 </head>
@@ -83,7 +85,7 @@
 
   <!-- Follows the real moon. Most nights it just says where the moon is; on the night
        of the full moon it becomes an invitation, so people have a night to come back for. -->
-  <div class="moon" id="moonLine"></div>
+  <a class="moon" id="moonLine" href="moon.html"></a>
 
   <div class="further">
     <p>Other places here</p>
@@ -96,36 +98,32 @@
     </div>
   </div>
 </div>
+<script src="moon-calc.js"></script>
+<script src="moon-data.js"></script>
 <script>
-// Same moon as the wheel page: a known new moon and the mean synodic month, good to a
-// few hours. Phase runs 0 new .. 0.5 full .. 1 new again.
+// The same moon as the moon page, worked out the same way (US Naval Observatory full
+// moons, the moon's angle from the sun for the phase), so the two never disagree.
 (function(){
-  var SYNODIC = 29.530588853, NEW_MOON = Date.UTC(2000, 0, 6, 18, 14) / 86400000;
-  var days = Date.now() / 86400000 - NEW_MOON;
-  var p = (days / SYNODIC) % 1; if (p < 0) p += 1;
-  var toFull = Math.round(((0.5 - p + 1) % 1) * SYNODIC);
-  var el = document.getElementById('moonLine');
-  var near = Math.abs(p - 0.5) < 0.025;            // about the one night of the full moon
-  if (near) {
+  var DAY = 86400000, el = document.getElementById('moonLine');
+  var ev = new Date(); ev.setHours(21, 0, 0, 0);          // tonight, at nine in the evening
+  var inf = MoonCalc.info(ev), il = inf.illumination, e = inf.elongation;
+  var fulls = MoonData.phases.filter(function(p){ return p[0] === 'F'; }).map(function(p){ return new Date(p[1]); });
+  var nearFull = fulls.some(function(f){ return Math.abs(f - ev) < 0.8 * DAY; });
+  if (nearFull) {
     el.className = 'moon full';
-    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Light a candle with everyone else.';
+    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Light a candle with everyone else.<span class="go">See tonight\'s moon ›</span>';
     return;
   }
-  var names = [
-    [0.025, '🌑', 'a new moon - the darkest night of the month'],
-    [0.216, '🌒', 'a thin crescent, growing'],
-    [0.284, '🌓', 'half lit, growing'],
-    [0.43,  '🌔', 'more than half lit, growing'],
-    [0.475, '🌔', 'almost full'],
-    [0.57,  '🌖', 'just past full'],
-    [0.716, '🌖', 'more than half lit, getting smaller'],
-    [0.784, '🌗', 'half lit, getting smaller'],
-    [0.975, '🌘', 'a thin crescent, fading'],
-    [1.001, '🌑', 'a new moon - the darkest night of the month']
-  ];
-  var n = names.filter(function(x){ return p < x[0]; })[0];
-  var when = toFull === 1 ? 'Full moon tomorrow night.' : 'Full moon in ' + toFull + ' days.';
-  el.innerHTML = '<span class="em">' + n[1] + '</span>Tonight\'s moon: ' + n[2] + '. ' + when;
+  var n;
+  if (il < 0.02) n = ['🌑', 'a new moon - the darkest night of the month'];
+  else if (Math.abs(e - 90) < 6) n = ['🌓', 'half lit, growing'];
+  else if (Math.abs(e - 270) < 6) n = ['🌗', 'half lit, getting smaller'];
+  else if (inf.waxing) n = il < 0.5 ? ['🌒', 'a crescent, growing'] : il > 0.9 ? ['🌔', 'almost full'] : ['🌔', 'more than half lit, growing'];
+  else n = il > 0.9 ? ['🌖', 'just past full'] : il > 0.5 ? ['🌖', 'more than half lit, getting smaller'] : ['🌘', 'a crescent, fading'];
+  var nxt = fulls.filter(function(f){ return f > ev; })[0];
+  var when = '';
+  if (nxt) { var dd = Math.round((nxt - ev) / DAY); when = dd <= 1 ? ' Full moon tomorrow night.' : ' Full moon in ' + dd + ' days.'; }
+  el.innerHTML = '<span class="em">' + n[0] + '</span>Tonight\'s moon: ' + n[1] + '.' + when + '<span class="go">Moon calendar, blue moons and your birthday moon ›</span>';
 })();
 </script>
 </body>
