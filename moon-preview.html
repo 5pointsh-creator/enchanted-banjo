@@ -11,73 +11,195 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%}
-  body{background:#020308;color:#e9e4d6;font-family:"Segoe UI",system-ui,sans-serif;text-align:center;
-       background-image:radial-gradient(120% 60% at 50% 22%, #10162b 0%, #05070f 55%, #020308 100%)}
+  body{background:#020308;color:#e9e4d6;font-family:"Segoe UI",system-ui,sans-serif;
+       background-image:radial-gradient(120% 50% at 50% 12%, #10162b 0%, #05070f 55%, #020308 100%)}
   .serif{font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif}
-  .top{padding:18px 16px 0;font-size:11.5px;letter-spacing:4px;text-transform:uppercase;color:#c9b277}
-  .stage{position:relative;height:min(58vh,480px)}
-  canvas{position:absolute;inset:0;width:100%;height:100%}
-  .wrap{max-width:560px;margin:0 auto;padding:0 20px 46px}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:16px 16px 0;max-width:760px;margin:0 auto}
+  .brand{font-size:11.5px;letter-spacing:4px;text-transform:uppercase;color:#c9b277;text-decoration:none}
+  .where{font-size:12.5px;color:#aab3d3;background:none;border:1px solid rgba(201,178,119,.35);border-radius:999px;padding:6px 11px;cursor:pointer;font-family:inherit}
+  .stage{position:relative;height:min(52vh,440px)}
+  canvas.hero{position:absolute;inset:0;width:100%;height:100%}
+  .wrap{max-width:640px;margin:0 auto;padding:0 18px 50px}
+  .center{text-align:center}
   .date{font-size:12.5px;letter-spacing:2.5px;text-transform:uppercase;color:#9aa3c2}
-  h1{margin-top:6px;font-size:40px;line-height:1.08;font-weight:600;color:#f7f1e1;letter-spacing:.3px}
+  h1{margin-top:6px;font-size:38px;line-height:1.08;font-weight:600;color:#f7f1e1;letter-spacing:.3px}
+  .badges{margin-top:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .badge{font-size:11.5px;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid rgba(201,178,119,.45);color:#e8d9ad}
+  .badge.blue{border-color:rgba(120,170,255,.6);color:#bcd3ff}
   .phase{margin-top:6px;font-size:16px;color:#b8bfd9;font-style:italic}
-  .rule{display:flex;align-items:center;gap:12px;justify-content:center;margin:22px auto 18px;color:#c9b277;font-size:12px}
-  .rule:before,.rule:after{content:"";height:1px;width:70px;background:linear-gradient(90deg,transparent,#c9b27788,transparent)}
-  .lore-h{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#c9b277}
-  .lore{margin:10px auto 0;max-width:30em;font-size:21px;line-height:1.5;font-style:italic;color:#ece6d6}
-  .why{margin:14px auto 0;max-width:34em;font-size:14px;line-height:1.6;color:#a9b1cf}
-  .scrub{margin:28px auto 0;max-width:420px;text-align:left}
+  .scrub{margin:22px auto 0;max-width:460px}
   .scrub label{display:flex;justify-content:space-between;font-size:12.5px;color:#9aa3c2;margin-bottom:8px}
   .scrub label b{color:#e9dfbf;font-weight:600}
-  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;
-       background:linear-gradient(90deg,#c9b277,#56597a);outline:none}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
-       background:radial-gradient(circle at 35% 35%,#fff7e0,#d8c48e);box-shadow:0 0 14px rgba(255,230,170,.55);cursor:pointer}
-  input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-radius:50%;
-       background:radial-gradient(circle at 35% 35%,#fff7e0,#d8c48e);box-shadow:0 0 14px rgba(255,230,170,.55)}
-  .btn{display:block;margin:30px auto 0;max-width:420px;padding:15px;border-radius:999px;text-decoration:none;
-       font-size:17px;font-weight:600;color:#1d1405;background:linear-gradient(180deg,#f0d495,#c9a24e);
-       box-shadow:0 10px 30px rgba(220,180,90,.25)}
-  .next{margin-top:14px;font-size:14px;color:#9aa3c2}
-  .back{display:inline-block;margin-top:24px;font-size:13.5px;color:#b9a8e6;text-decoration:none}
-  .tag{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9;background:#ffd479;color:#2a1a00;
-       font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:linear-gradient(90deg,#c9b277,#56597a);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff7e0,#d8c48e);box-shadow:0 0 14px rgba(255,230,170,.55);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff7e0,#d8c48e)}
+  section{margin-top:34px}
+  .h{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:11.5px;letter-spacing:3px;text-transform:uppercase;color:#c9b277}
+  .h:after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#c9b27766,transparent)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .cell{background:rgba(22,28,50,.55);border:1px solid rgba(190,205,255,.12);border-radius:12px;padding:12px 13px}
+  .cell small{display:block;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#8f99bb}
+  .cell b{display:block;margin-top:4px;font-size:19px;font-weight:600;color:#f1ead7}
+  .cell span{display:block;margin-top:2px;font-size:12.5px;color:#a9b1cf}
+  .lore{font-size:21px;line-height:1.5;font-style:italic;color:#ece6d6;text-align:center}
+  .why{margin-top:12px;font-size:14px;line-height:1.6;color:#a9b1cf;text-align:center}
+  .card{background:rgba(22,28,50,.55);border:1px solid rgba(190,205,255,.12);border-radius:14px;padding:14px 15px}
+  .stars{color:#e8c86a;letter-spacing:2px}
+  .sol{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14.5px;margin-top:10px}
+  .sol dt{color:#8f99bb;font-size:12px;letter-spacing:1px;text-transform:uppercase;padding-top:2px}
+  .sol dd{color:#efe8d5}
+  .week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:14px}
+  .week div{text-align:center;font-size:11.5px;color:#9aa3c2;padding:6px 2px;border-radius:9px;background:rgba(10,14,28,.6)}
+  .week div b{display:block;font-size:13px;color:#e9dfbf;margin-bottom:2px}
+  .week div.on{outline:1px solid #c9b277}
+  .note{margin-top:10px;font-size:12.5px;line-height:1.55;color:#8f99bb}
+  .plant b{color:#f1ead7}
+  .calnav{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .calnav button{background:none;border:1px solid rgba(201,178,119,.35);color:#e8d9ad;border-radius:999px;width:34px;height:34px;font-size:16px;cursor:pointer}
+  .calnav strong{font-size:22px;font-weight:600;color:#f1ead7}
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal .dow{font-size:10.5px;text-align:center;color:#7f89ab;letter-spacing:1px;padding-bottom:4px}
+  .cal .day{position:relative;text-align:center;padding:4px 0 5px;border-radius:9px;background:rgba(14,19,36,.6);cursor:pointer;min-height:62px;border:1px solid transparent}
+  .cal .day.today{border-color:rgba(201,178,119,.6)}
+  .cal .day.sel{background:rgba(201,178,119,.16)}
+  .cal .day i{display:block;font-style:normal;font-size:11px;color:#9aa3c2}
+  .cal .day canvas{width:26px;height:26px;margin:3px auto 0;display:block}
+  .cal .day em{display:block;font-style:normal;font-size:9.5px;line-height:1.15;color:#e8d9ad;margin-top:2px}
+  .cal .day em.blue{color:#9fc0ff}
+  .cal .blank{background:none;cursor:default}
+  .legend{margin-top:10px;font-size:12px;color:#8f99bb;line-height:1.7}
+  .list{display:grid;gap:8px}
+  .item{display:flex;gap:12px;align-items:flex-start;background:rgba(22,28,50,.5);border:1px solid rgba(190,205,255,.1);border-radius:12px;padding:11px 13px}
+  .item .ic{font-size:20px;line-height:1.2;flex:0 0 26px;text-align:center}
+  .item b{display:block;font-size:15px;color:#f1ead7;font-weight:600}
+  .item span{display:block;margin-top:2px;font-size:13px;line-height:1.5;color:#a9b1cf}
+  .day-input{display:flex;gap:8px;margin-top:4px}
+  .day-input input{flex:1;min-width:0;background:rgba(0,0,0,.35);border:1px solid rgba(190,205,255,.2);border-radius:10px;padding:11px;color:#efe8d5;font-size:16px;font-family:inherit;color-scheme:dark}
+  .then{display:none;margin-top:14px;gap:14px;align-items:center}
+  .then canvas{width:92px;height:92px;flex:0 0 92px}
+  .then p{font-size:15.5px;line-height:1.55;color:#ece6d6}
+  .then a{color:#e8c86a}
+  .btn{display:block;margin:34px auto 0;max-width:440px;padding:15px;border-radius:999px;text-decoration:none;text-align:center;font-size:17px;font-weight:600;color:#1d1405;background:linear-gradient(180deg,#f0d495,#c9a24e);box-shadow:0 10px 30px rgba(220,180,90,.25)}
+  .foot{margin-top:26px;text-align:center;font-size:12px;line-height:1.7;color:#6f789a}
+  .foot a{color:#b9a8e6;text-decoration:none}
+  .tag{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9;background:#ffd479;color:#2a1a00;font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  @media (min-width:640px){ .grid{grid-template-columns:repeat(4,1fr)} }
 </style>
 </head>
 <body>
 <div class="tag">PREVIEW</div>
-<div class="top">Banjo Spirits &nbsp;·&nbsp; the moon</div>
-<div class="stage"><canvas id="c"></canvas></div>
-<div class="wrap">
-  <div class="date" id="date"></div>
-  <h1 class="serif" id="title"></h1>
-  <div class="phase serif" id="phase"></div>
+<div class="top">
+  <a class="brand" href="/">Banjo Spirits · the moon</a>
+  <button class="where" id="where">📍 Columbus, Ohio</button>
+</div>
+<div class="stage"><canvas class="hero" id="hero"></canvas></div>
 
-  <div class="rule">✦</div>
-  <div class="lore-h">What the old folks said</div>
-  <p class="lore serif" id="lore"></p>
-  <p class="why" id="why"></p>
+<div class="wrap">
+  <div class="center">
+    <div class="date" id="date"></div>
+    <h1 class="serif" id="title"></h1>
+    <div class="badges" id="badges"></div>
+    <div class="phase serif" id="phase"></div>
+  </div>
 
   <div class="scrub">
     <label><span>Drag through the nights ahead</span><b id="when">Tonight</b></label>
     <input type="range" id="night" min="0" max="29" step="1" value="0" aria-label="Nights ahead">
   </div>
 
-  <a class="btn" id="cta" href="candles.html"></a>
-  <div class="next" id="next"></div>
-  <a class="back" href="/">‹ Back to the front page</a>
+  <section>
+    <div class="h">At a glance</div>
+    <div class="grid">
+      <div class="cell"><small>Lit</small><b id="g-lit"></b><span id="g-name"></span></div>
+      <div class="cell"><small>Age</small><b id="g-age"></b><span>since the new moon</span></div>
+      <div class="cell"><small>Moonrise</small><b id="g-rise"></b><span id="g-rise2"></span></div>
+      <div class="cell"><small>Moonset</small><b id="g-set"></b><span id="g-set2"></span></div>
+      <div class="cell"><small>Highest</small><b id="g-high"></b><span>due south</span></div>
+      <div class="cell"><small>Distance</small><b id="g-dist"></b><span id="g-dist2"></span></div>
+      <div class="cell"><small>Moon sign</small><b id="g-sign"></b><span>where it rides tonight</span></div>
+      <div class="cell"><small>Next full moon</small><b id="g-full"></b><span id="g-full2"></span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="h">What the old folks said</div>
+    <p class="lore serif" id="lore"></p>
+    <p class="why" id="why"></p>
+  </section>
+
+  <section>
+    <div class="h">Hunting &amp; fishing by the moon</div>
+    <div class="card">
+      <div><span class="stars" id="sol-stars"></span> <span id="sol-word" style="color:#d9cfb0"></span></div>
+      <dl class="sol" id="sol"></dl>
+      <div class="week" id="week"></div>
+      <p class="note">The old solunar tables: game and fish feed hardest when the moon is overhead or underfoot (the major times, about two hours) and when it rises or sets (the minor times, about an hour). Best of all in the days around the new and full moon.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="h">Planting by the moon</div>
+    <div class="card plant">
+      <p id="plant"></p>
+      <p class="note">From the old almanacs. Plant what grows above ground while the moon fills, roots while it shrinks - and best of all when the moon rides in a "fruitful" sign.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="h">The month</div>
+    <div class="calnav"><button id="prevM" aria-label="Previous month">‹</button><strong class="serif" id="monthName"></strong><button id="nextM" aria-label="Next month">›</button></div>
+    <div class="cal" id="cal"></div>
+    <div class="legend">Tap a night to see it. Full and new moons are named; <span style="color:#9fc0ff">blue</span> marks a blue moon, ★ a supermoon, ◐ an eclipse, ☄ a meteor shower.</div>
+  </section>
+
+  <section>
+    <div class="h">Coming up</div>
+    <div class="list" id="coming"></div>
+  </section>
+
+  <section>
+    <div class="h">The moon on a day that matters</div>
+    <p style="font-size:14.5px;color:#b8bfd9;line-height:1.55">A birthday, a wedding, the day someone was born or the day they passed. See the moon that shone that night.</p>
+    <div class="day-input"><input type="date" id="dayIn" aria-label="A date"></div>
+    <div class="then" id="then"><canvas id="thenMoon"></canvas><p id="thenTxt"></p></div>
+  </section>
+
+  <a class="btn" href="candles.html">🕯️ Light a candle for someone tonight</a>
+  <p class="foot">Moon picture: NASA Lunar Reconnaissance Orbiter. Phases and seasons: US Naval Observatory. Eclipses: NASA Goddard.<br>
+    <a href="/">‹ Back to the front page</a></p>
 </div>
 
+<script src="moon-calc.js"></script>
+<script src="moon-data.js"></script>
 <script>
 (function(){
-  var q = new URLSearchParams(location.search).get('night');
-  var base = q ? new Date(q + (q.length <= 16 ? ':00Z' : '')) : new Date();
+  var DAY = 86400000, $ = function(id){ return document.getElementById(id); };
+  var MC = window.MoonCalc, MD = window.MoonData;
 
-  // ---- the moon: same calculation as the wheel page, good to a few hours
-  var SYN = 29.530588853, NEW0 = Date.UTC(2000, 0, 6, 18, 14), DAY = 86400000;
-  function phaseAt(t){ var p = ((t - NEW0) / DAY / SYN) % 1; return p < 0 ? p + 1 : p; }
+  // ---------- place: Columbus unless the visitor shares theirs ----------
+  var loc = { lat: 39.96, lon: -83.00, label: 'Columbus, Ohio' };
+  try { var saved = JSON.parse(localStorage.getItem('bsMoonLoc') || 'null'); if (saved && saved.lat) loc = saved; } catch (e) {}
+  $('where').textContent = '📍 ' + loc.label;
+  $('where').addEventListener('click', function(){
+    if (!navigator.geolocation) { alert('This phone will not share its location.'); return; }
+    $('where').textContent = '📍 Finding you…';
+    navigator.geolocation.getCurrentPosition(function(p){
+      loc = { lat: Math.round(p.coords.latitude * 100) / 100, lon: Math.round(p.coords.longitude * 100) / 100, label: 'Your location' };
+      try { localStorage.setItem('bsMoonLoc', JSON.stringify(loc)); } catch (e) {}
+      $('where').textContent = '📍 ' + loc.label; render(sel);
+    }, function(){ $('where').textContent = '📍 ' + loc.label; }, { timeout: 10000, maximumAge: 3600000 });
+  });
 
-  // ---- old names; Harvest = full moon nearest the autumn equinox, Hunter's = the one after
+  // ---------- the official tables ----------
+  var KIND = { F: 'Full Moon', N: 'New Moon', Q1: 'First Quarter', L: 'Last Quarter' };
+  var PH = MD.phases.map(function(p){ return { kind: KIND[p[0]], time: new Date(p[1]) }; });
+  var SEASONS = MD.seasons.map(function(s){ return new Date(s); });
+  // beyond the tables, work the phases out
+  var lastT = PH[PH.length - 1].time;
+  MC.phases(new Date(lastT.getTime() + 3600000), new Date(lastT.getTime() + 400 * DAY)).forEach(function(p){ PH.push({ kind: p.phase, time: p.time }); });
+  var FULLS = PH.filter(function(p){ return p.kind === 'Full Moon'; });
+  var NEWS  = PH.filter(function(p){ return p.kind === 'New Moon'; });
+
   var NAMES = ['Wolf','Snow','Worm','Pink','Flower','Strawberry','Buck','Sturgeon','Corn','Hunter’s','Beaver','Cold'];
   var WHY = {
     'Wolf':'Named for the wolves heard howling through the long midwinter nights.',
@@ -94,115 +216,302 @@
     'Beaver':'Named for the time to set beaver traps, before the swamps froze over.',
     'Cold':'Named for the long, cold nights at the turn of the year. It rides highest in the sky of any full moon.'
   };
-  function fullMoonName(d){
-    var y = d.getUTCFullYear(), eq = Date.UTC(y, 8, 22, 12);
-    var back = ((phaseAt(eq) - 0.5 + 1) % 1) * SYN;
-    var a = eq - back * DAY, b = a + SYN * DAY;
-    var harvest = (Math.abs(a - eq) < Math.abs(b - eq)) ? a : b, hunter = harvest + SYN * DAY;
-    if (Math.abs(d.getTime() - harvest) < 2 * DAY) return 'Harvest';
-    if (Math.abs(d.getTime() - hunter) < 2 * DAY) return 'Hunter’s';
-    return NAMES[d.getUTCMonth()];
+  // The official tables cover 2026-2030; any other year (an old birthday, say) is worked
+  // out from scratch, a year either side, and kept so it is only done once.
+  var TABLE_FROM = FULLS[0].time, TABLE_TO = FULLS[FULLS.length - 1].time, YEARS = {};
+  function contextFor(t){
+    if (t > TABLE_FROM.getTime() + 60 * DAY && t < TABLE_TO.getTime() - 60 * DAY) return { fulls: FULLS, seasons: SEASONS };
+    var y = new Date(t).getFullYear();
+    if (!YEARS[y]) {
+      var fulls = MC.phases(new Date(y - 1, 9, 1), new Date(y + 1, 3, 1)).filter(function(p){ return p.phase === 'Full Moon'; })
+                    .map(function(p){ return { kind: 'Full Moon', time: p.time }; });
+      var seasons = [].concat(MC.seasons(y - 1), MC.seasons(y), MC.seasons(y + 1)).map(function(s){ return s.time; });
+      YEARS[y] = { fulls: fulls, seasons: seasons };
+    }
+    return YEARS[y];
   }
+  function fullInfo(f){
+    var t = f.time, local = new Date(t), y = local.getFullYear(), C = contextFor(t.getTime());
+    var fulls = C.fulls, seasons = C.seasons;
+    // the same full moon from this context's list (a computed list holds its own objects)
+    var me = fulls.filter(function(x){ return Math.abs(x.time - t) < DAY; })[0] || f;
+    var eq = null;
+    seasons.forEach(function(s){ if (s.getUTCFullYear() === y && s.getUTCMonth() === 8) eq = s; });
+    if (!eq) eq = new Date(Date.UTC(y, 8, 22, 12));
+    var harvest = null;
+    fulls.forEach(function(x){ if (!harvest || Math.abs(x.time - eq) < Math.abs(harvest.time - eq)) harvest = x; });
+    var hi = fulls.indexOf(harvest), name;
+    if (me === harvest) name = 'Harvest';
+    else if (fulls[hi + 1] === me) name = 'Hunter’s';
+    else name = NAMES[local.getMonth()];
+    var km = MC.info(t).km;
+    // blue: second full moon of a calendar month, or third of four in a season
+    var sameMonth = fulls.filter(function(x){ var d = new Date(x.time); return d.getFullYear() === y && d.getMonth() === local.getMonth(); });
+    var monthlyBlue = sameMonth.length > 1 && sameMonth[1] === me;
+    var seasonalBlue = false;
+    for (var i = 0; i + 1 < seasons.length; i++) {
+      if (t >= seasons[i] && t < seasons[i + 1]) {
+        var inS = fulls.filter(function(x){ return x.time >= seasons[i] && x.time < seasons[i + 1]; });
+        seasonalBlue = inS.length === 4 && inS[2] === me;
+      }
+    }
+    return { name: name, km: km, superMoon: km < 360000, monthlyBlue: monthlyBlue, seasonalBlue: seasonalBlue };
+  }
+  function next(list, t){ for (var i = 0; i < list.length; i++) if (list[i].time > t) return list[i]; return null; }
+  function prev(list, t){ var r = null; for (var i = 0; i < list.length; i++) { if (list[i].time <= t) r = list[i]; else break; } return r; }
+  function nearFull(t){ for (var i = 0; i < FULLS.length; i++) if (Math.abs(FULLS[i].time - t) < 0.8 * DAY) return FULLS[i]; return null; }
 
-  // ---- what the old folks said: real moon-planting lore, the kind still in the almanac
-  var LORE = [
-    [0.035, 'The Dark of the Moon', 'The dark of the moon was for resting. Nothing was planted and nothing was started. A night for sitting still, and for thinking about the ones who are gone.'],
-    [0.25,  'A New Crescent, Growing', 'Plant what grows above the ground while the moon is filling - beans, corn, anything that climbs toward the light. A filling moon was a time for beginnings.'],
-    [0.43,  'More Than Half, and Growing', 'A growing moon was thought to pull things upward - the sap in the trees, the water in the ground. Good for sowing, good for setting out on a journey.'],
-    [0.475, 'Nearly Full', 'A growing moon was thought to pull things upward - the sap in the trees, the water in the ground. Good for sowing, good for setting out on a journey.'],
-    [0.525, 'Full', 'Folks said the full moon pulls on everything that holds water - the tides, the sap, and the blood in us. It was the night for gathering together, and for remembering.'],
-    [0.57,  'Just Past Full', 'Plant what grows under the ground while the moon is going down - potatoes, onions, turnips. A shrinking moon was for pulling roots and cutting timber.'],
-    [0.75,  'Past Full, Growing Smaller', 'Plant what grows under the ground while the moon is going down - potatoes, onions, turnips. A shrinking moon was for pulling roots and cutting timber.'],
-    [0.965, 'A Thin Crescent, Fading', 'The waning moon was the time for letting things go. Clear the ground, mend what is broken, and make ready for the dark.'],
-    [1.001, 'The Dark of the Moon', 'The dark of the moon was for resting. Nothing was planted and nothing was started. A night for sitting still, and for thinking about the ones who are gone.']
-  ];
-  var $ = function(id){ return document.getElementById(id); };
-  var fmt = function(d){ return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }); };
+  // ---------- words ----------
+  function phaseName(inf){
+    var p = inf.illumination;
+    if (p < 0.02) return 'New Moon';
+    if (p > 0.98) return 'Full Moon';
+    if (Math.abs(p - 0.5) < 0.06) return inf.waxing ? 'First Quarter' : 'Last Quarter';
+    if (inf.waxing) return p < 0.5 ? 'Waxing Crescent' : 'Waxing Gibbous';
+    return p > 0.5 ? 'Waning Gibbous' : 'Waning Crescent';
+  }
+  var TITLES = {
+    'New Moon':'The Dark of the Moon', 'Waxing Crescent':'A Crescent, Growing', 'First Quarter':'Half Lit, Growing',
+    'Waxing Gibbous':'More Than Half, and Growing', 'Full Moon':'Full', 'Waning Gibbous':'Past Full, Growing Smaller',
+    'Last Quarter':'Half Lit, Growing Smaller', 'Waning Crescent':'A Thin Crescent, Fading'
+  };
+  var LORE = {
+    'New Moon':'The dark of the moon was for resting. Nothing was planted and nothing was started. A night for sitting still, and for thinking about the ones who are gone.',
+    'Waxing Crescent':'Plant what grows above the ground while the moon is filling - beans, corn, anything that climbs toward the light. A filling moon was a time for beginnings.',
+    'First Quarter':'Half a moon and growing. The old folks said things started now would grow with it - a good week for sowing and for setting out.',
+    'Waxing Gibbous':'A growing moon was thought to pull things upward - the sap in the trees, the water in the ground. Good for sowing, good for setting out on a journey.',
+    'Full Moon':'Folks said the full moon pulls on everything that holds water - the tides, the sap, and the blood in us. It was the night for gathering together, and for remembering.',
+    'Waning Gibbous':'Plant what grows under the ground while the moon is going down - potatoes, onions, turnips. A shrinking moon was for pulling roots and cutting timber.',
+    'Last Quarter':'Half a moon and shrinking. A time to weed, to clear brush and to cut wood, the almanacs said - things cut now grow back slow.',
+    'Waning Crescent':'The waning moon was the time for letting things go. Clear the ground, mend what is broken, and make ready for the dark.'
+  };
+  var FRUITFUL = { Cancer: 2, Scorpio: 2, Pisces: 2, Taurus: 1, Capricorn: 1, Libra: 1 };
 
-  // ---- the moon face: NASA's Lunar Reconnaissance Orbiter mosaic (public domain)
+  var fmtDay = function(d){ return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }); };
+  var fmtShort = function(d){ return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); };
+  var fmtTime = function(d){ return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+  function startOfDay(d){ var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+  function evening(d){ var x = startOfDay(d); x.setHours(21); return x; }
+  function nightOf(t){ return new Date(t.getTime() - (new Date(t).getHours() < 12 ? DAY : 0)); }
+
+  // ---------- drawing ----------
   var face = new Image(); face.src = 'moon-face.jpg';
-  var cv = $('c'), ctx = cv.getContext('2d'), current = 0;
-
-  function render(offsetDays){
-    current = offsetDays;
-    var t = new Date(base.getTime() + offsetDays * DAY);
-    var p = phaseAt(t.getTime());
-    var nearFull = Math.abs(p - 0.5) < 0.025;
-    var toFull = nearFull ? (0.5 - p) * SYN : ((0.5 - p + 1) % 1) * SYN;
-    var fullAt = new Date(t.getTime() + toFull * DAY);
-    var nm = fullMoonName(fullAt);
-    var L = LORE.filter(function(x){ return p < x[0]; })[0];
-
-    $('date').textContent = (offsetDays === 0 && !q ? 'Tonight · ' : '') + fmt(t);
-    $('when').textContent = offsetDays === 0 ? 'Tonight' : offsetDays === 1 ? 'Tomorrow night' : 'In ' + offsetDays + ' nights';
-    if (nearFull) {
-      $('title').textContent = 'The ' + nm + ' Moon';
-      $('phase').textContent = 'Full moon';
-      $('cta').textContent = '🕯️  Light a candle under the ' + nm + ' Moon';
-      $('next').textContent = '';
-      $('why').textContent = WHY[nm];
-    } else {
-      $('title').textContent = L[1];
-      var d = Math.round(toFull);
-      $('phase').textContent = d === 1 ? 'The full moon is tomorrow night' : 'The full moon is ' + d + ' nights away';
-      $('cta').textContent = '🕯️  Light a candle for someone';
-      var night = new Date(fullAt.getTime() - (fullAt.getHours() < 12 ? DAY : 0));
-      $('next').textContent = 'Next full moon: the ' + nm + ' Moon, the night of ' + fmt(night) + '.';
-      $('why').textContent = 'Coming: the ' + nm + ' Moon. ' + WHY[nm];
-    }
-    $('lore').textContent = L[2];
-    draw(p);
-  }
-
-  function draw(p){
-    var dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
-    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    var s = 5; function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
-    for (var i = 0; i < 160; i++) {
-      ctx.globalAlpha = 0.2 + r() * 0.6; ctx.fillStyle = '#dfe5f7';
-      ctx.beginPath(); ctx.arc(r() * W, r() * H, r() * 1.2 + 0.25, 0, 7); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    var mr = Math.min(W * 0.36, H * 0.4), mx = W / 2, my = H * 0.52;
-    var f = (1 - Math.cos(2 * Math.PI * p)) / 2, a = mr * (1 - 2 * f), waxing = p < 0.5;
-
-    // glow, brighter as more of it is lit
-    // the glow has to fade out before the edge of the canvas, or it ends in a hard line
-    var hr = Math.min(mr * 2.6, H - my - 2, my - 2, W / 2);
-    var halo = ctx.createRadialGradient(mx, my, mr * 0.9, mx, my, hr);
-    halo.addColorStop(0, 'rgba(235,230,210,' + (0.05 + 0.20 * f) + ')'); halo.addColorStop(1, 'rgba(200,205,235,0)');
-    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(mx, my, hr, 0, 7); ctx.fill();
-
+  function drawMoon(ctx, mx, my, mr, inf, photo){
+    var el = inf.elongation, waxing = el < 180;
+    var f = inf.illumination, a = mr * (1 - 2 * f);
     ctx.save(); ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.clip();
-    if (face.complete && face.naturalWidth) {
+    if (photo && face.complete && face.naturalWidth) {
       ctx.drawImage(face, mx - mr, my - mr, mr * 2, mr * 2);
-      // warm it slightly, the way the moon looks low over the trees
       ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(255,225,170,0.35)';
       ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2); ctx.globalCompositeOperation = 'source-over';
-    } else {
-      ctx.fillStyle = '#cfcab9'; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
-    }
-    // the night side: everything outside the lit lune, left faintly visible (earthshine)
-    ctx.beginPath(); var N = 96, dir = waxing ? 1 : -1;
-    // the dark region is bounded by the far limb and the terminator
-    for (var k = 0; k <= N; k++) { var th = -Math.PI/2 + (k/N) * Math.PI; ctx.lineTo(mx - dir*mr*Math.cos(th), my + mr*Math.sin(th)); }
-    for (k = N; k >= 0; k--) { th = -Math.PI/2 + (k/N) * Math.PI; ctx.lineTo(mx + dir*a*Math.cos(th), my + mr*Math.sin(th)); }
+    } else { ctx.fillStyle = '#e7e1cf'; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2); }
+    ctx.beginPath(); var N = 64, dir = waxing ? 1 : -1, th, k;
+    for (k = 0; k <= N; k++) { th = -Math.PI / 2 + (k / N) * Math.PI; ctx.lineTo(mx - dir * mr * Math.cos(th), my + mr * Math.sin(th)); }
+    for (k = N; k >= 0; k--) { th = -Math.PI / 2 + (k / N) * Math.PI; ctx.lineTo(mx + dir * a * Math.cos(th), my + mr * Math.sin(th)); }
     ctx.closePath();
-    if ('filter' in ctx) ctx.filter = 'blur(' + Math.max(1.5, mr * 0.025) + 'px)';
-    ctx.fillStyle = 'rgba(2,3,10,0.9)'; ctx.fill();
-    ctx.filter = 'none';
-    // a little darkening at the edge of the disc, as on the real thing
-    var limb = ctx.createRadialGradient(mx, my, mr * 0.65, mx, my, mr);
-    limb.addColorStop(0, 'rgba(0,0,0,0)'); limb.addColorStop(1, 'rgba(0,0,10,0.35)');
-    ctx.fillStyle = limb; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+    if (photo && 'filter' in ctx) ctx.filter = 'blur(' + Math.max(1, mr * 0.025) + 'px)';
+    ctx.fillStyle = photo ? 'rgba(2,3,10,0.9)' : 'rgba(20,24,44,0.92)'; ctx.fill(); ctx.filter = 'none';
+    if (photo) {
+      var limb = ctx.createRadialGradient(mx, my, mr * 0.65, mx, my, mr);
+      limb.addColorStop(0, 'rgba(0,0,0,0)'); limb.addColorStop(1, 'rgba(0,0,10,0.35)');
+      ctx.fillStyle = limb; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+    }
     ctx.restore();
   }
+  function sizeCanvas(cv){ var dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight; cv.width = W * dpr; cv.height = H * dpr; var c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); return { c: c, W: W, H: H }; }
+  function drawHero(inf){
+    var s = sizeCanvas($('hero')), ctx = s.c, W = s.W, H = s.H, seed = 5;
+    function r(){ seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < 150; i++) { ctx.globalAlpha = 0.2 + r() * 0.6; ctx.fillStyle = '#dfe5f7'; ctx.beginPath(); ctx.arc(r() * W, r() * H, r() * 1.2 + 0.25, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    var mr = Math.min(W * 0.34, H * 0.4), mx = W / 2, my = H * 0.52;
+    var hr = Math.min(mr * 2.6, H - my - 2, my - 2, W / 2);
+    var halo = ctx.createRadialGradient(mx, my, mr * 0.9, mx, my, hr);
+    halo.addColorStop(0, 'rgba(235,230,210,' + (0.05 + 0.2 * inf.illumination) + ')'); halo.addColorStop(1, 'rgba(200,205,235,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(mx, my, hr, 0, 7); ctx.fill();
+    drawMoon(ctx, mx, my, mr, inf, true);
+  }
 
-  face.onload = function(){ render(current); };
-  $('night').addEventListener('input', function(e){ render(+e.target.value); });
-  window.addEventListener('resize', function(){ render(current); });
-  render(0);
+  // ---------- the page for one night ----------
+  var today = startOfDay(new Date()), sel = today, calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+  function stars(n){ return '★★★★'.slice(0, n) + '☆☆☆☆'.slice(0, 4 - n); }
+  function solunarRating(t){
+    var nf = next(FULLS, new Date(t.getTime() - 20 * DAY)), d = Infinity;
+    PH.forEach(function(p){ if (p.kind === 'Full Moon' || p.kind === 'New Moon') d = Math.min(d, Math.abs(p.time - t) / DAY); });
+    return d <= 1 ? 4 : d <= 2.5 ? 3 : d <= 5 ? 2 : 1;
+  }
+  function dayEvents(day){ return MC.events(day, new Date(day.getTime() + DAY), loc.lat, loc.lon); }
+  function span(t, minutes){ return fmtTime(new Date(t.getTime() - minutes * 60000)) + ' - ' + fmtTime(new Date(t.getTime() + minutes * 60000)); }
+
+  function render(day){
+    sel = startOfDay(day);
+    var ev = evening(sel), inf = MC.info(ev), pname = phaseName(inf);
+    var off = Math.round((sel - today) / DAY);
+    $('night').value = Math.max(0, Math.min(29, off));
+    $('when').textContent = off === 0 ? 'Tonight' : off === 1 ? 'Tomorrow night' : off > 1 && off < 30 ? 'In ' + off + ' nights' : fmtShort(sel);
+    $('date').textContent = (off === 0 ? 'Tonight · ' : '') + fmtDay(sel);
+
+    var nf = nearFull(ev), badges = [];
+    if (nf) {
+      var fi = fullInfo(nf);
+      $('title').textContent = 'The ' + fi.name + ' Moon';
+      $('phase').textContent = 'Full at ' + fmtTime(nf.time) + (new Date(nf.time).getDate() !== sel.getDate() ? ' (' + fmtShort(nf.time) + ')' : '');
+      if (fi.superMoon) badges.push('<span class="badge">★ Supermoon</span>');
+      if (fi.monthlyBlue) badges.push('<span class="badge blue">Blue Moon</span>');
+      if (fi.seasonalBlue) badges.push('<span class="badge blue">Blue Moon (old almanac)</span>');
+      $('why').textContent = WHY[fi.name] + (fi.monthlyBlue ? ' It is also a blue moon - the second full moon in one calendar month.' : '') + (fi.seasonalBlue ? ' It is also a blue moon by the old almanac reckoning - the third full moon in a season that has four.' : '');
+    } else {
+      $('title').textContent = TITLES[pname];
+      var nxt = next(FULLS, ev), nfi = fullInfo(nxt), dd = Math.round((nxt.time - ev) / DAY);
+      $('phase').textContent = dd <= 1 ? 'The full moon is tomorrow night' : 'The full moon is ' + dd + ' nights away';
+      $('why').textContent = 'Coming: the ' + nfi.name + ' Moon. ' + WHY[nfi.name];
+    }
+    $('badges').innerHTML = badges.join('');
+    $('lore').textContent = LORE[pname];
+
+    // at a glance
+    var pn = prev(NEWS, ev);
+    $('g-lit').textContent = Math.round(inf.illumination * 100) + '%';
+    $('g-name').textContent = pname;
+    $('g-age').textContent = pn ? ((ev - pn.time) / DAY).toFixed(1) + ' days' : '-';
+    var evs = dayEvents(sel);
+    var rise = evs.filter(function(e){ return e.type === 'rise'; })[0], set = evs.filter(function(e){ return e.type === 'set'; })[0];
+    var high = evs.filter(function(e){ return e.type === 'overhead'; })[0];
+    $('g-rise').textContent = rise ? fmtTime(rise.time) : 'none';
+    $('g-rise2').textContent = rise ? '' : 'no moonrise this day';
+    $('g-set').textContent = set ? fmtTime(set.time) : 'none';
+    $('g-set2').textContent = set ? '' : 'no moonset this day';
+    $('g-high').textContent = high ? fmtTime(high.time) : '-';
+    $('g-dist').textContent = Math.round(inf.miles).toLocaleString('en-US') + ' mi';
+    $('g-dist2').textContent = inf.km < 362000 ? 'close - near its nearest' : inf.km > 402000 ? 'far - near its farthest' : Math.round(inf.km).toLocaleString('en-US') + ' km';
+    $('g-sign').textContent = inf.sign;
+    var nx = next(FULLS, nf ? new Date(nf.time.getTime() + DAY) : ev), nxi = fullInfo(nx);
+    $('g-full').textContent = nxi.name + ' Moon';
+    $('g-full2').textContent = 'the night of ' + fmtShort(nightOf(nx.time)) + (nxi.superMoon ? ' · supermoon' : '') + (nxi.monthlyBlue || nxi.seasonalBlue ? ' · blue moon' : '');
+
+    // solunar
+    var rating = solunarRating(ev);
+    $('sol-stars').textContent = stars(rating);
+    $('sol-word').textContent = ['', 'a slow day', 'a fair day', 'a good day', 'one of the best days of the month'][rating];
+    var rows = [];
+    evs.forEach(function(e){
+      if (e.type === 'overhead') rows.push(['Major', span(e.time, 60) + ' (moon overhead)', e.time]);
+      if (e.type === 'underfoot') rows.push(['Major', span(e.time, 60) + ' (moon underfoot)', e.time]);
+      if (e.type === 'rise') rows.push(['Minor', span(e.time, 30) + ' (moonrise)', e.time]);
+      if (e.type === 'set') rows.push(['Minor', span(e.time, 30) + ' (moonset)', e.time]);
+    });
+    rows.sort(function(a, b){ return a[2] - b[2]; });
+    $('sol').innerHTML = rows.map(function(r){ return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
+    var wk = '';
+    for (var i = 0; i < 7; i++) {
+      var dday = new Date(sel.getTime() + i * DAY), rt = solunarRating(evening(dday));
+      wk += '<div class="' + (i === 0 ? 'on' : '') + '"><b>' + dday.toLocaleDateString('en-US', { weekday: 'short' }) + '</b><span class="stars">' + '★'.repeat(rt) + '</span></div>';
+    }
+    $('week').innerHTML = wk;
+
+    // planting
+    var fr = FRUITFUL[inf.sign] || 0, kind = inf.waxing ? 'above-ground crops - beans, corn, squash, tomatoes' : 'root crops - potatoes, onions, carrots, turnips';
+    var txt;
+    if (pname === 'New Moon' || pname === 'Full Moon') txt = '<b>The day of the ' + (pname === 'New Moon' ? 'new' : 'full') + ' moon.</b> Many old farmers would not plant on it - they waited a day.';
+    else if (fr === 2) txt = '<b>A good planting day.</b> The moon is ' + (inf.waxing ? 'filling' : 'going down') + ' and rides in ' + inf.sign + ', one of the fruitful signs. Plant ' + kind + '.';
+    else if (fr === 1) txt = '<b>A fair planting day.</b> The moon is ' + (inf.waxing ? 'filling' : 'going down') + ' in ' + inf.sign + ', a middling sign. Plant ' + kind + ' if you must.';
+    else txt = '<b>Not a planting day.</b> The moon rides in ' + inf.sign + ', a barren sign. The almanacs said weed, clear brush and cut wood on days like this.';
+    $('plant').innerHTML = txt;
+
+    drawHero(inf);
+    if (sel.getMonth() !== calMonth.getMonth() || sel.getFullYear() !== calMonth.getFullYear()) calMonth = new Date(sel.getFullYear(), sel.getMonth(), 1);
+    drawCalendar();
+  }
+
+  // ---------- the month ----------
+  function drawCalendar(){
+    var y = calMonth.getFullYear(), m = calMonth.getMonth();
+    $('monthName').textContent = calMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    var first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate(), html = '';
+    ['S','M','T','W','T','F','S'].forEach(function(d){ html += '<div class="dow">' + d + '</div>'; });
+    for (var b = 0; b < first; b++) html += '<div class="day blank"></div>';
+    var monthStart = new Date(y, m, 1), monthEnd = new Date(y, m + 1, 1);
+    for (var d = 1; d <= days; d++) {
+      var day = new Date(y, m, d), dEnd = new Date(y, m, d + 1), tags = [];
+      PH.forEach(function(p){
+        if (p.time >= day && p.time < dEnd && (p.kind === 'Full Moon' || p.kind === 'New Moon')) {
+          if (p.kind === 'New Moon') tags.push('<em>New</em>');
+          else { var fi = fullInfo(p); tags.push('<em class="' + (fi.monthlyBlue || fi.seasonalBlue ? 'blue' : '') + '">' + fi.name + (fi.superMoon ? ' ★' : '') + '</em>'); }
+        }
+      });
+      MD.eclipses.forEach(function(e){ var t = new Date(e[0]); if (t >= day && t < dEnd) tags.push('<em>◐ ' + e[2] + '</em>'); });
+      MD.showers.forEach(function(s){ if (s[1] - 1 === m && s[2] === d) tags.push('<em>☄ ' + s[0] + '</em>'); });
+      var cls = 'day' + (+day === +today ? ' today' : '') + (+day === +sel ? ' sel' : '');
+      html += '<div class="' + cls + '" data-d="' + day.getTime() + '"><i>' + d + '</i><canvas data-c="' + day.getTime() + '"></canvas>' + tags.join('') + '</div>';
+    }
+    $('cal').innerHTML = html;
+    [].forEach.call($('cal').querySelectorAll('canvas'), function(cv){
+      var s = sizeCanvas(cv), inf = MC.info(evening(new Date(+cv.getAttribute('data-c'))));
+      drawMoon(s.c, s.W / 2, s.H / 2, s.W / 2 - 1, inf, false);
+    });
+  }
+  $('cal').addEventListener('click', function(e){
+    var cell = e.target.closest('.day'); if (!cell || !cell.getAttribute('data-d')) return;
+    render(new Date(+cell.getAttribute('data-d'))); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  $('prevM').addEventListener('click', function(){ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); drawCalendar(); });
+  $('nextM').addEventListener('click', function(){ calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); drawCalendar(); });
+
+  // ---------- coming up ----------
+  function coming(){
+    var now = new Date(), until = new Date(now.getTime() + 400 * DAY), items = [];
+    FULLS.forEach(function(f){
+      if (f.time < now || f.time > until) return;
+      var fi = fullInfo(f), extra = [];
+      if (fi.superMoon) extra.push('a supermoon - about ' + Math.round(fi.km * 0.621371).toLocaleString('en-US') + ' miles away, close and bright');
+      if (fi.monthlyBlue) extra.push('a blue moon - the second full moon this month');
+      if (fi.seasonalBlue) extra.push('a blue moon by the old almanac - the third of four this season');
+      items.push({ t: f.time, ic: fi.monthlyBlue || fi.seasonalBlue ? '🔵' : '🌕', b: 'The ' + fi.name + ' Moon', s: 'The night of ' + fmtDay(nightOf(f.time)) + (extra.length ? ' - ' + extra.join('; ') + '.' : '.'), big: fi.superMoon || fi.monthlyBlue || fi.seasonalBlue });
+    });
+    MD.eclipses.forEach(function(e){
+      var t = new Date(e[0]); if (t < now || t > until) return;
+      items.push({ t: t, ic: '◐', b: e[2] + ' ' + (e[1] === 'solar' ? 'eclipse of the sun' : 'eclipse of the moon'), s: fmtDay(t) + '. Seen from ' + e[3] + '.', big: true });
+    });
+    for (var y = now.getFullYear(); y <= now.getFullYear() + 1; y++) MD.showers.forEach(function(s){
+      var t = new Date(y, s[1] - 1, s[2], 23); if (t < now || t > until) return;
+      var lit = Math.round(MC.info(t).illumination * 100);
+      items.push({ t: t, ic: '☄', b: 'The ' + s[0], s: 'Peaks around the night of ' + fmtDay(t) + ' - ' + s[3] + '. The moon is ' + lit + '% lit that night' + (lit < 30 ? ', so the sky will be dark.' : lit > 70 ? ', so only the bright ones will show.' : '.'), big: false });
+    });
+    SEASONS.forEach(function(t, i){
+      if (t < now || t > until) return;
+      var m = t.getUTCMonth(), name = m === 2 ? 'The spring equinox' : m === 5 ? 'The summer solstice' : m === 8 ? 'The autumn equinox' : 'The winter solstice';
+      items.push({ t: t, ic: '☀', b: name, s: fmtDay(t) + (m === 11 ? ' - the longest night of the year.' : m === 5 ? ' - the shortest night of the year.' : '.'), big: false });
+    });
+    items.sort(function(a, b){ return a.t - b.t; });
+    $('coming').innerHTML = items.slice(0, 12).map(function(it){
+      return '<div class="item"><div class="ic">' + it.ic + '</div><div><b>' + it.b + '</b><span>' + it.s + '</span></div></div>';
+    }).join('');
+  }
+
+  // ---------- the moon on a day that matters ----------
+  $('dayIn').addEventListener('change', function(){
+    var v = $('dayIn').value; if (!v) return;
+    var p = v.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2], 21);
+    var inf = MC.info(d), pname = phaseName(inf);
+    var C = contextFor(d.getTime()), around = null;
+    C.fulls.forEach(function(x){ if (!around || Math.abs(x.time - d) < Math.abs(around.time - d)) around = x; });
+    var fi = fullInfo(around), nf = Math.abs(around.time - d) < 0.8 * DAY;
+    $('then').style.display = 'flex';                 // show first: a hidden canvas measures 0 wide
+    var s = sizeCanvas($('thenMoon')); s.c.clearRect(0, 0, s.W, s.H);
+    drawMoon(s.c, s.W / 2, s.H / 2, s.W / 2 - 2, inf, true);
+    var when = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    var blue = fi.monthlyBlue ? ' It was a blue moon - the second full moon that month.' : fi.seasonalBlue ? ' It was a blue moon by the old almanac reckoning.' : '';
+    var txt = 'On the night of ' + when + ', ' + (nf ? 'the moon was full - the ' + fi.name + ' Moon.' + blue + (fi.superMoon ? ' A supermoon, too.' : '') : 'the moon was ' + pname.toLowerCase() + ', ' + Math.round(inf.illumination * 100) + '% lit. The full moon nearest it was the ' + fi.name + ' Moon.');
+    $('thenTxt').innerHTML = txt + ' <a href="candles.html">Light a candle for that day.</a>';
+  });
+
+  $('night').addEventListener('input', function(e){ render(new Date(today.getTime() + (+e.target.value) * DAY)); });
+  face.onload = function(){ render(sel); };
+  window.addEventListener('resize', function(){ render(sel); });
+  coming();
+  render(today);
 })();
 </script>
 </body>
