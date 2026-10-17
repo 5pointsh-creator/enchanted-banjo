@@ -5,43 +5,62 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
 <title>Tonight's moon — Banjo Spirits</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%}
-  body{background:#05060d;color:#dfe4f5;font-family:"Segoe UI",system-ui,sans-serif;text-align:center}
-  .sky{position:relative;height:min(62vh,520px);overflow:hidden;
-       background:radial-gradient(90% 70% at 50% 35%, #18213a 0%, #0b0f1e 55%, #05060d 100%)}
+  body{background:#020308;color:#e9e4d6;font-family:"Segoe UI",system-ui,sans-serif;text-align:center;
+       background-image:radial-gradient(120% 60% at 50% 22%, #10162b 0%, #05070f 55%, #020308 100%)}
+  .serif{font-family:"Cormorant Garamond",Georgia,"Times New Roman",serif}
+  .top{padding:18px 16px 0;font-size:11.5px;letter-spacing:4px;text-transform:uppercase;color:#c9b277}
+  .stage{position:relative;height:min(58vh,480px)}
   canvas{position:absolute;inset:0;width:100%;height:100%}
-  .wrap{max-width:560px;margin:0 auto;padding:0 18px 44px}
-  .kicker{margin-top:16px;font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#9aa6cc}
-  h1{margin-top:8px;font-size:30px;font-weight:600;color:#f6f1e4;letter-spacing:.2px}
-  .phase{margin-top:4px;font-size:15px;color:#aeb8d8}
-  .lore{margin:22px auto 0;padding:16px 18px;border-radius:14px;text-align:left;
-        background:rgba(28,34,58,.6);border:1px solid rgba(190,205,255,.16)}
-  .lore b{display:block;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#c9b98c;margin-bottom:6px;font-weight:600}
-  .lore p{font-size:16px;line-height:1.6;color:#e8e3d6;font-family:Georgia,"Times New Roman",serif}
-  .name-why{margin-top:10px;font-size:14px;line-height:1.55;color:#b9c2de}
-  .btn{display:block;margin:24px auto 0;max-width:420px;padding:15px;border-radius:14px;text-decoration:none;
-       font-size:17px;font-weight:600;color:#fff;background:linear-gradient(180deg,#e0a23c,#a8641a);
-       box-shadow:0 10px 26px rgba(224,162,60,.28)}
-  .next{margin-top:16px;font-size:14px;color:#9aa6cc}
-  .back{display:inline-block;margin-top:22px;font-size:14px;color:#c9b6f5;text-decoration:none}
+  .wrap{max-width:560px;margin:0 auto;padding:0 20px 46px}
+  .date{font-size:12.5px;letter-spacing:2.5px;text-transform:uppercase;color:#9aa3c2}
+  h1{margin-top:6px;font-size:40px;line-height:1.08;font-weight:600;color:#f7f1e1;letter-spacing:.3px}
+  .phase{margin-top:6px;font-size:16px;color:#b8bfd9;font-style:italic}
+  .rule{display:flex;align-items:center;gap:12px;justify-content:center;margin:22px auto 18px;color:#c9b277;font-size:12px}
+  .rule:before,.rule:after{content:"";height:1px;width:70px;background:linear-gradient(90deg,transparent,#c9b27788,transparent)}
+  .lore-h{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#c9b277}
+  .lore{margin:10px auto 0;max-width:30em;font-size:21px;line-height:1.5;font-style:italic;color:#ece6d6}
+  .why{margin:14px auto 0;max-width:34em;font-size:14px;line-height:1.6;color:#a9b1cf}
+  .scrub{margin:28px auto 0;max-width:420px;text-align:left}
+  .scrub label{display:flex;justify-content:space-between;font-size:12.5px;color:#9aa3c2;margin-bottom:8px}
+  .scrub label b{color:#e9dfbf;font-weight:600}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;
+       background:linear-gradient(90deg,#c9b277,#56597a);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;border-radius:50%;
+       background:radial-gradient(circle at 35% 35%,#fff7e0,#d8c48e);box-shadow:0 0 14px rgba(255,230,170,.55);cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:26px;height:26px;border:none;border-radius:50%;
+       background:radial-gradient(circle at 35% 35%,#fff7e0,#d8c48e);box-shadow:0 0 14px rgba(255,230,170,.55)}
+  .btn{display:block;margin:30px auto 0;max-width:420px;padding:15px;border-radius:999px;text-decoration:none;
+       font-size:17px;font-weight:600;color:#1d1405;background:linear-gradient(180deg,#f0d495,#c9a24e);
+       box-shadow:0 10px 30px rgba(220,180,90,.25)}
+  .next{margin-top:14px;font-size:14px;color:#9aa3c2}
+  .back{display:inline-block;margin-top:24px;font-size:13.5px;color:#b9a8e6;text-decoration:none}
   .tag{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9;background:#ffd479;color:#2a1a00;
        font-size:12px;font-weight:700;padding:5px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
 <div class="tag">PREVIEW</div>
-<div class="sky"><canvas id="c"></canvas></div>
+<div class="top">Banjo Spirits &nbsp;·&nbsp; the moon</div>
+<div class="stage"><canvas id="c"></canvas></div>
 <div class="wrap">
-  <div class="kicker" id="kicker">Tonight's moon</div>
-  <h1 id="title"></h1>
-  <div class="phase" id="phase"></div>
+  <div class="date" id="date"></div>
+  <h1 class="serif" id="title"></h1>
+  <div class="phase serif" id="phase"></div>
 
-  <div class="lore">
-    <b>What the old folks said</b>
-    <p id="lore"></p>
-    <div class="name-why" id="why"></div>
+  <div class="rule">✦</div>
+  <div class="lore-h">What the old folks said</div>
+  <p class="lore serif" id="lore"></p>
+  <p class="why" id="why"></p>
+
+  <div class="scrub">
+    <label><span>Drag through the nights ahead</span><b id="when">Tonight</b></label>
+    <input type="range" id="night" min="0" max="29" step="1" value="0" aria-label="Nights ahead">
   </div>
 
   <a class="btn" id="cta" href="candles.html"></a>
@@ -51,23 +70,14 @@
 
 <script>
 (function(){
-  // ---- when is "tonight"? (?night=2026-10-25T23:30 lets the preview show other nights)
   var q = new URLSearchParams(location.search).get('night');
-  var now = q ? new Date(q + (q.length <= 16 ? ':00Z' : '')) : new Date();
+  var base = q ? new Date(q + (q.length <= 16 ? ':00Z' : '')) : new Date();
 
   // ---- the moon: same calculation as the wheel page, good to a few hours
-  var SYN = 29.530588853, NEW0 = Date.UTC(2000, 0, 6, 18, 14);
-  function phaseAt(t){ var p = ((t - NEW0) / 86400000 / SYN) % 1; return p < 0 ? p + 1 : p; }
-  var p = phaseAt(now.getTime());
-  var nearFull = Math.abs(p - 0.5) < 0.025;
+  var SYN = 29.530588853, NEW0 = Date.UTC(2000, 0, 6, 18, 14), DAY = 86400000;
+  function phaseAt(t){ var p = ((t - NEW0) / DAY / SYN) % 1; return p < 0 ? p + 1 : p; }
 
-  // the next full moon (or tonight's), as a real date
-  var toFull = ((0.5 - p + 1) % 1) * SYN;
-  if (nearFull) toFull = (0.5 - p) * SYN;
-  var fullAt = new Date(now.getTime() + toFull * 86400000);
-
-  // ---- the old names. The Harvest Moon is the full moon nearest the autumn equinox and
-  // the Hunter's Moon the one after it, so those two are worked out, not looked up.
+  // ---- old names; Harvest = full moon nearest the autumn equinox, Hunter's = the one after
   var NAMES = ['Wolf','Snow','Worm','Pink','Flower','Strawberry','Buck','Sturgeon','Corn','Hunter’s','Beaver','Cold'];
   var WHY = {
     'Wolf':'Named for the wolves heard howling through the long midwinter nights.',
@@ -86,96 +96,113 @@
   };
   function fullMoonName(d){
     var y = d.getUTCFullYear(), eq = Date.UTC(y, 8, 22, 12);
-    // find the full moon nearest this year's equinox
-    var pe = phaseAt(eq), back = ((pe - 0.5 + 1) % 1) * SYN;
-    var a = eq - back * 86400000, b = a + SYN * 86400000;
-    var harvest = (Math.abs(a - eq) < Math.abs(b - eq)) ? a : b;
-    var hunter = harvest + SYN * 86400000;
-    var day = 86400000 * 2;
-    if (Math.abs(d.getTime() - harvest) < day) return 'Harvest';
-    if (Math.abs(d.getTime() - hunter) < day) return 'Hunter’s';
-    var n = NAMES[d.getUTCMonth()];
-    // if the Hunter's Moon fell in November, November's own name moves aside for it
-    return n;
+    var back = ((phaseAt(eq) - 0.5 + 1) % 1) * SYN;
+    var a = eq - back * DAY, b = a + SYN * DAY;
+    var harvest = (Math.abs(a - eq) < Math.abs(b - eq)) ? a : b, hunter = harvest + SYN * DAY;
+    if (Math.abs(d.getTime() - harvest) < 2 * DAY) return 'Harvest';
+    if (Math.abs(d.getTime() - hunter) < 2 * DAY) return 'Hunter’s';
+    return NAMES[d.getUTCMonth()];
   }
 
   // ---- what the old folks said: real moon-planting lore, the kind still in the almanac
   var LORE = [
-    [0.035, 'The dark of the moon', 'The dark of the moon was for resting. Nothing was planted and nothing was started. Folks said it was a night for sitting still, and for thinking about the ones who are gone.'],
-    [0.25,  'A new crescent, growing', 'Plant what grows above the ground while the moon is filling, the old farmers said - beans, corn, anything that climbs toward the light. A filling moon was a time for beginnings.'],
-    [0.475, 'More than half, and growing', 'A growing moon was thought to pull things upward - the sap in the trees, the water in the ground. Good for sowing, good for starting out on a journey.'],
+    [0.035, 'The Dark of the Moon', 'The dark of the moon was for resting. Nothing was planted and nothing was started. A night for sitting still, and for thinking about the ones who are gone.'],
+    [0.25,  'A New Crescent, Growing', 'Plant what grows above the ground while the moon is filling - beans, corn, anything that climbs toward the light. A filling moon was a time for beginnings.'],
+    [0.43,  'More Than Half, and Growing', 'A growing moon was thought to pull things upward - the sap in the trees, the water in the ground. Good for sowing, good for setting out on a journey.'],
+    [0.475, 'Nearly Full', 'A growing moon was thought to pull things upward - the sap in the trees, the water in the ground. Good for sowing, good for setting out on a journey.'],
     [0.525, 'Full', 'Folks said the full moon pulls on everything that holds water - the tides, the sap, and the blood in us. It was the night for gathering together, and for remembering.'],
-    [0.75,  'Past full, getting smaller', 'Plant what grows under the ground while the moon is going down - potatoes, onions, turnips. A shrinking moon was for pulling roots and cutting timber.'],
-    [0.965, 'A thin crescent, fading', 'The waning moon was the time for letting things go, the old saying went. Clear the ground, mend what is broken, and make ready for the dark.'],
-    [1.001, 'The dark of the moon', 'The dark of the moon was for resting. Nothing was planted and nothing was started. Folks said it was a night for sitting still, and for thinking about the ones who are gone.']
+    [0.57,  'Just Past Full', 'Plant what grows under the ground while the moon is going down - potatoes, onions, turnips. A shrinking moon was for pulling roots and cutting timber.'],
+    [0.75,  'Past Full, Growing Smaller', 'Plant what grows under the ground while the moon is going down - potatoes, onions, turnips. A shrinking moon was for pulling roots and cutting timber.'],
+    [0.965, 'A Thin Crescent, Fading', 'The waning moon was the time for letting things go. Clear the ground, mend what is broken, and make ready for the dark.'],
+    [1.001, 'The Dark of the Moon', 'The dark of the moon was for resting. Nothing was planted and nothing was started. A night for sitting still, and for thinking about the ones who are gone.']
   ];
-  var L = LORE.filter(function(x){ return p < x[0]; })[0];
-
+  var $ = function(id){ return document.getElementById(id); };
   var fmt = function(d){ return d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }); };
-  var nm = fullMoonName(fullAt);
-  if (nearFull) {
-    document.getElementById('kicker').textContent = 'Full moon tonight';
-    document.getElementById('title').textContent = 'The ' + nm + ' Moon';
-    document.getElementById('phase').textContent = 'Full';
-    document.getElementById('cta').textContent = '🕯️ Light a candle tonight under the ' + nm + ' Moon';
-    document.getElementById('next').textContent = '';
-  } else {
-    document.getElementById('title').textContent = L[1];
-    var days = Math.round(toFull);
-    document.getElementById('phase').textContent = days === 1 ? 'Full moon tomorrow night' : 'Full moon in ' + days + ' days';
-    document.getElementById('cta').textContent = '🕯️ Light a candle for someone tonight';
-    // the moment of full often falls after midnight; people look up the evening before
-    var night = new Date(fullAt.getTime() - (fullAt.getHours() < 12 ? 86400000 : 0));
-    document.getElementById('next').textContent = 'Next full moon: the ' + nm + ' Moon, the night of ' + fmt(night) + '.';
-  }
-  document.getElementById('lore').textContent = L[2];
-  document.getElementById('why').textContent = (nearFull ? '' : 'Coming up - the ' + nm + ' Moon. ') + WHY[nm];
 
-  // ---- draw it
-  var cv = document.getElementById('c'), ctx = cv.getContext('2d');
-  function draw(){
+  // ---- the moon face: NASA's Lunar Reconnaissance Orbiter mosaic (public domain)
+  var face = new Image(); face.src = 'moon-face.jpg';
+  var cv = $('c'), ctx = cv.getContext('2d'), current = 0;
+
+  function render(offsetDays){
+    current = offsetDays;
+    var t = new Date(base.getTime() + offsetDays * DAY);
+    var p = phaseAt(t.getTime());
+    var nearFull = Math.abs(p - 0.5) < 0.025;
+    var toFull = nearFull ? (0.5 - p) * SYN : ((0.5 - p + 1) % 1) * SYN;
+    var fullAt = new Date(t.getTime() + toFull * DAY);
+    var nm = fullMoonName(fullAt);
+    var L = LORE.filter(function(x){ return p < x[0]; })[0];
+
+    $('date').textContent = (offsetDays === 0 && !q ? 'Tonight · ' : '') + fmt(t);
+    $('when').textContent = offsetDays === 0 ? 'Tonight' : offsetDays === 1 ? 'Tomorrow night' : 'In ' + offsetDays + ' nights';
+    if (nearFull) {
+      $('title').textContent = 'The ' + nm + ' Moon';
+      $('phase').textContent = 'Full moon';
+      $('cta').textContent = '🕯️  Light a candle under the ' + nm + ' Moon';
+      $('next').textContent = '';
+      $('why').textContent = WHY[nm];
+    } else {
+      $('title').textContent = L[1];
+      var d = Math.round(toFull);
+      $('phase').textContent = d === 1 ? 'The full moon is tomorrow night' : 'The full moon is ' + d + ' nights away';
+      $('cta').textContent = '🕯️  Light a candle for someone';
+      var night = new Date(fullAt.getTime() - (fullAt.getHours() < 12 ? DAY : 0));
+      $('next').textContent = 'Next full moon: the ' + nm + ' Moon, the night of ' + fmt(night) + '.';
+      $('why').textContent = 'Coming: the ' + nm + ' Moon. ' + WHY[nm];
+    }
+    $('lore').textContent = L[2];
+    draw(p);
+  }
+
+  function draw(p){
     var dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
-    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.clearRect(0,0,W,H);
-    // stars, fixed so they do not jump about on resize
-    var s = 7; function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
-    for (var i = 0; i < 120; i++) {
-      ctx.globalAlpha = 0.25 + r() * 0.55; ctx.fillStyle = '#d8e0f5';
-      ctx.beginPath(); ctx.arc(r() * W, r() * H * 0.8, r() * 1.3 + 0.3, 0, 7); ctx.fill();
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    var s = 5; function r(){ s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for (var i = 0; i < 160; i++) {
+      ctx.globalAlpha = 0.2 + r() * 0.6; ctx.fillStyle = '#dfe5f7';
+      ctx.beginPath(); ctx.arc(r() * W, r() * H, r() * 1.2 + 0.25, 0, 7); ctx.fill();
     }
     ctx.globalAlpha = 1;
-    var mr = Math.min(W, H) * 0.24, mx = W / 2, my = H * 0.42;
+    var mr = Math.min(W * 0.36, H * 0.4), mx = W / 2, my = H * 0.52;
     var f = (1 - Math.cos(2 * Math.PI * p)) / 2, a = mr * (1 - 2 * f), waxing = p < 0.5;
-    // halo grows with the light
-    var halo = ctx.createRadialGradient(mx, my, mr * 0.7, mx, my, mr * 3.2);
-    halo.addColorStop(0, 'rgba(230,235,255,' + (0.06 + 0.16 * f) + ')'); halo.addColorStop(1, 'rgba(200,210,255,0)');
-    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(mx, my, mr * 3.2, 0, 7); ctx.fill();
-    // the dark disc
-    ctx.fillStyle = 'rgba(150,160,205,0.13)'; ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.fill();
-    // the lit face: bright limb on one side, the terminator ellipse on the other
+
+    // glow, brighter as more of it is lit
+    // the glow has to fade out before the edge of the canvas, or it ends in a hard line
+    var hr = Math.min(mr * 2.6, H - my - 2, my - 2, W / 2);
+    var halo = ctx.createRadialGradient(mx, my, mr * 0.9, mx, my, hr);
+    halo.addColorStop(0, 'rgba(235,230,210,' + (0.05 + 0.20 * f) + ')'); halo.addColorStop(1, 'rgba(200,205,235,0)');
+    ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(mx, my, hr, 0, 7); ctx.fill();
+
     ctx.save(); ctx.beginPath(); ctx.arc(mx, my, mr, 0, 7); ctx.clip();
-    var g = ctx.createRadialGradient(mx - mr * .3, my - mr * .35, mr * .1, mx, my, mr * 1.2);
-    g.addColorStop(0, '#f3eee2'); g.addColorStop(1, '#cfc9e4'); ctx.fillStyle = g;
-    ctx.beginPath(); var N = 80, dir = waxing ? 1 : -1;
-    for (var k = 0; k <= N; k++) { var th = -Math.PI/2 + (k/N) * Math.PI; ctx.lineTo(mx + dir*mr*Math.cos(th), my + mr*Math.sin(th)); }
+    if (face.complete && face.naturalWidth) {
+      ctx.drawImage(face, mx - mr, my - mr, mr * 2, mr * 2);
+      // warm it slightly, the way the moon looks low over the trees
+      ctx.globalCompositeOperation = 'soft-light'; ctx.fillStyle = 'rgba(255,225,170,0.35)';
+      ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2); ctx.globalCompositeOperation = 'source-over';
+    } else {
+      ctx.fillStyle = '#cfcab9'; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+    }
+    // the night side: everything outside the lit lune, left faintly visible (earthshine)
+    ctx.beginPath(); var N = 96, dir = waxing ? 1 : -1;
+    // the dark region is bounded by the far limb and the terminator
+    for (var k = 0; k <= N; k++) { var th = -Math.PI/2 + (k/N) * Math.PI; ctx.lineTo(mx - dir*mr*Math.cos(th), my + mr*Math.sin(th)); }
     for (k = N; k >= 0; k--) { th = -Math.PI/2 + (k/N) * Math.PI; ctx.lineTo(mx + dir*a*Math.cos(th), my + mr*Math.sin(th)); }
-    ctx.closePath(); ctx.fill();
-    // the seas: soft-edged and uneven, so the big moon reads as a moon, not as bubbles
-    [[-0.28,-0.20,0.34,0.20],[0.16,-0.08,0.26,0.16],[-0.12,0.28,0.30,0.14],[0.30,0.28,0.18,0.12],[0.02,0.08,0.20,0.10]].forEach(function(o){
-      var cx = mx + o[0]*mr, cy = my + o[1]*mr, rr = o[2]*mr;
-      var sg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
-      sg.addColorStop(0, 'rgba(96,100,140,' + o[3] + ')'); sg.addColorStop(1, 'rgba(96,100,140,0)');
-      ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, 7); ctx.fill(); });
-    ctx.restore(); ctx.globalAlpha = 1;
-    // the tree line along the bottom
-    ctx.fillStyle = '#05060d';
-    ctx.beginPath(); ctx.moveTo(0, H);
-    var x = 0, s2 = 11; function r2(){ s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; }
-    while (x < W + 30) { var w = 18 + r2() * 26, h = H * (0.10 + r2() * 0.16);
-      ctx.lineTo(x, H - h * 0.25); ctx.lineTo(x + w / 2, H - h); ctx.lineTo(x + w, H - h * 0.25); x += w * 0.7; }
-    ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+    ctx.closePath();
+    if ('filter' in ctx) ctx.filter = 'blur(' + Math.max(1.5, mr * 0.025) + 'px)';
+    ctx.fillStyle = 'rgba(2,3,10,0.9)'; ctx.fill();
+    ctx.filter = 'none';
+    // a little darkening at the edge of the disc, as on the real thing
+    var limb = ctx.createRadialGradient(mx, my, mr * 0.65, mx, my, mr);
+    limb.addColorStop(0, 'rgba(0,0,0,0)'); limb.addColorStop(1, 'rgba(0,0,10,0.35)');
+    ctx.fillStyle = limb; ctx.fillRect(mx - mr, my - mr, mr * 2, mr * 2);
+    ctx.restore();
   }
-  draw(); window.addEventListener('resize', draw);
+
+  face.onload = function(){ render(current); };
+  $('night').addEventListener('input', function(e){ render(+e.target.value); });
+  window.addEventListener('resize', function(){ render(current); });
+  render(0);
 })();
 </script>
 </body>
