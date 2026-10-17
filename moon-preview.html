@@ -266,7 +266,10 @@
     var p = inf.illumination;
     if (p < 0.02) return 'New Moon';
     if (p > 0.98) return 'Full Moon';
-    if (Math.abs(p - 0.5) < 0.06) return inf.waxing ? 'First Quarter' : 'Last Quarter';
+    // a quarter is the moment the moon stands 90 degrees from the sun; it moves about 12 a day,
+    // so 6 either side is the half day around it
+    if (Math.abs(inf.elongation - 90) < 6) return 'First Quarter';
+    if (Math.abs(inf.elongation - 270) < 6) return 'Last Quarter';
     if (inf.waxing) return p < 0.5 ? 'Waxing Crescent' : 'Waxing Gibbous';
     return p > 0.5 ? 'Waning Gibbous' : 'Waning Crescent';
   }
