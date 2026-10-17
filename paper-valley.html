@@ -60,6 +60,8 @@
   .sheet input,.sheet textarea{width:100%;margin:5px 0 2px;padding:10px;border-radius:9px;
        border:1px solid #4a4238;background:#0b0a08;color:var(--cream);font:inherit}
   .sheet textarea{resize:none}
+  .side-go{display:block;padding:11px;border-radius:10px;text-decoration:none;color:#e0d3b8;font-size:14px;
+           border:1px solid #4a4238;background:rgba(40,34,26,.8)}
   .two{display:flex;gap:10px}
   .two > div{flex:1}
   .warn{margin:14px 0 4px;padding:10px 12px;border-radius:10px;background:#1d1509;
@@ -276,6 +278,20 @@
       <p class="sub">A search that ended. This is the only wall here that isn't sad.</p>
       <div id="millList"></div>
       <div class="acts"><button class="go" id="millClose">Hang it back up</button></div>
+    </div>
+  </div>
+
+  <!-- offered once, after a lantern has gone up: the other places, never on the way in -->
+  <div class="sheet" id="furtherSheet">
+    <div class="card">
+      <h3>While you are here</h3>
+      <p class="sub">Your lantern is on the trail. There are other quiet places on Banjo Spirits.</p>
+      <div style="display:grid;gap:8px;margin-top:6px">
+        <a class="side-go" href="wheel.html">🎡 Ride the wheel</a>
+        <a class="side-go" href="forest.html">🌲 Walk the forest</a>
+        <a class="side-go" href="candles.html">🕯️ Light a candle for someone</a>
+      </div>
+      <div class="acts"><button class="go" id="furtherClose">Stay in the valley</button></div>
     </div>
   </div>
 
@@ -906,6 +922,7 @@ function closeHang(){
   F('fSub').textContent='For someone still out there that you are in hopes of reconnecting with. Fill in what you know — leave the rest blank.';
 }
 F('fCancel').onclick = closeHang;
+document.getElementById('furtherClose').onclick = ()=>{ document.getElementById('furtherSheet').style.display='none'; };
 F('hangBtn').onclick = ()=>{ closeHang(); hangForm.style.display='flex'; };
 
 // Same rules the server applies, said sooner. Some people are not lost, they left, and a
@@ -958,6 +975,8 @@ F('fSave').onclick = async ()=>{
       closeHang(); minePanel.refresh();
       goToLantern(saved);
       showHint('Your lantern is on the trail. Share it so people walk past it.', 5200);
+      // after the walk to their lantern and the hint have had their moment
+      setTimeout(()=>{ document.getElementById('furtherSheet').style.display='flex'; }, 6500);
     }
   }catch(e){ err.textContent = e.message; }
   finally{ F('fSave').disabled = false; }
