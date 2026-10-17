@@ -79,6 +79,14 @@
   .then canvas{width:92px;height:92px;flex:0 0 92px}
   .then p{font-size:15.5px;line-height:1.55;color:#ece6d6}
   .then a{color:#e8c86a}
+  .bday{display:none;margin-top:14px}
+  .bday .card{display:flex;gap:14px;align-items:center;background:rgba(22,28,50,.5);border:1px solid rgba(190,205,255,.1);border-radius:14px;padding:12px 13px;margin-top:10px}
+  .bday canvas{width:84px;height:84px;flex:0 0 84px}
+  .bday .k{font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:#c9b277}
+  .bday p{font-size:15px;line-height:1.55;color:#ece6d6;margin-top:3px}
+  .bday .lore{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:18px;line-height:1.45;color:#e8dcc0;margin-top:12px}
+  .bday ul{list-style:none;margin-top:6px}
+  .bday li{font-size:14.5px;line-height:1.6;color:#d9d2bf}
   .btn{display:block;margin:34px auto 0;max-width:440px;padding:15px;border-radius:999px;text-decoration:none;text-align:center;font-size:17px;font-weight:600;color:#1d1405;background:linear-gradient(180deg,#f0d495,#c9a24e);box-shadow:0 10px 30px rgba(220,180,90,.25)}
   .foot{margin-top:26px;text-align:center;font-size:12px;line-height:1.7;color:#6f789a}
   .foot a{color:#b9a8e6;text-decoration:none}
@@ -155,6 +163,18 @@
   <section>
     <div class="h">Coming up</div>
     <div class="list" id="coming"></div>
+  </section>
+
+  <section>
+    <div class="h">Your birthday moon</div>
+    <p style="font-size:14.5px;color:#b8bfd9;line-height:1.55">Put in your birthday. See the moon on the night you were born, the moon on your next birthday, and the birthdays ahead that fall on a full moon.</p>
+    <div class="day-input"><input type="date" id="bdayIn" aria-label="Your birthday"></div>
+    <div class="bday" id="bday">
+      <div class="card"><canvas id="bornMoon"></canvas><div><div class="k">The night you were born</div><p id="bornTxt"></p></div></div>
+      <div class="lore" id="bornLore"></div>
+      <div class="card"><canvas id="nextMoon"></canvas><div><div class="k">Your next birthday</div><p id="nextTxt"></p></div></div>
+      <div class="card" style="display:block"><div class="k">Full moon birthdays ahead</div><ul id="fullBdays"></ul></div>
+    </div>
   </section>
 
   <section>
@@ -276,7 +296,7 @@
   var TITLES = {
     'New Moon':'The Dark of the Moon', 'Waxing Crescent':'A Crescent, Growing', 'First Quarter':'Half Lit, Growing',
     'Waxing Gibbous':'More Than Half, and Growing', 'Full Moon':'Full', 'Waning Gibbous':'Past Full, Growing Smaller',
-    'Last Quarter':'Half Lit, Growing Smaller', 'Waning Crescent':'A Thin Crescent, Fading'
+    'Last Quarter':'Half Lit, Growing Smaller', 'Waning Crescent':'A Crescent, Fading'
   };
   var LORE = {
     'New Moon':'The dark of the moon was for resting. Nothing was planted and nothing was started. A night for sitting still, and for thinking about the ones who are gone.',
@@ -508,6 +528,61 @@
     var blue = fi.monthlyBlue ? ' It was a blue moon - the second full moon that month.' : fi.seasonalBlue ? ' It was a blue moon by the old almanac reckoning.' : '';
     var txt = 'On the night of ' + when + ', ' + (nf ? 'the moon was full - the ' + fi.name + ' Moon.' + blue + (fi.superMoon ? ' A supermoon, too.' : '') : 'the moon was ' + pname.toLowerCase() + ', ' + Math.round(inf.illumination * 100) + '% lit. The full moon nearest it was the ' + fi.name + ' Moon.');
     $('thenTxt').innerHTML = txt + ' <a href="candles.html">Light a candle for that day.</a>';
+  });
+
+  // ---------- your birthday moon ----------
+  var BORN = {
+    'New Moon':'Born in the dark of the moon. The old folks said those babies keep their own counsel and start things nobody else would dare.',
+    'Waxing Crescent':'Born on a thin, growing moon. The old folks said a builder - always reaching for a little more light.',
+    'First Quarter':'Born at the half moon, growing. The old folks said strong-willed, a doer who pushes through.',
+    'Waxing Gibbous':'Born as the moon was filling. The old folks said a finisher - one who sees a thing through to the end.',
+    'Full Moon':'Born under a full moon. The old folks said a full-moon child is bold and open-hearted, and nothing stays hidden from them.',
+    'Waning Gibbous':'Born as the moon began to give back its light. The old folks said a teacher, one who shares what they know.',
+    'Last Quarter':'Born at the half moon, going down. The old folks said one who clears the way and keeps their word.',
+    'Waning Crescent':'Born in the last thin light before the dark. The old folks said an old soul.'
+  };
+  function nearestFull(d){
+    var around = null;
+    contextFor(d.getTime()).fulls.forEach(function(x){ if (!around || Math.abs(x.time - d) < Math.abs(around.time - d)) around = x; });
+    return around;
+  }
+  function birthdayIn(y, m, day){                     // a Feb 29 birthday is kept on Feb 28 in other years
+    if (m === 1 && day === 29 && new Date(y, 1, 29).getMonth() !== 1) day = 28;
+    return new Date(y, m, day, 21);
+  }
+  function moonWords(d){
+    var inf = MC.info(d), f = nearestFull(d), fi = fullInfo(f), isFull = Math.abs(f.time - d) < 0.8 * DAY;
+    var blue = fi.monthlyBlue ? ' A blue moon - the second full moon that month.' : fi.seasonalBlue ? ' A blue moon by the old almanac reckoning.' : '';
+    return { inf: inf, full: isFull, fi: fi,
+      words: isFull ? 'a full moon - the ' + fi.name + ' Moon.' + blue + (fi.superMoon ? ' A supermoon, too.' : '')
+                    : TITLES[phaseName(inf)].toLowerCase() + ', ' + Math.round(inf.illumination * 100) + '% lit.' };
+  }
+  $('bdayIn').addEventListener('change', function(){
+    var v = $('bdayIn').value; if (!v) return;
+    var p = v.split('-'), y = +p[0], m = +p[1] - 1, dd = +p[2];
+    if (!(y > 1800 && y < 2200)) return;
+    var born = new Date(y, m, dd, 21), b = moonWords(born);
+    $('bday').style.display = 'block';                // show first: a hidden canvas measures 0 wide
+    var s1 = sizeCanvas($('bornMoon')); s1.c.clearRect(0, 0, s1.W, s1.H); drawMoon(s1.c, s1.W / 2, s1.H / 2, s1.W / 2 - 2, b.inf, true);
+    $('bornTxt').textContent = born.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) +
+      ': ' + b.words.charAt(0).toUpperCase() + b.words.slice(1) + ' The moon was in ' + b.inf.sign + '.';
+    $('bornLore').textContent = BORN[b.full ? 'Full Moon' : phaseName(b.inf)];
+    // the next birthday from today on
+    var ny = today.getFullYear(), nb = birthdayIn(ny, m, dd);
+    if (startOfDay(nb) < today) nb = birthdayIn(++ny, m, dd);
+    var n = moonWords(nb), ev = dayEvents(startOfDay(nb)), rise = ev.filter(function(e){ return e.type === 'rise'; })[0];
+    var s2 = sizeCanvas($('nextMoon')); s2.c.clearRect(0, 0, s2.W, s2.H); drawMoon(s2.c, s2.W / 2, s2.H / 2, s2.W / 2 - 2, n.inf, true);
+    var age = ny - y;
+    $('nextTxt').textContent = fmtDay(nb) + ', ' + ny + (age > 0 ? ' - you turn ' + age : '') + '. ' +
+      n.words.charAt(0).toUpperCase() + n.words.slice(1) + (rise ? ' It rises at ' + fmtTime(rise.time) + ' in ' + loc.label + '.' : '');
+    // birthdays in the next 30 years that land on a full moon
+    var hits = [];
+    for (var yy = ny; yy < ny + 30 && hits.length < 6; yy++) {
+      var w = moonWords(birthdayIn(yy, m, dd));
+      if (w.full) hits.push(yy + ' - the ' + w.fi.name + ' Moon' + (w.fi.superMoon ? ', a supermoon' : '') + (w.fi.monthlyBlue || w.fi.seasonalBlue ? ', a blue moon' : '') + (yy - y > 0 ? ' (you turn ' + (yy - y) + ')' : ''));
+    }
+    $('fullBdays').innerHTML = hits.length ? hits.map(function(h){ return '<li>🌕 ' + h + '</li>'; }).join('')
+      : '<li>None in the next 30 years - your birthday keeps slipping between full moons. That makes the night you were born the one to remember.</li>';
   });
 
   $('night').addEventListener('input', function(e){ render(new Date(today.getTime() + (+e.target.value) * DAY)); });
