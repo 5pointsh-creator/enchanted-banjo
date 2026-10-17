@@ -174,6 +174,7 @@
       <div class="lore" id="bornLore"></div>
       <div class="card"><canvas id="nextMoon"></canvas><div><div class="k">Your next birthday</div><p id="nextTxt"></p></div></div>
       <div class="card" style="display:block"><div class="k">Full moon birthdays ahead</div><ul id="fullBdays"></ul></div>
+      <div class="card" style="display:block"><div class="k">Full moon birthdays you have had</div><ul id="pastBdays"></ul></div>
     </div>
   </section>
 
@@ -573,16 +574,24 @@
     var n = moonWords(nb), ev = dayEvents(startOfDay(nb)), rise = ev.filter(function(e){ return e.type === 'rise'; })[0];
     var s2 = sizeCanvas($('nextMoon')); s2.c.clearRect(0, 0, s2.W, s2.H); drawMoon(s2.c, s2.W / 2, s2.H / 2, s2.W / 2 - 2, n.inf, true);
     var age = ny - y;
-    $('nextTxt').textContent = fmtDay(nb) + ', ' + ny + (age > 0 ? ' - you turn ' + age : '') + '. ' +
+    $('nextTxt').textContent = fmtDay(nb) + ', ' + ny + (age > 0 && age <= 110 ? ' - you turn ' + age : '') + '. ' +
       n.words.charAt(0).toUpperCase() + n.words.slice(1) + (rise ? ' It rises at ' + fmtTime(rise.time) + ' in ' + loc.label + '.' : '');
     // birthdays in the next 30 years that land on a full moon
     var hits = [];
     for (var yy = ny; yy < ny + 30 && hits.length < 6; yy++) {
       var w = moonWords(birthdayIn(yy, m, dd));
-      if (w.full) hits.push(yy + ' - the ' + w.fi.name + ' Moon' + (w.fi.superMoon ? ', a supermoon' : '') + (w.fi.monthlyBlue || w.fi.seasonalBlue ? ', a blue moon' : '') + (yy - y > 0 ? ' (you turn ' + (yy - y) + ')' : ''));
+      if (w.full) hits.push(yy + ' - the ' + w.fi.name + ' Moon' + (w.fi.superMoon ? ', a supermoon' : '') + (w.fi.monthlyBlue || w.fi.seasonalBlue ? ', a blue moon' : '') + (yy - y > 0 && yy - y <= 110 ? ' (you turn ' + (yy - y) + ')' : ''));
     }
     $('fullBdays').innerHTML = hits.length ? hits.map(function(h){ return '<li>🌕 ' + h + '</li>'; }).join('')
       : '<li>None in the next 30 years - your birthday keeps slipping between full moons. That makes the night you were born the one to remember.</li>';
+    // and the ones already behind them, from the first birthday up to last year's
+    var past = [];
+    for (var py = y + 1; py < ny; py++) {
+      var pw = moonWords(birthdayIn(py, m, dd));
+      if (pw.full) past.push(py + ' - the ' + pw.fi.name + ' Moon' + (pw.fi.superMoon ? ', a supermoon' : '') + (pw.fi.monthlyBlue || pw.fi.seasonalBlue ? ', a blue moon' : '') + (py - y <= 110 ? ' (you turned ' + (py - y) + ')' : ''));
+    }
+    $('pastBdays').innerHTML = past.length ? past.map(function(h){ return '<li>🌕 ' + h + '</li>'; }).join('')
+      : '<li>' + (ny - y > 1 ? 'None yet.' : 'None yet - the first birthday is still ahead.') + '</li>';
   });
 
   $('night').addEventListener('input', function(e){ render(new Date(today.getTime() + (+e.target.value) * DAY)); });
