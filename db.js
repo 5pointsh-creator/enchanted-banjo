@@ -207,6 +207,40 @@ async function migrate() {
     CREATE INDEX IF NOT EXISTS candles_burning_idx ON candles (burns_until DESC);
   `);
 
+  // ---- lights on the moon ----
+  // For luck, not for mourning - the candles stay the place for that. Every light goes out
+  // at the next full moon (`shines_until`), so the moon wipes itself clean once a month and
+  // nobody ever has to tidy it. x and y are where it sits on the moon's face, -1..1 across
+  // the disc. A birthday candle is the same row with kind 'birthday', whose birthday it is,
+  // and optionally the date they were born, so its page can show the moon from that night.
+  // Phones are only ever kept as a hash, and only to stop one phone filling the moon.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS moon_lights (
+      id           SERIAL PRIMARY KEY,
+      kind         TEXT NOT NULL DEFAULT 'light',
+      colour       TEXT NOT NULL DEFAULT 'gold',
+      words        TEXT,
+      for_name     TEXT,
+      born_on      DATE,
+      x            REAL NOT NULL,
+      y            REAL NOT NULL,
+      device_hash  TEXT,
+      ip_hash      TEXT,
+      reports      INTEGER NOT NULL DEFAULT 0,
+      hidden       BOOLEAN NOT NULL DEFAULT FALSE,
+      kept         BOOLEAN NOT NULL DEFAULT FALSE,
+      shines_until TIMESTAMPTZ NOT NULL,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS moon_lights_shining_idx ON moon_lights (shines_until DESC);
+    CREATE TABLE IF NOT EXISTS moon_light_reports (
+      light_id    INTEGER REFERENCES moon_lights(id) ON DELETE CASCADE,
+      device_hash TEXT NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (light_id, device_hash)
+    );
+  `);
+
   // whoever runs the site can take down something cruel; nobody else can
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;`);
 

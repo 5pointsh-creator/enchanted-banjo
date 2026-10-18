@@ -55,9 +55,42 @@
       'in question, and use Remove. You can remove anything; everyone else can only remove their own.</p>' +
       '<p><a href="plant.html">Go to the forest</a> &nbsp;·&nbsp; <a href="sky.html">Go to the sky</a>' +
       ' &nbsp;·&nbsp; <a href="paper-valley.html">Go to Paper Valley</a></p>' +
-      '<div id="takedowns"></div>';
+      '<div id="takedowns"></div><div id="moonReports"></div>';
     renderTakedowns();
+    renderMoonReports();
     return;
+  }
+
+  // Lights on the moon that somebody reported. Three reports from different phones and a
+  // light goes dark by itself; this is where the owner takes it down for good, or keeps it.
+  async function renderMoonReports(){
+    const box = document.getElementById('moonReports');
+    const r = await fetch('/api/moon-lights-reported', { credentials:'same-origin' });
+    const d = await r.json().catch(()=>({}));
+    const list = (r.ok && d.lights) || [];
+    if(!list.length){
+      box.innerHTML = '<p style="opacity:.6">No moon lights reported.</p>';
+      return;
+    }
+    box.innerHTML = '<h1 style="font-size:17px;margin:18px 0 8px">Reported moon lights</h1>' +
+      '<p>A light reported by three different phones has already gone dark on its own. Remove takes it away for good; Keep puts it back and stops reports counting against it.</p>';
+    list.forEach((l) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'border:1px solid #4a2f6e;border-radius:12px;padding:12px;margin-bottom:9px';
+      row.innerHTML = '<div style="font-weight:600;margin-bottom:4px"></div>' +
+        '<div style="font-size:13px;opacity:.7;margin-bottom:10px"></div>' +
+        '<button data-a="remove" style="width:auto;padding:7px 12px;font-size:13px">Remove</button> ' +
+        '<button data-a="keep" style="width:auto;padding:7px 12px;font-size:13px">Keep</button>';
+      row.children[0].textContent = l.kind === 'birthday' ? 'Birthday candle for ' + (l.for_name || '') + (l.words ? ' - ' + l.words : '') : (l.words || '');
+      row.children[1].textContent = l.reports + (l.reports === 1 ? ' report' : ' reports') + (l.hidden ? ' - already dark' : ' - still showing');
+      row.querySelector('[data-a=remove]').onclick = async () => {
+        await fetch('/api/moon-lights/' + l.id, { method:'DELETE', credentials:'same-origin' }); renderMoonReports();
+      };
+      row.querySelector('[data-a=keep]').onclick = async () => {
+        await fetch('/api/moon-lights/' + l.id + '/keep', { method:'POST', credentials:'same-origin' }); renderMoonReports();
+      };
+      box.appendChild(row);
+    });
   }
 
   // Someone who was posted about and would rather not be. These are the ones that matter

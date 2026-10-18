@@ -984,6 +984,184 @@ app.get('/lantern/:id', async (req, res) => {
 <script>location.replace(${JSON.stringify(target)});</script></body></html>`);
 });
 
+// ---- lights on the moon ----
+// Lights for luck and wishes, kept apart from the candles. Each colour says what it is FOR,
+// never what it will DO, same as the candles. Every light goes out at the next full moon,
+// which keeps the moon from ever filling up - it starts empty again every month.
+const MoonCalc = require('./moon-calc.js');
+const MOON_COLOURS = {
+  gold:     'for luck',
+  red:      'for love',
+  pink:     'for friendship',
+  green:    'for a good harvest, and money',
+  blue:     'for healing',
+  silver:   'for safe travels, and protection',
+  purple:   'for peace',
+  orange:   'for courage, and strength',
+  birthday: 'for a birthday',
+};
+const MOON_SHOWN = 40;            // how many the moon shows at once; the count carries the rest
+const MOON_HIDE_AT = 3;           // reports from different phones before a light hides itself
+const MOON_PER_IP_DAY = 10;       // a household shares one address, so this is looser than per phone
+
+// Out at the end of the next full moon night. One left in the last few days before a full
+// moon would barely be seen, so those carry on to the full moon after.
+function moonLightsOut(now) {
+  const from = new Date(now.getTime());
+  const fulls = MoonCalc.phases(from, new Date(from.getTime() + 62 * 86400000))
+    .filter((p) => p.angle === 180).map((p) => p.time);
+  let out = new Date(fulls[0].getTime() + 12 * 3600000);
+  if (out - now < 3 * 86400000 && fulls[1]) out = new Date(fulls[1].getTime() + 12 * 3600000);
+  return out;
+}
+
+// Short and plain. The point is to keep the worst of it off a page people send their
+// mothers, not to referee every word - the report button does the rest.
+const MOON_BAD_WORDS = /\b(fuck\w*|shit|shits|shitty|cunt\w*|bitch\w*|whore\w*|slut\w*|dickheads?|cocksuckers?|pussy|assholes?|nigg\w*|fag|fags|faggots?|retards?|retarded|kikes?|spics|rape|raped|rapist|kill yourself|kys)\b/i;
+
+const moonHash = (v) => require('crypto').createHash('sha256')
+  .update(String(v) + '|moon|' + (signingSecret || '')).digest('hex').slice(0, 32);
+
+const publicMoonLight = (r) => ({
+  id: r.id, kind: r.kind, colour: r.colour, words: r.words, for_name: r.for_name,
+  born_on: r.born_on ? new Date(r.born_on).toISOString().slice(0, 10) : null,
+  x: r.x, y: r.y,
+  meaning: MOON_COLOURS[r.colour] || MOON_COLOURS.gold,
+  shining: new Date(r.shines_until) > new Date() && !r.hidden,
+  shines_until: r.shines_until, placed_at: r.created_at,
+});
+
+app.get('/api/moon-lights', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM moon_lights WHERE shines_until > now() AND NOT hidden
+        ORDER BY created_at DESC LIMIT $1`, [MOON_SHOWN]);
+    const { rows: tally } = await pool.query(
+      'SELECT COUNT(*)::int AS n FROM moon_lights WHERE shines_until > now() AND NOT hidden');
+    res.json({ lights: rows.map(publicMoonLight), shining: tally[0].n, shown: MOON_SHOWN,
+               colours: MOON_COLOURS, lights_out: moonLightsOut(new Date()) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+app.get('/api/moon-lights/:id', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.status(404).json({ error: 'That light is not here.' });
+  try {
+    const { rows } = await pool.query('SELECT * FROM moon_lights WHERE id=$1', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'That light is not here.' });
+    if (rows[0].hidden) return res.json({ light: { id: rows[0].id, shining: false } });   // reported dark: nothing of it is shown
+    res.json({ light: publicMoonLight(rows[0]) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+app.post('/api/moon-lights', async (req, res) => {
+  const b = req.body || {};
+  const kind = b.kind === 'birthday' ? 'birthday' : 'light';
+  const colour = kind === 'birthday' ? 'birthday'
+    : (MOON_COLOURS[String(b.colour || '')] && b.colour !== 'birthday' ? String(b.colour) : 'gold');
+  const words = String(b.words || '').trim().slice(0, 60);
+  const forName = String(b.for_name || '').trim().slice(0, 40);
+  let x = +b.x, y = +b.y;
+  if (!isFinite(x) || !isFinite(y)) return res.status(400).json({ error: 'Tap a spot on the moon first.' });
+  const r = Math.hypot(x, y);
+  if (r > 0.92) { x = x / r * 0.92; y = y / r * 0.92; }          // keep it on the face, off the rim
+  let bornOn = null;
+  if (kind === 'birthday' && /^\d{4}-\d{2}-\d{2}$/.test(String(b.born_on || ''))) {
+    const d = new Date(b.born_on + 'T12:00:00Z');
+    if (!isNaN(d) && d.getUTCFullYear() > 1850 && d < new Date()) bornOn = String(b.born_on);
+  }
+  if (kind === 'birthday' && !forName) return res.status(400).json({ error: 'Please put in whose birthday it is.' });
+  if (kind === 'light' && !words) return res.status(400).json({ error: 'Please put in a first name or a short wish.' });
+  const refusal = refuseContactDetail({ words, forName });
+  if (refusal) return res.status(400).json({ error: refusal });
+  if (MOON_BAD_WORDS.test(words + ' ' + forName)) return res.status(400).json({ error: 'Please keep it kind - people send these to their families.' });
+  const device = String(b.device || '').slice(0, 80);
+  if (device.length < 8) return res.status(400).json({ error: 'Please reload the page and try again.' });
+  const deviceHash = moonHash('d:' + device), ipHash = moonHash('i:' + (req.ip || ''));
+  try {
+    const { rows: mine } = await pool.query(
+      `SELECT COUNT(*) FILTER (WHERE device_hash=$1)::int AS phone, COUNT(*) FILTER (WHERE ip_hash=$2)::int AS home
+         FROM moon_lights WHERE created_at > now() - interval '20 hours'`, [deviceHash, ipHash]);
+    if (mine[0].phone >= 1) return res.status(429).json({ error: 'One light a night from each phone. Come back tomorrow night and leave another.' });
+    if (mine[0].home >= MOON_PER_IP_DAY) return res.status(429).json({ error: 'A lot of lights have come from here today. Come back tomorrow night.' });
+    const { rows } = await pool.query(
+      `INSERT INTO moon_lights (kind, colour, words, for_name, born_on, x, y, device_hash, ip_hash, shines_until)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [kind, colour, words || null, forName || null, bornOn, x, y, deviceHash, ipHash, moonLightsOut(new Date())]);
+    res.json({ light: publicMoonLight(rows[0]) });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+// Three different phones and it goes dark on its own, owner or no owner. Once the owner
+// has looked at one and kept it, reports stop counting against it.
+app.post('/api/moon-lights/:id/report', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.json({ ok: true });
+  const device = String((req.body || {}).device || '').slice(0, 80);
+  if (device.length < 8) return res.json({ ok: true });
+  try {
+    const ins = await pool.query(
+      `INSERT INTO moon_light_reports (light_id, device_hash) SELECT id, $2 FROM moon_lights WHERE id=$1
+       ON CONFLICT DO NOTHING`, [req.params.id, moonHash('d:' + device)]);
+    if (ins.rowCount) {
+      await pool.query(
+        `UPDATE moon_lights SET reports = reports + 1,
+                hidden = hidden OR (NOT kept AND reports + 1 >= $2) WHERE id=$1`, [req.params.id, MOON_HIDE_AT]);
+    }
+    res.json({ ok: true });
+  } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
+});
+
+app.get('/api/moon-lights-reported', requireAuth, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ error: 'Owner only.' });
+  const { rows } = await pool.query(
+    `SELECT * FROM moon_lights WHERE reports > 0 AND NOT kept AND shines_until > now()
+      ORDER BY hidden DESC, reports DESC, created_at DESC LIMIT 100`);
+  res.json({ lights: rows.map((r) => ({ ...publicMoonLight(r), reports: r.reports, hidden: r.hidden })) });
+});
+
+app.post('/api/moon-lights/:id/keep', requireAuth, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ error: 'Owner only.' });
+  await pool.query('UPDATE moon_lights SET kept=TRUE, hidden=FALSE WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+app.delete('/api/moon-lights/:id', requireAuth, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ error: 'Owner only.' });
+  await pool.query('DELETE FROM moon_lights WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+// The link somebody sends: server-rendered so the wish shows in the message preview.
+app.get('/moon-light/:id', async (req, res) => {
+  let row = null;
+  if (dbReady && /^\d+$/.test(req.params.id)) {
+    try {
+      const { rows } = await pool.query('SELECT * FROM moon_lights WHERE id=$1 AND NOT hidden', [req.params.id]);
+      row = rows[0] || null;
+    } catch (e) { console.error(e); }
+  }
+  const target = `/moon.html?light=${encodeURIComponent(req.params.id)}#lights`;
+  const title = !row ? 'Lights on the moon — Banjo Spirits'
+    : row.kind === 'birthday' ? `A birthday candle on the moon for ${row.for_name}`
+    : 'Someone left a light on the moon for you';
+  const bits = !row ? 'Leave a light on the moon for luck. Every light shines until the next full moon.'
+    : row.kind === 'birthday' ? ['Happy birthday, ' + row.for_name + '.', row.words].filter(Boolean).join(' ')
+    : [`A ${row.colour} light, ${MOON_COLOURS[row.colour] || ''}.`, row.words ? `"${row.words}"` : ''].filter(Boolean).join(' ');
+  res.set('Content-Type', 'text/html; charset=utf-8').send(
+`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>${escHtml(title)}</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="${escHtml(bits).slice(0, 300)}">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Banjo Spirits">
+<meta property="og:title" content="${escHtml(title)}">
+<meta property="og:description" content="${escHtml(bits).slice(0, 300)}">
+<meta property="og:image" content="https://www.banjospirits.com/moon-face.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0;url=${escHtml(target)}">
+</head><body><p>Taking you to the moon… <a href="${escHtml(target)}">continue</a></p>
+<script>location.replace(${JSON.stringify(target)});</script></body></html>`);
+});
+
 // ---- static site (same HTML the Pages preview serves) ----
 // A page fetched ahead of a portal is only worth fetching if the browser is allowed to
 // keep it: with no lifetime at all it has to come back and ask again on the way in, which

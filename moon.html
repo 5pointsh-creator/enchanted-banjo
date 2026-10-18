@@ -95,6 +95,38 @@
   .bday .lore{font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:18px;line-height:1.45;color:#e8dcc0;margin-top:12px}
   .bday ul{list-style:none;margin-top:6px}
   .bday li{font-size:14.5px;line-height:1.6;color:#d9d2bf}
+  .ml-stage{position:relative;width:min(100%,340px);margin:0 auto}
+  .ml-stage canvas{display:block;width:100%;aspect-ratio:1/1;touch-action:manipulation;cursor:pointer}
+  .ml-tip{position:absolute;display:none;max-width:230px;transform:translate(-50%,calc(-100% - 14px));background:rgba(14,18,34,.96);border:1px solid rgba(255,210,122,.45);border-radius:10px;padding:8px 11px;font-size:13px;line-height:1.4;color:#fff3d6;text-align:left;z-index:3}
+  .ml-tip i{display:block;font-style:normal;font-size:11.5px;color:#aab3d3;margin-top:2px}
+  .ml-tip button{margin-top:6px;background:none;border:0;padding:0;color:#8f99bb;font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit}
+  .ml-count{margin-top:10px;text-align:center;font-size:13.5px;color:#a9b1cf;line-height:1.5}
+  .ml-count b{color:#ffd27a;font-weight:600}
+  .ml-btn{display:block;width:100%;max-width:440px;margin:14px auto 0;padding:14px;border:0;border-radius:14px;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;color:#1a1205;background:linear-gradient(180deg,#f2cf7c,#c99a3e)}
+  .ml-btn.ghost{background:none;border:1px solid rgba(201,178,119,.45);color:#e8d9ad;font-weight:600}
+  .ml-note{margin-top:8px;text-align:center;font-size:12px;color:#7f88a8}
+  .ml-form,.ml-done,.ml-shared{display:none;margin-top:16px;background:rgba(16,19,34,.75);border:1px solid rgba(201,178,119,.28);border-radius:16px;padding:15px}
+  .ml-step{font-size:14.5px;color:#ffe2a6;text-align:center;margin-bottom:6px}
+  .ml-form label{display:block;font-size:13px;color:#aab3d3;margin:12px 0 6px}
+  .ml-form input[type=text],.ml-form input[type=date]{width:100%;background:rgba(0,0,0,.4);border:1px solid rgba(190,205,255,.25);border-radius:10px;padding:11px;font-size:16px;color:#fff;font-family:inherit;color-scheme:dark}
+  .ml-colours{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ml-col{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:12px;border:1px solid rgba(190,205,255,.18);background:#0e1120;color:#fff;font-family:inherit;text-align:left;cursor:pointer}
+  .ml-col.on{border:2px solid var(--c);padding:8px 9px;background:#191a26}
+  .ml-col.wide{grid-column:1/-1}
+  .ml-col .dot{width:15px;height:15px;border-radius:50%;flex:0 0 auto;background:var(--c);box-shadow:0 0 7px 2px var(--c)}
+  .ml-col b{display:block;font-size:14px;font-weight:600}
+  .ml-col small{display:block;font-size:11.5px;color:#9aa3c4}
+  .ml-err{margin-top:10px;font-size:13.5px;color:#ff9a8a;text-align:center;min-height:1px}
+  .ml-small{margin-top:8px;font-size:11.5px;color:#7f88a8;text-align:center}
+  .ml-big{font-size:25px;line-height:1.25;text-align:center;color:#fff4dc}
+  .ml-mean{margin-top:8px;text-align:center;font-size:18px;letter-spacing:.5px}
+  .ml-words{margin-top:6px;text-align:center;font-style:italic;font-size:21px;color:#efe7d2}
+  .ml-until{margin-top:8px;text-align:center;font-size:14px;color:#a9b1cf}
+  .ml-born{display:flex;gap:12px;align-items:center;margin-top:14px;padding-top:12px;border-top:1px solid rgba(190,205,255,.12)}
+  .ml-born canvas{width:64px;height:64px;flex:0 0 64px}
+  .ml-born p{font-size:14px;line-height:1.5;color:#d9d2bf}
+  .ml-share{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .ml-share a,.ml-share button{display:block;padding:12px 6px;border-radius:12px;background:#1a1f33;border:1px solid rgba(190,205,255,.2);color:#e9e4d6;text-align:center;font-size:14px;text-decoration:none;font-family:inherit;cursor:pointer}
   .btn{display:block;margin:34px auto 0;max-width:440px;padding:15px;border-radius:999px;text-decoration:none;text-align:center;font-size:17px;font-weight:600;color:#1d1405;background:linear-gradient(180deg,#f0d495,#c9a24e);box-shadow:0 10px 30px rgba(220,180,90,.25)}
   .foot{margin-top:26px;text-align:center;font-size:12px;line-height:1.7;color:#6f789a}
   .foot a{color:#b9a8e6;text-decoration:none}
@@ -120,6 +152,36 @@
     <label><span>Drag through the nights ahead</span><b id="when">Tonight</b></label>
     <input type="range" id="night" min="0" max="29" step="1" value="0" aria-label="Nights ahead">
   </div>
+
+  <section id="lights" style="display:none">
+    <div class="h">Lights on the moon</div>
+    <div class="ml-stage" id="mlStage"><canvas id="mlMoon" aria-label="The moon, with the lights people have left on it"></canvas><div class="ml-tip" id="mlTip"></div></div>
+    <p class="ml-count" id="mlCount"></p>
+    <div class="ml-shared" id="mlShared"></div>
+    <button class="ml-btn" id="mlStart">✨ Leave a light on the moon</button>
+    <p class="ml-note" id="mlNote">Free. No account needed. Every light shines until the next full moon, then the moon starts fresh.</p>
+    <div class="ml-form" id="mlForm">
+      <p class="ml-step" id="mlStep">First, tap the spot on the moon where you want your light.</p>
+      <label>Pick a colour</label>
+      <div class="ml-colours" id="mlColours"></div>
+      <div id="mlWishBox">
+        <label for="mlWords">Your first name, or a short wish</label>
+        <input type="text" id="mlWords" maxlength="60" placeholder="For Danny's new job" autocomplete="off">
+      </div>
+      <div id="mlBdayBox" style="display:none">
+        <label for="mlFor">Whose birthday?</label>
+        <input type="text" id="mlFor" maxlength="40" placeholder="Danny" autocomplete="off">
+        <label for="mlBWords">A few words (you can leave this empty)</label>
+        <input type="text" id="mlBWords" maxlength="60" placeholder="Love you, son" autocomplete="off">
+        <label for="mlBorn">The day they were born (you can leave this empty - if you fill it in, their page shows the moon from that night)</label>
+        <input type="date" id="mlBorn">
+      </div>
+      <button class="ml-btn" id="mlPlace">Place it on the moon</button>
+      <p class="ml-err" id="mlErr"></p>
+      <p class="ml-small">Short words only. No web links, emails or phone numbers. One light a night from each phone.</p>
+    </div>
+    <div class="ml-done" id="mlDone"></div>
+  </section>
 
   <section>
     <div class="h">At a glance</div>
@@ -600,11 +662,277 @@
       : '<li>' + (ny - y > 1 ? 'None yet.' : 'None yet - the first birthday is still ahead.') + '</li>';
   });
 
+  window.BSMoon = { drawMoon: drawMoon, sizeCanvas: sizeCanvas, moonWords: moonWords, face: face, fmtDay: fmtDay, fulls: FULLS };
   $('night').addEventListener('input', function(e){ render(new Date(today.getTime() + (+e.target.value) * DAY)); });
   face.onload = function(){ render(sel); };
   window.addEventListener('resize', function(){ render(sel); });
   coming();
   render(today);
+})();
+</script>
+<script>
+// Lights on the moon. The moon here is the whole bright face, not tonight's phase, so every
+// light can be seen. Nothing is ever drawn that a real person did not leave: an empty moon
+// is shown empty.
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var M = window.BSMoon, DAY = 86400000;
+  // PREVIEW: shown only on the preview link, or to someone who was sent a light
+  if (!/[?&](preview=lights|light=)/.test(location.search)) return;
+  $('lights').style.display = 'block';
+  var COLS = [
+    ['gold', '#ffcf6a', 'Gold', 'Luck'], ['red', '#ff5a5a', 'Red', 'Love'],
+    ['pink', '#ff9ccf', 'Pink', 'Friendship'], ['green', '#5fe08a', 'Green', 'A good harvest, money'],
+    ['blue', '#6fb4ff', 'Blue', 'Healing'], ['silver', '#eef1ff', 'Silver', 'Safe travels, protection'],
+    ['purple', '#b48cff', 'Purple', 'Peace'], ['orange', '#ff9a3c', 'Orange', 'Courage, strength']
+  ];
+  var HEX = {}; COLS.forEach(function(c){ HEX[c[0]] = c[1]; }); HEX.birthday = '#ffd9a0';
+  var esc = function(t){ return String(t == null ? '' : t).replace(/[&<>"']/g, function(c){ return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]; }); };
+  var device = null;
+  try { device = localStorage.getItem('bsMoonDevice'); } catch (e) {}
+  if (!device) {
+    device = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Math.random()).slice(2) + String(Date.now());
+    try { localStorage.setItem('bsMoonDevice', device); } catch (e) {}
+  }
+
+  var state = { lights: [], shining: 0, mode: 'all', single: null, placing: false, spot: null, colour: 'gold', kind: 'light', loaded: false, failed: false };
+  var cv = $('mlMoon');
+
+  // full moon tonight: every light shines brighter
+  function fullTonight(){
+    var ev = new Date(); ev.setHours(21, 0, 0, 0);
+    return (M.fulls || []).some(function(f){ return Math.abs(f.time - ev) < 0.8 * DAY; });
+  }
+
+  function draw(){
+    var s = M.sizeCanvas(cv), c = s.c, W = s.W, R = W / 2 - 6, cx = W / 2, cy = W / 2;
+    c.clearRect(0, 0, W, W);
+    var halo = c.createRadialGradient(cx, cy, R * 0.9, cx, cy, R * 1.12);
+    var many = state.mode === 'all' && state.shining > state.lights.length;
+    halo.addColorStop(0, many ? 'rgba(225,232,255,0.30)' : 'rgba(220,225,255,0.14)'); halo.addColorStop(1, 'rgba(220,225,255,0)');
+    c.fillStyle = halo; c.beginPath(); c.arc(cx, cy, R * 1.12, 0, 7); c.fill();
+    c.save(); c.beginPath(); c.arc(cx, cy, R, 0, 7); c.clip();
+    if (M.face.complete && M.face.naturalWidth) c.drawImage(M.face, cx - R, cy - R, R * 2, R * 2);
+    else { c.fillStyle = '#c9c6bc'; c.fillRect(cx - R, cy - R, R * 2, R * 2); }
+    if (state.mode === 'single') { c.fillStyle = 'rgba(0,0,8,0.25)'; c.fillRect(cx - R, cy - R, R * 2, R * 2); }
+    c.restore();
+    var boost = fullTonight() ? 1.6 : 1;
+    var list = state.mode === 'single' && state.single ? [state.single] : state.lights;
+    list.forEach(function(l){
+      var px = cx + l.x * R, py = cy + l.y * R, big = state.mode === 'single' ? 1.7 : 1;
+      if (l.kind === 'birthday') drawCandle(c, px, py, (W / 300) * big, boost);
+      else drawLight(c, px, py, HEX[l.colour] || HEX.gold, (W / 300) * big, boost);
+    });
+    if (state.placing && state.spot) {
+      var px = cx + state.spot.x * R, py = cy + state.spot.y * R;
+      c.setLineDash([4, 4]); c.strokeStyle = '#ffd27a'; c.lineWidth = 2;
+      c.beginPath(); c.arc(px, py, 15, 0, 7); c.stroke(); c.setLineDash([]);
+      if (state.kind === 'birthday') drawCandle(c, px, py, W / 300, 1); else drawLight(c, px, py, HEX[state.colour], W / 300, 1);
+    }
+  }
+  function drawLight(c, x, y, col, k, boost){
+    var r = 16 * k * boost, g = c.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, col); g.addColorStop(0.22, col); g.addColorStop(0.45, hexA(col, 0.35)); g.addColorStop(1, hexA(col, 0));
+    c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(x, y, 1.6 * k, 0, 7); c.fill();
+  }
+  function drawCandle(c, x, y, k, boost){
+    var g = c.createRadialGradient(x, y - 7 * k, 0, x, y - 7 * k, 15 * k * boost);
+    g.addColorStop(0, 'rgba(255,214,140,0.85)'); g.addColorStop(1, 'rgba(255,190,90,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(x, y - 7 * k, 15 * k * boost, 0, 7); c.fill();
+    c.fillStyle = '#fdf6ea'; c.fillRect(x - 2.2 * k, y - 3 * k, 4.4 * k, 10 * k);           // the candle
+    c.fillStyle = '#ff9ccf'; c.fillRect(x - 2.2 * k, y + 1 * k, 4.4 * k, 1.6 * k);           // a stripe
+    c.fillStyle = '#ffcf6a'; c.beginPath();                                                     // the flame
+    c.moveTo(x, y - 10.5 * k); c.quadraticCurveTo(x + 2.6 * k, y - 6 * k, x, y - 4 * k); c.quadraticCurveTo(x - 2.6 * k, y - 6 * k, x, y - 10.5 * k); c.fill();
+  }
+  function hexA(h, a){ var n = parseInt(h.slice(1), 16); return 'rgba(' + (n >> 16) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + a + ')'; }
+
+  function untilText(l){
+    // a full moon in the small hours belongs to the night before, as the rest of the page says
+    var f = new Date(new Date(l.shines_until).getTime() - 12 * 3600000);
+    if (f.getHours() < 12) f = new Date(f.getTime() - DAY);
+    return 'the night of ' + f.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+  function countText(){
+    if (state.failed) return 'The lights are resting for a moment. Try again in a minute.';
+    if (!state.loaded) return '';
+    var full = fullTonight() ? '<br><b>Full moon tonight - every light is shining brighter.</b>' : '';
+    if (!state.shining) return 'No lights on the moon yet this month. Be the first.' + full;
+    var more = state.shining - state.lights.length;
+    return '<b>' + state.shining + '</b> ' + (state.shining === 1 ? 'light' : 'lights') + ' on the moon right now' +
+      (more > 0 ? ' - the newest ' + state.lights.length + ' are shown, and ' + more + ' more are glowing behind them' : '') +
+      '. Tap one to read it.' + full;
+  }
+
+  function load(){
+    return fetch('/api/moon-lights', { credentials: 'same-origin' }).then(function(r){ if (!r.ok) throw 0; return r.json(); })
+      .then(function(d){ state.lights = d.lights || []; state.shining = d.shining || 0; state.loaded = true; state.failed = false; })
+      .catch(function(){ state.failed = true; })
+      .then(function(){ if (state.mode === 'all') $('mlCount').innerHTML = countText(); draw(); });
+  }
+
+  // ---- reading a light ----
+  function pointFromEvent(e){
+    var r = cv.getBoundingClientRect(), R = r.width / 2 - 6;
+    return { x: (e.clientX - r.left - r.width / 2) / R, y: (e.clientY - r.top - r.height / 2) / R, px: e.clientX - r.left, py: e.clientY - r.top };
+  }
+  function showTip(l, p){
+    var tip = $('mlTip'), who = l.kind === 'birthday' ? '🎂 Happy birthday, ' + esc(l.for_name) + (l.words ? ' - ' + esc(l.words) : '') : esc(l.words);
+    var mean = l.kind === 'birthday' ? 'A birthday candle' : 'A ' + l.colour + ' light, ' + esc(l.meaning);
+    tip.innerHTML = who + '<i>' + mean + '</i><button type="button">Report this</button>';
+    tip.style.left = Math.max(110, Math.min(p.px, cv.clientWidth - 110)) + 'px'; tip.style.top = p.py + 'px'; tip.style.display = 'block';
+    tip.querySelector('button').onclick = function(ev){
+      ev.stopPropagation();
+      if (!confirm('Report this light as unkind or out of place? If enough people report it, it goes dark.')) return;
+      fetch('/api/moon-lights/' + l.id + '/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ device: device }) })
+        .then(function(){ tip.innerHTML = 'Thank you. It has been reported.'; });
+    };
+  }
+  cv.addEventListener('click', function(e){
+    var p = pointFromEvent(e);
+    if (state.placing) {
+      if (Math.hypot(p.x, p.y) > 0.92) { var k = 0.92 / Math.hypot(p.x, p.y); p.x *= k; p.y *= k; }
+      // never right on top of another light: step away until there is room
+      for (var n = 0; n < 12; n++) {
+        var near = state.lights.filter(function(l){ return Math.hypot(l.x - p.x, l.y - p.y) < 0.075; })[0];
+        if (!near) break;
+        var dx = p.x - near.x, dy = p.y - near.y, d = Math.hypot(dx, dy) || 0.01;
+        p.x = near.x + dx / d * 0.08; p.y = near.y + dy / d * 0.08;
+        if (Math.hypot(p.x, p.y) > 0.92) { var k2 = 0.92 / Math.hypot(p.x, p.y); p.x *= k2; p.y *= k2; }
+      }
+      state.spot = { x: p.x, y: p.y };
+      $('mlStep').textContent = 'That spot is yours. Now pick a colour and write your words. (Tap the moon again to move it.)';
+      draw(); return;
+    }
+    if (state.mode !== 'all') return;
+    var best = null, bd = 0.09;
+    state.lights.forEach(function(l){ var d = Math.hypot(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; best = l; } });
+    if (best) {
+      var r = cv.getBoundingClientRect(), R = r.width / 2 - 6;
+      showTip(best, { px: r.width / 2 + best.x * R, py: r.height / 2 + best.y * R });
+    } else $('mlTip').style.display = 'none';
+  });
+
+  // ---- leaving a light ----
+  $('mlColours').innerHTML = COLS.map(function(c){
+    return '<button type="button" class="ml-col' + (c[0] === 'gold' ? ' on' : '') + '" data-c="' + c[0] + '" style="--c:' + c[1] + '"><span class="dot"></span><span><b>' + c[2] + '</b><small>' + c[3] + '</small></span></button>';
+  }).join('') + '<button type="button" class="ml-col wide" data-c="birthday" style="--c:#ffd9a0"><span class="dot"></span><span><b>🎂 Birthday candle</b><small>A little candle on the moon for someone\'s birthday</small></span></button>';
+  Array.prototype.forEach.call(document.querySelectorAll('.ml-col'), function(b){
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(document.querySelectorAll('.ml-col'), function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+      var c = b.getAttribute('data-c');
+      state.kind = c === 'birthday' ? 'birthday' : 'light'; if (c !== 'birthday') state.colour = c;
+      $('mlWishBox').style.display = state.kind === 'birthday' ? 'none' : 'block';
+      $('mlBdayBox').style.display = state.kind === 'birthday' ? 'block' : 'none';
+      draw();
+    });
+  });
+  function startPlacing(){
+    state.mode = 'all'; state.placing = true; state.spot = null;
+    $('mlShared').style.display = 'none'; $('mlDone').style.display = 'none'; $('mlTip').style.display = 'none';
+    $('mlForm').style.display = 'block'; $('mlStart').style.display = 'none'; $('mlNote').style.display = 'none';
+    $('mlStep').textContent = 'First, tap the spot on the moon where you want your light.';
+    $('mlCount').innerHTML = countText(); draw();
+    document.getElementById('lights').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  $('mlStart').addEventListener('click', startPlacing);
+  $('mlPlace').addEventListener('click', function(){
+    var err = $('mlErr'); err.textContent = '';
+    if (!state.spot) { err.textContent = 'Tap a spot on the moon first.'; return; }
+    var body = { kind: state.kind, colour: state.colour, x: state.spot.x, y: state.spot.y, device: device };
+    if (state.kind === 'birthday') {
+      body.for_name = $('mlFor').value.trim(); body.words = $('mlBWords').value.trim(); body.born_on = $('mlBorn').value || null;
+      if (!body.for_name) { err.textContent = 'Please put in whose birthday it is.'; return; }
+    } else {
+      body.words = $('mlWords').value.trim();
+      if (!body.words) { err.textContent = 'Please put in a first name or a short wish.'; return; }
+    }
+    $('mlPlace').disabled = true; $('mlPlace').textContent = 'Placing it…';
+    fetch('/api/moon-lights', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function(r){ return r.json().then(function(d){ return { ok: r.ok, d: d }; }); })
+      .then(function(res){
+        if (!res.ok) { err.textContent = (res.d && res.d.error) || 'That did not work. Try again in a minute.'; return; }
+        state.placing = false; state.spot = null; $('mlForm').style.display = 'none';
+        showDone(res.d.light); return load();
+      })
+      .catch(function(){ err.textContent = 'That did not go through. Check the signal and try again.'; })
+      .then(function(){ $('mlPlace').disabled = false; $('mlPlace').textContent = 'Place it on the moon'; });
+  });
+
+  function shareBlock(l){
+    var url = location.origin + '/moon-light/' + l.id;
+    var line = l.kind === 'birthday' ? 'I lit a birthday candle on the moon for you. Happy birthday, ' + l.for_name + '.' : 'I left a light on the moon for you.';
+    var sms = 'sms:?&body=' + encodeURIComponent(line + ' ' + url);
+    var fb = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url);
+    return '<div class="ml-share">' +
+      '<a href="' + sms + '">💬 Send in a text</a>' +
+      '<a href="' + fb + '" target="_blank" rel="noopener">📘 Facebook</a>' +
+      '<button type="button" data-copy="' + esc(url) + '">🔗 Copy the link</button>' +
+      (navigator.share ? '<button type="button" data-share="' + esc(url) + '" data-line="' + esc(line) + '">📤 Share…</button>' : '<a href="' + esc(url) + '">👁 See its page</a>') +
+      '</div>';
+  }
+  function wireShare(box){
+    var cp = box.querySelector('[data-copy]');
+    if (cp) cp.onclick = function(){
+      var u = cp.getAttribute('data-copy');
+      (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(function(){ cp.textContent = '✓ Copied'; }, function(){ prompt('Copy this link:', u); });
+    };
+    var sh = box.querySelector('[data-share]');
+    if (sh) sh.onclick = function(){ navigator.share({ title: 'A light on the moon', text: sh.getAttribute('data-line'), url: sh.getAttribute('data-share') }).catch(function(){}); };
+  }
+  function showDone(l){
+    var box = $('mlDone');
+    box.innerHTML = '<p class="ml-big serif">' + (l.kind === 'birthday' ? 'Your birthday candle is on the moon.' : 'Your light is on the moon.') + '</p>' +
+      '<p class="ml-until">It shines until the full moon, ' + untilText(l) + '. Send it to someone:</p>' + shareBlock(l);
+    box.style.display = 'block'; wireShare(box);
+    $('mlStart').style.display = 'block'; $('mlNote').style.display = 'block';
+  }
+
+  // ---- the page someone was sent ----
+  function showShared(l){
+    state.mode = 'single'; state.single = l;
+    var box = $('mlShared'), col = HEX[l.colour] || HEX.gold, html;
+    if (!l.shining) {
+      html = '<p class="ml-big serif">This light has gone out.</p><p class="ml-until">Every light goes out at the full moon, and the moon starts fresh. Leave a new one - it takes a minute.</p>';
+      state.single = null;
+    } else if (l.kind === 'birthday') {
+      html = '<p class="ml-big serif">Someone lit a birthday candle on the moon for you.</p>' +
+        '<p class="ml-mean serif" style="color:' + col + '">Happy birthday, ' + esc(l.for_name) + '.</p>' +
+        (l.words ? '<p class="ml-words serif">&ldquo;' + esc(l.words) + '&rdquo;</p>' : '') +
+        '<p class="ml-until">It shines until the full moon, ' + untilText(l) + '.</p>' +
+        (l.born_on ? '<div class="ml-born"><canvas id="mlBornMoon"></canvas><p id="mlBornTxt"></p></div>' : '');
+    } else {
+      html = '<p class="ml-big serif">Someone left a light on the moon for you.</p>' +
+        '<p class="ml-mean serif" style="color:' + col + '">A ' + esc(l.colour) + ' light, ' + esc(l.meaning) + '.</p>' +
+        (l.words ? '<p class="ml-words serif">&ldquo;' + esc(l.words) + '&rdquo;</p>' : '') +
+        '<p class="ml-until">It shines until the full moon, ' + untilText(l) + '.</p>';
+    }
+    html += '<button class="ml-btn" id="mlBack" type="button">✨ Leave one back</button>' +
+            '<button class="ml-btn ghost" id="mlAll" type="button">See all the lights on the moon</button>';
+    box.innerHTML = html; box.style.display = 'block';
+    $('mlStart').style.display = 'none'; $('mlNote').style.display = 'none'; $('mlCount').innerHTML = '';
+    if (l.born_on && l.shining) {
+      var p = l.born_on.split('-'), born = new Date(+p[0], +p[1] - 1, +p[2], 21), w = M.moonWords(born);
+      var s = M.sizeCanvas($('mlBornMoon')); M.drawMoon(s.c, s.W / 2, s.H / 2, s.W / 2 - 2, w.inf, true);
+      $('mlBornTxt').textContent = 'The night ' + l.for_name + ' was born, ' + born.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ', the moon was ' + w.words;
+    }
+    $('mlBack').onclick = startPlacing;
+    $('mlAll').onclick = function(){ state.mode = 'all'; state.single = null; box.style.display = 'none'; $('mlStart').style.display = 'block'; $('mlNote').style.display = 'block'; $('mlCount').innerHTML = countText(); draw(); };
+    draw();
+  }
+
+  var want = (location.search.match(/[?&]light=(\d+)/) || [])[1];
+  M.face.addEventListener('load', draw);
+  window.addEventListener('resize', draw);
+  load().then(function(){
+    if (!want) return;
+    return fetch('/api/moon-lights/' + want).then(function(r){ return r.ok ? r.json() : null; }).then(function(d){
+      if (d && d.light) showShared(d.light);
+      else showShared({ shining: false });
+      setTimeout(function(){ document.getElementById('lights').scrollIntoView({ block: 'start' }); }, 300);
+    }).catch(function(){});
+  });
 })();
 </script>
 </body>
