@@ -44,6 +44,10 @@
        sits beneath it. Lighting a fresh one puts them back the usual way round. */
     body.showing-one .panel{order:1}
     body.showing-one .wall{order:2}
+    /* Same when they came in through the front door's "Remember someone": they came to
+       light one, so the form is what they see first, not a shelf they have to scroll past. */
+    body.start-light .panel{order:1}
+    body.start-light .wall{order:2}
   }
 
   /* ---- the shelf ---- */
@@ -429,6 +433,10 @@
 
   // ---------- start ----------
   var asked = new URLSearchParams(location.search).get('c');
+  if (!asked && new URLSearchParams(location.search).get('start')) {
+    document.body.classList.add('start-light');
+    el('pageTitle').textContent = 'Light a candle for someone';
+  }
   if (asked) { show(asked); } else { lightForm(); }
   loadShelf();
 })();
