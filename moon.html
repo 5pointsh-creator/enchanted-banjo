@@ -190,7 +190,7 @@
       <div class="cell"><small>Age</small><b id="g-age"></b><span>since the new moon</span></div>
       <div class="cell"><small>Moonrise</small><b id="g-rise"></b><span id="g-rise2"></span></div>
       <div class="cell"><small>Moonset</small><b id="g-set"></b><span id="g-set2"></span></div>
-      <div class="cell"><small>Highest</small><b id="g-high"></b><span>due south</span></div>
+      <div class="cell"><small>Highest</small><b id="g-high"></b><span id="g-high2">due south</span></div>
       <div class="cell"><small>Distance</small><b id="g-dist"></b><span id="g-dist2"></span></div>
       <div class="cell"><small>Moon sign</small><b id="g-sign"></b><span>where it rides tonight</span></div>
       <div class="cell"><small>Next full moon</small><b id="g-full"></b><span id="g-full2"></span></div>
@@ -475,7 +475,11 @@
     $('g-rise2').textContent = rise ? '' : 'no moonrise this day';
     $('g-set').textContent = set ? fmtTime(set.time) : 'none';
     $('g-set2').textContent = set ? '' : 'no moonset this day';
-    $('g-high').textContent = high ? fmtTime(high.time) : '-';
+    // once a month the moon peaks just after midnight, so that day has none of its own
+    var late = high ? null : MC.events(new Date(sel.getTime() + DAY), new Date(sel.getTime() + DAY + 8 * 3600000), loc.lat, loc.lon)
+                             .filter(function(e){ return e.type === 'overhead'; })[0];
+    $('g-high').textContent = high ? fmtTime(high.time) : late ? fmtTime(late.time) : '-';
+    $('g-high2').textContent = high ? 'due south' : late ? 'due south, after midnight' : 'due south';
     $('g-dist').textContent = Math.round(inf.miles).toLocaleString('en-US') + ' mi';
     $('g-dist2').textContent = inf.km < 362000 ? 'close - near its nearest' : inf.km > 402000 ? 'far - near its farthest' : Math.round(inf.km).toLocaleString('en-US') + ' km';
     $('g-sign').textContent = inf.sign;
