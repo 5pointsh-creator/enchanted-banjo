@@ -98,6 +98,7 @@
   .ml-stage{position:relative;width:min(100%,340px);margin:0 auto}
   .ml-stage canvas{display:block;width:100%;aspect-ratio:1/1;touch-action:manipulation;cursor:pointer}
   .ml-tip{position:absolute;display:none;max-width:230px;transform:translate(-50%,calc(-100% - 14px));background:rgba(14,18,34,.96);border:1px solid rgba(255,210,122,.45);border-radius:10px;padding:8px 11px;font-size:13px;line-height:1.4;color:#fff3d6;text-align:left;z-index:3}
+  .ml-tip.below{transform:translate(-50%,16px)}
   .ml-tip i{display:block;font-style:normal;font-size:11.5px;color:#aab3d3;margin-top:2px}
   .ml-tip button{margin-top:6px;background:none;border:0;padding:0;color:#8f99bb;font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit}
   .ml-count{margin-top:10px;text-align:center;font-size:13.5px;color:#a9b1cf;line-height:1.5}
@@ -789,7 +790,9 @@
     var tip = $('mlTip'), who = l.kind === 'birthday' ? '🎂 Happy birthday, ' + esc(l.for_name) + (l.words ? ' - ' + esc(l.words) : '') : esc(l.words);
     var mean = l.kind === 'birthday' ? 'A birthday candle' : 'A ' + l.colour + ' light, ' + esc(l.meaning);
     tip.innerHTML = who + '<i>' + mean + '</i><button type="button">Report this</button>';
-    tip.style.left = Math.max(110, Math.min(p.px, cv.clientWidth - 110)) + 'px'; tip.style.top = p.py + 'px'; tip.style.display = 'block';
+    tip.style.left = Math.max(110, Math.min(p.px, cv.clientWidth - 110)) + 'px'; tip.style.top = p.py + 'px';
+    // a light near the top would put its box above the moon, off the top of a screen, so it opens below
+    tip.className = 'ml-tip' + (p.py < cv.clientHeight * 0.4 ? ' below' : ''); tip.style.display = 'block';
     tip.querySelector('button').onclick = function(ev){
       ev.stopPropagation();
       if (!confirm('Report this light as unkind or out of place? If enough people report it, it goes dark.')) return;
@@ -813,9 +816,9 @@
       $('mlStep').innerHTML = 'That spot is saved for you, but it is <b>not on the moon yet</b>. Pick a colour, write your words, then press <b>Place it on the moon</b> at the bottom. (Tap the moon again to move it.)';
       draw(); return;
     }
-    if (state.mode !== 'all') return;
+    var pool = state.mode === 'single' && state.single ? [state.single] : state.lights;
     var best = null, bd = 0.09;
-    state.lights.forEach(function(l){ var d = Math.hypot(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; best = l; } });
+    pool.forEach(function(l){ var d = Math.hypot(l.x - p.x, l.y - p.y); if (d < bd) { bd = d; best = l; } });
     if (best) {
       var r = cv.getBoundingClientRect(), R = r.width / 2 - 6;
       showTip(best, { px: r.width / 2 + best.x * R, py: r.height / 2 + best.y * R });
