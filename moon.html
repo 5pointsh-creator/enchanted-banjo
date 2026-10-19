@@ -128,6 +128,7 @@
   .ml-born p{font-size:14px;line-height:1.5;color:#d9d2bf}
   .ml-share{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
   .ml-share a,.ml-share button{display:block;padding:12px 6px;border-radius:12px;background:#1a1f33;border:1px solid rgba(190,205,255,.2);color:#e9e4d6;text-align:center;font-size:14px;text-decoration:none;font-family:inherit;cursor:pointer}
+  .btn.quiet{margin-top:12px;font-size:15px;font-weight:600;color:#e8d9ad;background:none;border:1px solid rgba(201,178,119,.45);box-shadow:none}
   .btn{display:block;margin:34px auto 0;max-width:440px;padding:15px;border-radius:999px;text-decoration:none;text-align:center;font-size:17px;font-weight:600;color:#1d1405;background:linear-gradient(180deg,#f0d495,#c9a24e);box-shadow:0 10px 30px rgba(220,180,90,.25)}
   .foot{margin-top:26px;text-align:center;font-size:12px;line-height:1.7;color:#6f789a}
   .foot a{color:#b9a8e6;text-decoration:none}
@@ -154,7 +155,7 @@
     <input type="range" id="night" min="0" max="29" step="1" value="0" aria-label="Nights ahead">
   </div>
 
-  <section id="lights" style="display:none">
+  <section id="lights">
     <div class="h">Lights on the moon</div>
     <div class="ml-stage" id="mlStage"><canvas id="mlMoon" aria-label="The moon, with the lights people have left on it"></canvas><div class="ml-tip" id="mlTip"></div></div>
     <p class="ml-count" id="mlCount"></p>
@@ -268,7 +269,8 @@
   <script src="moon-book-signup.js" defer></script>
   <script>fetch('/api/moon-book/status').then(function(r){return r.json();}).then(function(d){ if (d.open) document.getElementById('moonbook').style.display='block'; }).catch(function(){});</script>
 
-  <a class="btn" href="candles.html">🕯️ Light a candle for someone tonight</a>
+  <a class="btn" href="#lights" id="toLights">✨ Leave a light on the moon</a>
+  <a class="btn quiet" href="candles.html?start=1">🕯️ Light a candle for someone you miss</a>
   <p class="foot">Moon picture: NASA Lunar Reconnaissance Orbiter. Phases and seasons: US Naval Observatory. Eclipses: NASA Goddard.<br>
     <a href="/">‹ Back to the front page</a></p>
 </div>
@@ -696,9 +698,6 @@
 (function(){
   var $ = function(id){ return document.getElementById(id); };
   var M = window.BSMoon, DAY = 86400000;
-  // PREVIEW: shown only on the preview link, or to someone who was sent a light
-  if (!/[?&](preview=lights|light=)/.test(location.search)) return;
-  $('lights').style.display = 'block';
   var COLS = [
     ['gold', '#ffcf6a', 'Gold', 'Luck'], ['red', '#ff5a5a', 'Red', 'Love'],
     ['pink', '#ff9ccf', 'Pink', 'Friendship'], ['green', '#5fe08a', 'Green', 'A good harvest, money'],

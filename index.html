@@ -112,7 +112,8 @@
   var nearFull = fulls.some(function(f){ return Math.abs(f - ev) < 0.8 * DAY; });
   if (nearFull) {
     el.className = 'moon full';
-    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Light a candle with everyone else.<span class="go">See tonight\'s moon ›</span>';
+    el.href = 'moon.html#lights';
+    el.innerHTML = '<span class="em">🌕</span>Full moon tonight. Leave a light on the moon with everyone else.<span class="go">Every light shines brighter tonight ›</span>';
     return;
   }
   var n;
@@ -124,7 +125,7 @@
   var nxt = fulls.filter(function(f){ return f > ev; })[0];
   var when = '';
   if (nxt) { var dd = Math.round((nxt - ev) / DAY); when = dd <= 1 ? ' Full moon tomorrow night.' : ' Full moon in ' + dd + ' days.'; }
-  el.innerHTML = '<span class="em">' + n[0] + '</span>Tonight\'s moon: ' + n[1] + '.' + when + '<span class="go">Moon calendar, blue moons and your birthday moon ›</span>';
+  el.innerHTML = '<span class="em">' + n[0] + '</span>Tonight\'s moon: ' + n[1] + '.' + when + '<span class="go">Moon calendar, your birthday moon, and lights on the moon ›</span>';
 })();
 </script>
 </body>

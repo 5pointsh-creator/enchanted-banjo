@@ -25,8 +25,8 @@ const HOME = { lat: 39.96, lon: -83.0, label: 'Columbus, Ohio' };
 const FIRST_LETTER = Date.UTC(2026, 9, 20);        // nothing before the Hunter's Moon of 2026
 const SEND_BEFORE = 3 * DAY;                       // the letter goes out three days ahead
 const YOUTUBE = 'https://www.youtube.com/@5days-banjospirits';
-// Lights on the moon are still behind the preview lock; the letters only point at them once they are open to everyone.
-const LIGHTS_PUBLIC = false;
+// Lights on the moon are open to everyone, so the letters point at them.
+const LIGHTS_PUBLIC = true;
 const FROM = process.env.MOON_BOOK_FROM || 'The Moon Book - Banjo Spirits <moon@banjospirits.com>';
 const RESEND_URL = process.env.RESEND_API_URL || 'https://api.resend.com/emails';
 
