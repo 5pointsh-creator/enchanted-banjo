@@ -178,7 +178,7 @@
       </div>
       <button class="ml-btn" id="mlPlace">Place it on the moon</button>
       <p class="ml-err" id="mlErr"></p>
-      <p class="ml-small">Short words only. No web links, emails or phone numbers. One light a night from each phone.</p>
+      <p class="ml-small">Short words only. No web links, emails or phone numbers. One light and one birthday candle a night from each phone.</p>
     </div>
     <div class="ml-done" id="mlDone"></div>
   </section>
@@ -731,6 +731,11 @@
       var px = cx + state.spot.x * R, py = cy + state.spot.y * R;
       c.setLineDash([4, 4]); c.strokeStyle = '#ffd27a'; c.lineWidth = 2;
       c.beginPath(); c.arc(px, py, 15, 0, 7); c.stroke(); c.setLineDash([]);
+      // say it on the moon itself: this one is only pencilled in
+      c.font = '600 12px system-ui, sans-serif'; c.textAlign = 'center';
+      var ly = py - 22 < 14 ? py + 32 : py - 22, tw = c.measureText('not placed yet').width + 12;
+      c.fillStyle = 'rgba(10,12,24,0.8)'; c.fillRect(px - tw / 2, ly - 12, tw, 17);
+      c.fillStyle = '#ffd27a'; c.fillText('not placed yet', px, ly);
       if (state.kind === 'birthday') drawCandle(c, px, py, W / 300, 1); else drawLight(c, px, py, HEX[state.colour], W / 300, 1);
     }
   }
@@ -805,7 +810,7 @@
         if (Math.hypot(p.x, p.y) > 0.92) { var k2 = 0.92 / Math.hypot(p.x, p.y); p.x *= k2; p.y *= k2; }
       }
       state.spot = { x: p.x, y: p.y };
-      $('mlStep').textContent = 'That spot is yours. Now pick a colour and write your words. (Tap the moon again to move it.)';
+      $('mlStep').innerHTML = 'That spot is saved for you, but it is <b>not on the moon yet</b>. Pick a colour, write your words, then press <b>Place it on the moon</b> at the bottom. (Tap the moon again to move it.)';
       draw(); return;
     }
     if (state.mode !== 'all') return;

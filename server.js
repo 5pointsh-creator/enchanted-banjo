@@ -1079,9 +1079,12 @@ app.post('/api/moon-lights', async (req, res) => {
   const deviceHash = moonHash('d:' + device), ipHash = moonHash('i:' + (req.ip || ''));
   try {
     const { rows: mine } = await pool.query(
-      `SELECT COUNT(*) FILTER (WHERE device_hash=$1)::int AS phone, COUNT(*) FILTER (WHERE ip_hash=$2)::int AS home
-         FROM moon_lights WHERE created_at > now() - interval '20 hours'`, [deviceHash, ipHash]);
-    if (mine[0].phone >= 1) return res.status(429).json({ error: 'One light a night from each phone. Come back tomorrow night and leave another.' });
+      `SELECT COUNT(*) FILTER (WHERE device_hash=$1 AND kind=$3)::int AS phone, COUNT(*) FILTER (WHERE ip_hash=$2)::int AS home
+         FROM moon_lights WHERE created_at > now() - interval '20 hours'`, [deviceHash, ipHash, kind]);
+    // a light and a birthday candle are different errands, so a phone may leave one of each a night
+    if (mine[0].phone >= 1) return res.status(429).json({ error: kind === 'birthday'
+      ? 'One birthday candle a night from each phone. Come back tomorrow night for another.'
+      : 'One light a night from each phone. Come back tomorrow night and leave another.' });
     if (mine[0].home >= MOON_PER_IP_DAY) return res.status(429).json({ error: 'A lot of lights have come from here today. Come back tomorrow night.' });
     const { rows } = await pool.query(
       `INSERT INTO moon_lights (kind, colour, words, for_name, born_on, x, y, device_hash, ip_hash, shines_until)
