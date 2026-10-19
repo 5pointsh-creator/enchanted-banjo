@@ -1165,6 +1165,11 @@ app.get('/moon-light/:id', async (req, res) => {
 <script>location.replace(${JSON.stringify(target)});</script></body></html>`);
 });
 
+// ---- the Moon Book: a letter before every full moon (see moon-book.js) ----
+const moonBook = require('./moon-book.js')(app, {
+  pool, isReady: () => dbReady, requireAuth, hashIp: (ip) => moonHash('i:' + ip),
+});
+
 // ---- static site (same HTML the Pages preview serves) ----
 // A page fetched ahead of a portal is only worth fetching if the browser is allowed to
 // keep it: with no lifetime at all it has to come back and ask again on the way in, which
@@ -1203,6 +1208,7 @@ async function removeTestRows() {
 // Keep trying: the database is often attached minutes after the first deploy.
 function connect() {
   migrate()
+    .then(() => moonBook.migrate())
     .then(async () => {
       if (!signingSecret) {
         signingSecret = await getOrCreateSigningSecret();

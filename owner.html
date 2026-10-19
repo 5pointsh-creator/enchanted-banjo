@@ -55,10 +55,24 @@
       'in question, and use Remove. You can remove anything; everyone else can only remove their own.</p>' +
       '<p><a href="plant.html">Go to the forest</a> &nbsp;·&nbsp; <a href="sky.html">Go to the sky</a>' +
       ' &nbsp;·&nbsp; <a href="paper-valley.html">Go to Paper Valley</a></p>' +
-      '<div id="takedowns"></div><div id="moonReports"></div>';
+      '<div id="takedowns"></div><div id="moonReports"></div><div id="moonBook"></div>';
     renderTakedowns();
     renderMoonReports();
+    renderMoonBook();
     return;
+  }
+
+  // Who gets the Moon Book. Only ever shown here, to the owner.
+  async function renderMoonBook(){
+    const box = document.getElementById('moonBook');
+    const r = await fetch('/api/moon-book/subscribers', { credentials:'same-origin' });
+    const d = await r.json().catch(()=>({}));
+    if(!r.ok){ box.innerHTML = ''; return; }
+    box.innerHTML = '<h1 style="font-size:17px;margin:18px 0 8px">The Moon Book</h1>' +
+      '<p>' + d.confirmed + ' signed up and confirmed, ' + d.waiting + ' waiting to confirm, ' + d.unsubscribed + ' stopped.</p>' +
+      (d.open ? '' : '<p style="opacity:.7">Sign-ups are closed until the email key is in Railway.</p>') +
+      (d.address ? '' : '<p style="opacity:.7">Monthly letters wait for the mailing address (MOON_BOOK_ADDRESS in Railway).</p>') +
+      '<p><a href="/api/moon-book/subscribers?format=csv">Download the list</a> &nbsp;·&nbsp; <a href="/moon-book">Read the letters</a></p>';
   }
 
   // Lights on the moon that somebody reported. Three reports from different phones and a
