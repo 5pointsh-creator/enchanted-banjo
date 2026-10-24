@@ -255,19 +255,22 @@
     <div class="then" id="then"><canvas id="thenMoon"></canvas><p id="thenTxt"></p></div>
   </section>
 
-  <section id="moonbook" style="display:none">
+  <section id="moonbook">
     <div class="h">The Moon Book</div>
-    <p style="font-size:15px;color:#d9d2bf;line-height:1.6">A letter a few days before every full moon: its old name, what is coming in the sky, the best hunting, fishing and planting days, and a little luck. Free, and one click to stop. <a href="/moon-book" style="color:#e8c86a">Read past letters</a></p>
-    <form class="mb-form" onsubmit="return false" style="margin-top:12px">
+    <p style="font-size:15px;color:#d9d2bf;line-height:1.6">A letter a few days before every full moon: its old name, what is coming in the sky, the best hunting, fishing and planting days, and a little luck.</p>
+    <a href="/moon-book" class="btn quiet" style="margin-top:14px">📖 Read this month's letter</a>
+    <!-- the email box only shows once the Moon Book can actually send -->
+    <form class="mb-form" id="mbForm" onsubmit="return false" style="margin-top:16px;display:none">
+      <p style="font-size:14.5px;color:#d9d2bf;margin-bottom:8px">Get it by email - free, and one click to stop.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="email" required placeholder="Your email" aria-label="Your email" style="flex:1;min-width:190px;padding:12px;border-radius:10px;border:1px solid rgba(190,205,255,.25);background:rgba(0,0,0,.4);color:#fff;font-size:16px;font-family:inherit">
       <button style="padding:12px 18px;border-radius:10px;border:0;background:linear-gradient(180deg,#f2cf7c,#c99a3e);color:#1a1205;font-weight:700;font-size:15px;cursor:pointer;font-family:inherit">Sign up</button></div>
       <input name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
       <p class="mb-msg" style="margin-top:10px;font-size:14px;color:#ffe2a6"></p>
     </form>
-    <p style="margin-top:10px;font-size:13.5px;color:#a9b1cf">Rather not give an email? <a href="https://www.youtube.com/@5days-banjospirits" target="_blank" rel="noopener" style="color:#e8c86a">Follow Banjo Spirits on YouTube</a></p>
+    <p style="margin-top:12px;font-size:13.5px;color:#a9b1cf;text-align:center">A new letter goes up here before every full moon. You can also follow <a href="https://www.youtube.com/@5days-banjospirits" target="_blank" rel="noopener" style="color:#e8c86a">Banjo Spirits on YouTube</a>.</p>
   </section>
   <script src="moon-book-signup.js" defer></script>
-  <script>fetch('/api/moon-book/status').then(function(r){return r.json();}).then(function(d){ if (d.open) document.getElementById('moonbook').style.display='block'; }).catch(function(){});</script>
+  <script>fetch('/api/moon-book/status').then(function(r){return r.json();}).then(function(d){ if (d.open) document.getElementById('mbForm').style.display='block'; }).catch(function(){});</script>
 
   <a class="btn" href="#lights" id="toLights">✨ Leave a light on the moon</a>
   <a class="btn quiet" href="candles.html?start=1">🕯️ Light a candle for someone you miss</a>
