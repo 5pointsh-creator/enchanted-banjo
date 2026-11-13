@@ -398,7 +398,13 @@ module.exports = function mountMoonBook(app, { pool, isReady, requireAuth, hashI
         ({ rows: [sub] } = await pool.query(
           `INSERT INTO moon_book_subscribers (email, token, ip_hash, last_mailed_at) VALUES ($1,$2,$3,now()) RETURNING *`, [email, token, ip]));
       }
-      await sendConfirm(sub);
+      try { await sendConfirm(sub); }
+      catch (e) {
+        // A send that never left must not count as "just sent", or the retry gets the
+        // ten-minute "we just sent you one" answer with nothing in the inbox.
+        await pool.query('UPDATE moon_book_subscribers SET last_mailed_at=NULL WHERE id=$1', [sub.id]).catch(() => {});
+        throw e;
+      }
       res.json({ ok: true, message: 'Almost there - we sent you an email. Tap the button in it to confirm (check the spam folder if it does not show up).' });
     } catch (e) {
       console.error('moon book subscribe:', e.message);
