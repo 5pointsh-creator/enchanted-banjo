@@ -308,8 +308,15 @@ const SIGNUP_FORM = `<form class="mb-form" onsubmit="return false" style="margin
 
 // ---------- the module ----------
 module.exports = function mountMoonBook(app, { pool, isReady, requireAuth, hashIp }) {
-  const KEY = () => process.env.RESEND_API_KEY || '';
-  const ADDRESS = () => process.env.MOON_BOOK_ADDRESS || '';
+  // Settings are typed by hand in Railway, so accept the name in any mix of capitals
+  // (Moon_Book_ADDRESS works the same as MOON_BOOK_ADDRESS).
+  const env = name => {
+    if (process.env[name]) return process.env[name].trim();
+    const k = Object.keys(process.env).find(k => k.toUpperCase() === name);
+    return k ? String(process.env[k]).trim() : '';
+  };
+  const KEY = () => env('RESEND_API_KEY');
+  const ADDRESS = () => env('MOON_BOOK_ADDRESS');
 
   async function migrate() {
     await pool.query(`
