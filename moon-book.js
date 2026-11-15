@@ -302,7 +302,7 @@ const SIGNUP_FORM = `<form class="mb-form" onsubmit="return false" style="margin
 <p style="font-size:15px;color:#d9d2bf;margin-bottom:10px">Get the next one by email - once a month, a few days before the full moon.</p>
 <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="email" required placeholder="Your email" style="flex:1;min-width:200px;padding:12px;border-radius:10px;border:1px solid #33405f;background:#05070f;color:#fff;font-size:16px">
 <button style="padding:12px 18px;border-radius:10px;border:0;background:#d8b45e;color:#1a1205;font-weight:700;font-size:15px;cursor:pointer">Sign up</button></div>
-<input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px">
+<input name="mb_hp_x" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px">
 <p class="mb-msg" style="margin-top:10px;font-size:14px;color:#ffe2a6"></p></form>
 <script src="/moon-book-signup.js" defer></script>`;
 
@@ -376,7 +376,10 @@ module.exports = function mountMoonBook(app, { pool, isReady, requireAuth, hashI
     if (!isReady()) return res.status(503).json({ error: 'Try again in a minute.' });
     if (!KEY()) return res.status(503).json({ error: 'The Moon Book is not open for sign-ups yet.' });
     const b = req.body || {};
-    if (b.website) return res.json({ ok: true, message: 'Check your email.' });      // a robot filled the hidden box
+    if (b.mb_hp_x || b.website) {                       // a robot filled the hidden box
+      console.log('moon book: sign-up refused by the robot trap');
+      return res.json({ ok: true, message: 'Check your email.' });
+    }
     const email = String(b.email || '').trim().toLowerCase();
     if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'That email does not look right. Check it and try again.' });
     const ip = hashIp(req.ip || '');
