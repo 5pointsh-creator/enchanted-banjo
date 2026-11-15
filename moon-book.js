@@ -418,13 +418,17 @@ module.exports = function mountMoonBook(app, { pool, isReady, requireAuth, hashI
   });
 
   app.get('/moon-book/confirm', async (req, res) => {
-    const t = String(req.query.t || '');
+    // Mail apps sometimes hand the link over altered - capital letters, a stray character
+    // or a fragment on the end - so read the code leniently, and say in the log why one failed.
+    const raw = String(req.query.t || '');
+    const t = (raw.toLowerCase().match(/[a-f0-9]{36}/) || [''])[0];
     let ok = false;
-    if (isReady() && /^[a-f0-9]{36}$/.test(t)) {
+    if (isReady() && t) {
       const r = await pool.query(
         `UPDATE moon_book_subscribers SET confirmed_at=COALESCE(confirmed_at, now()), unsubscribed_at=NULL WHERE token=$1 RETURNING id`, [t]);
       ok = !!r.rowCount;
     }
+    if (!ok) console.log(`moon book confirm failed: ${!isReady() ? 'database not ready' : !t ? 'link code unreadable (' + raw.length + ' chars)' : 'no sign-up holds code ' + t.slice(0, 6) + '...'}`);
     const next = FULLS.find((f) => f > new Date());
     res.set('Content-Type', 'text/html; charset=utf-8').send(page({
       title: ok ? 'You are in - the Moon Book' : 'The Moon Book', noindex: true, desc: 'The Moon Book from Banjo Spirits.',
