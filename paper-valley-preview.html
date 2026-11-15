@@ -100,7 +100,7 @@
 
   <!-- tonight's real moon over the valley; tap it for the moon page -->
   <a id="moonBadge" href="moon.html" title="Tonight's moon" style="position:fixed;right:12px;top:122px;z-index:8;
-     display:none;align-items:center;gap:7px;max-width:160px;pointer-events:auto;text-decoration:none;
+     display:none;align-items:center;gap:7px;max-width:200px;pointer-events:auto;text-decoration:none;
      background:rgba(18,20,30,.78);border:1px solid #4a4f66;border-radius:999px;padding:5px 11px 5px 6px;
      color:#e3e8f7;font-size:12.5px;line-height:1.2;backdrop-filter:blur(3px)">
      <canvas id="moonBadgeC" width="44" height="44" style="width:22px;height:22px;flex:none"></canvas>
@@ -503,15 +503,14 @@ scene.add(moonSky);
   const MW = window.MoonWords, pct = Math.round(MOON.inf.illumination * 100);
   const name = MOON.fi ? 'the ' + MOON.fi.name + ' Moon' : '';
   const extra = MOON.eclipse && MOON.eclipse !== 'Penumbral' ? ', and an eclipse' : MOON.fi && MOON.fi.superMoon ? ', a supermoon' : MOON.fi && (MOON.fi.monthlyBlue || MOON.fi.seasonalBlue) ? ', a blue moon' : '';
-  const SHORT = { 'Waxing Crescent':'Crescent', 'Waning Crescent':'Crescent', 'First Quarter':'Half moon', 'Last Quarter':'Half moon',
-                  'Waxing Gibbous':'Gibbous', 'Waning Gibbous':'Gibbous' };
-  const short = MOON.full ? (MOON.fi.name + ' Moon') : MOON.isNew ? 'New moon' : SHORT[MOON.phase] + ' · ' + pct + '%';
+  const NAME8 = p => p === 'Last Quarter' ? 'Third Quarter' : p;
+  const short = MOON.full ? 'Full Moon · ' + MOON.fi.name : MOON.isNew ? 'New Moon' : NAME8(MOON.phase) + ' · ' + pct + '%';
   let line;
   if (MOON.full) line = 'Full moon tonight, ' + name + extra + '. The valley is at its brightest.';
   else if (MOON.isNew) line = 'New moon tonight. The valley is dark, and the lanterns are the only light.';
   else {
     const nf = MW.next(MW.FULLS, MOON.when), days = nf ? Math.max(1, Math.round((MW.nightOf(nf.time) - MOON.when) / MW.DAY + 0.4)) : null;
-    line = 'Tonight: ' + MW.TITLES[MOON.phase].toLowerCase() + ', ' + pct + '% lit.' + (days ? ' Full moon in ' + days + (days === 1 ? ' night' : ' nights') + '.' : '');
+    line = 'Tonight: ' + NAME8(MOON.phase) + ', ' + pct + '% lit.' + (days ? ' Full moon in ' + days + (days === 1 ? ' night' : ' nights') + '.' : '');
   }
   document.getElementById('moonLine').textContent = '🌙 The valley follows the real moon. ' + line;
   document.getElementById('moonBadgeT').textContent = short;
@@ -720,6 +719,21 @@ const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial(
 const coneGeo = new THREE.ConeGeometry(1.5, 7.5, 6);
 const conifers = new THREE.InstancedMesh(coneGeo, new THREE.MeshStandardMaterial({color:0x16211a, roughness:1}), MAX_TREES);
 trunks.frustumCulled = false; conifers.frustumCulled = false;
+// Each of the eight phases gives the pines its own colour: near-black on the new moon,
+// greening as the moon fills, frosted silver at full, then blue, violet and plum as it wanes.
+{
+  const PINE = {
+    'New Moon':0x10283a, 'Waxing Crescent':0x0f3a3a, 'First Quarter':0x175a3a, 'Waxing Gibbous':0x3a6a3e,
+    'Full Moon':0x8fa8b8, 'Waning Gibbous':0x3d5f7a, 'Last Quarter':0x4a3d70, 'Waning Crescent':0x4a2a55
+  };
+  const c = new THREE.Color(PINE[MOON.phase] || 0x16211a);
+  if (MOON.tint === 'orange') c.lerp(new THREE.Color(0x8a6230), 0.4);
+  if (MOON.tint === 'red') c.lerp(new THREE.Color(0x7a2a24), 0.45);
+  if (MOON.tint === 'blue') c.lerp(new THREE.Color(0x3c6aa0), 0.45);
+  conifers.material.color.copy(c);
+  // a faint glow of the same colour, so it reads in the mist and on the darkest nights
+  conifers.material.emissive = c.clone(); conifers.material.emissiveIntensity = 0.22;
+}
 scene.add(trunks, conifers);
 const dummy = new THREE.Object3D();
 const hash = (a,b,s) => { const n = Math.sin(a*127.1 + b*311.7 + s*74.7)*43758.5453; return n - Math.floor(n); };
