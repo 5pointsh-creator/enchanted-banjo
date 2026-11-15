@@ -457,7 +457,7 @@ const MOON = (function(){
 // The moon itself, shaded the way it really is tonight, low in the sky ahead of you as you
 // set off - where the moonlight comes from. Gone on the night of the new moon.
 const moonSky = new THREE.Group();
-const MOON_DIR = new THREE.Vector3(-0.16, 0.30, -0.94).normalize();
+const MOON_DIR = new THREE.Vector3(0.03, 0.30, -0.95).normalize();
 moon.position.copy(MOON_DIR).multiplyScalar(100);
 {
   const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
