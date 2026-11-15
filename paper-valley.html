@@ -97,6 +97,14 @@
     </div>
   </div>
 
+  <!-- tonight's real moon over the valley; tap it for the moon page -->
+  <a id="moonBadge" href="moon.html" title="Tonight's moon" style="position:fixed;right:12px;top:122px;z-index:8;
+     display:none;align-items:center;gap:7px;max-width:200px;pointer-events:auto;text-decoration:none;
+     background:rgba(18,20,30,.78);border:1px solid #4a4f66;border-radius:999px;padding:5px 11px 5px 6px;
+     color:#e3e8f7;font-size:12.5px;line-height:1.2;backdrop-filter:blur(3px)">
+     <canvas id="moonBadgeC" width="44" height="44" style="width:22px;height:22px;flex:none"></canvas>
+     <span id="moonBadgeT"></span></a>
+
   <a class="side" style="top:56px" href="plant.html">🌲 Back to the memorial forest</a>
   <a class="side" style="top:96px" href="sky.html">✨ Look up at the sky</a>
   <button class="side" id="findBtn" style="top:136px;cursor:pointer;font:inherit">🔎 Find someone</button>
@@ -348,9 +356,13 @@
     <p>Hang a lantern with their name on it and it stands on the trail where everyone
        walking past will read it. Somebody might know something.</p>
     <button class="btn" id="enter">Walk the trail ▸</button>
+    <p id="moonLine" style="font-size:13.5px;color:#cfd8ef;max-width:420px;margin:14px auto 0;line-height:1.5"></p>
     <p style="font-size:12px;opacity:.5">Desktop: WASD + mouse. Mobile: on-screen controls.</p>
   </div>
 
+<script src="moon-calc.js"></script>
+<script src="moon-data.js"></script>
+<script src="moon-words.js"></script>
 <script src="bs-api.js"></script>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -392,6 +404,128 @@ const sky = new THREE.Mesh(
   })() })
 );
 scene.add(sky);
+
+// ---------- tonight's moon ----------
+// The valley is lit by the real moon over it tonight: silver and bright when it is full,
+// dark when it is new, with the lanterns left to carry the light. ?moondate=YYYY-MM-DD shows
+// any other night (that is how the before-and-after pictures are made).
+const MOON = (function(){
+  const MW = window.MoonWords, MC = window.MoonCalc;
+  let when = new Date();
+  const q = new URLSearchParams(location.search).get('moondate');
+  if (q && /^\d{4}-\d{2}-\d{2}$/.test(q)) { const [y,m,d] = q.split('-').map(Number); when = new Date(y, m-1, d, 22); }
+  const inf = MC.info(when), L = inf.illumination;
+  const full = MW.nearFull(when), fi = full ? MW.fullInfo(full) : null;
+  const phase = full ? 'Full Moon' : MW.phaseName(inf);
+  const eclipse = MW.eclipseNear(when);                      // 'Total' / 'Partial' / 'Penumbral' / null
+  const isNew = phase === 'New Moon';
+  let tint = null;                                           // the moon's own colour on its special nights
+  if (eclipse === 'Total' || eclipse === 'Partial') tint = 'red';
+  else if (fi && (fi.name === 'Harvest' || fi.name === 'Hunter’s')) tint = 'orange';
+  else if (fi && (fi.monthlyBlue || fi.seasonalBlue)) tint = 'blue';
+  return { when, inf, L, full: !!full, fi, phase, eclipse, isNew, tint,
+    big: fi && fi.superMoon ? 1.18 : 1,
+    // lanterns carry more of the light the darker the night; on a full moon they burn brighter too
+    lantern: full ? 1.25 : 1 + 0.35 * (1 - L),
+    reach: isNew ? 22 : 17,
+    stars: 0.35 + 0.65 * (1 - L) };
+})();
+{
+  const L = MOON.L, mix = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), L);
+  moon.intensity = 0.12 + 0.88 * L;
+  moon.color = mix(0x5f6f98, 0xd4def7);
+  hemi.intensity = 0.5 + 0.5 * L;
+  hemi.color = mix(0x26304a, 0x5d6f97);
+  scene.fog.color = mix(0x0d121e, 0x2c3a52);
+  if (MOON.tint === 'red') { moon.color.lerp(new THREE.Color(0xc0503a), 0.6); moon.intensity *= 0.55; }
+  if (MOON.tint === 'orange') moon.color.lerp(new THREE.Color(0xffc48a), 0.35);
+  if (MOON.tint === 'blue') moon.color.lerp(new THREE.Color(0x9fc0ff), 0.35);
+  // the sky: deep and starry on a dark night, washed silver-blue under a bright moon
+  const cv = document.createElement('canvas'); cv.width = 8; cv.height = 256;
+  const g = cv.getContext('2d'), grd = g.createLinearGradient(0, 0, 0, 256);
+  const c = (dark, lit) => '#' + mix(dark, lit).getHexString();
+  grd.addColorStop(0.00, c(0x03050b, 0x0e1628));
+  grd.addColorStop(0.55, c(0x0f1626, 0x2b3a57));
+  grd.addColorStop(0.78, c(0x232c3d, 0x55627c));
+  grd.addColorStop(1.00, c(0x353d4c, 0x76829a));
+  g.fillStyle = grd; g.fillRect(0, 0, 8, 256);
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+  sky.material.map.dispose(); sky.material.map = tx; sky.material.needsUpdate = true;
+}
+
+// The moon itself, shaded the way it really is tonight, low in the sky ahead of you as you
+// set off - where the moonlight comes from. Gone on the night of the new moon.
+const moonSky = new THREE.Group();
+const MOON_DIR = new THREE.Vector3(0.03, 0.30, -0.95).normalize();
+moon.position.copy(MOON_DIR).multiplyScalar(100);
+{
+  const S = 512, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace;
+  const face = new Image();
+  function paint(){
+    const g = cv.getContext('2d'); g.clearRect(0, 0, S, S);
+    const R = S * 0.27, glow = g.createRadialGradient(S/2, S/2, R * 0.9, S/2, S/2, S/2);
+    const tintRGB = MOON.tint === 'red' ? '200,90,60' : MOON.tint === 'orange' ? '255,190,120' : MOON.tint === 'blue' ? '170,200,255' : '220,226,245';
+    glow.addColorStop(0, 'rgba(' + tintRGB + ',' + (MOON.inf.illumination <= 0.02 ? 0.03 : 0.10 + 0.32 * MOON.L) + ')'); glow.addColorStop(1, 'rgba(' + tintRGB + ',0)');
+    g.fillStyle = glow; g.fillRect(0, 0, S, S);
+    if (MOON.inf.illumination <= 0.02) {
+      // the dark of the moon: no lit face, just the faint ghost of it by earthshine, so nobody
+      // walking the valley that night thinks the moon has gone missing
+      g.save(); g.beginPath(); g.arc(S/2, S/2, R, 0, 7); g.clip();
+      g.fillStyle = 'rgba(16,22,40,0.85)'; g.fillRect(0, 0, S, S);
+      if (face.complete && face.naturalWidth) { g.globalAlpha = 0.07; g.drawImage(face, S/2 - R, S/2 - R, R*2, R*2); }
+      g.restore();
+      g.beginPath(); g.arc(S/2, S/2, R - 1, 0, 7); g.strokeStyle = 'rgba(170,190,235,0.28)'; g.lineWidth = 3; g.stroke();
+    } else window.MoonWords.drawMoon(g, S/2, S/2, R, MOON.inf, face);
+    if (MOON.tint) {                                     // the colour sits on the lit face only
+      g.save(); g.globalCompositeOperation = 'source-atop';
+      g.fillStyle = MOON.tint === 'red' ? 'rgba(170,40,20,0.55)' : MOON.tint === 'orange' ? 'rgba(255,150,60,0.30)' : 'rgba(120,160,255,0.22)';
+      g.beginPath(); g.arc(S/2, S/2, R, 0, 7); g.fill(); g.restore();
+    }
+    tx.needsUpdate = true;
+  }
+  face.onload = paint; face.src = 'moon-face.jpg'; paint();
+  const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, fog: false }));
+  disc.position.copy(MOON_DIR).multiplyScalar(1100);
+  disc.scale.setScalar(240 * MOON.big);
+  disc.visible = true;                                       // on the new moon it is only a ghost
+  moonSky.add(disc);
+}
+// a field of stars, strong on a dark night and faint under a full moon
+{
+  const N = 900, pos = new Float32Array(N * 3);
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < N; i++) {
+    const az = rnd() * Math.PI * 2, el = Math.asin(0.12 + rnd() * 0.88), r = 1250;
+    pos[i*3] = Math.cos(el) * Math.cos(az) * r; pos[i*3+1] = Math.sin(el) * r; pos[i*3+2] = Math.cos(el) * Math.sin(az) * r;
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  moonSky.add(new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xdfe6ff, size: 2.2, sizeAttenuation: false,
+    transparent: true, opacity: 0.12 + 0.78 * (1 - MOON.L), depthWrite: false, fog: false })));
+}
+scene.add(moonSky);
+
+// what it says, on the badge and on the way in
+{
+  const MW = window.MoonWords, pct = Math.round(MOON.inf.illumination * 100);
+  const name = MOON.fi ? 'the ' + MOON.fi.name + ' Moon' : '';
+  const extra = MOON.eclipse && MOON.eclipse !== 'Penumbral' ? ', and an eclipse' : MOON.fi && MOON.fi.superMoon ? ', a supermoon' : MOON.fi && (MOON.fi.monthlyBlue || MOON.fi.seasonalBlue) ? ', a blue moon' : '';
+  const NAME8 = p => p === 'Last Quarter' ? 'Third Quarter' : p;
+  const short = MOON.full ? 'Full Moon · ' + MOON.fi.name : MOON.isNew ? 'New Moon' : NAME8(MOON.phase) + ' · ' + pct + '%';
+  let line;
+  if (MOON.full) line = 'Full moon tonight, ' + name + extra + '. The valley is at its brightest.';
+  else if (MOON.isNew) line = 'New moon tonight. The valley is dark, and the lanterns are the only light.';
+  else {
+    const nf = MW.next(MW.FULLS, MOON.when), days = nf ? Math.max(1, Math.round((MW.nightOf(nf.time) - MOON.when) / MW.DAY + 0.4)) : null;
+    line = 'Tonight: ' + NAME8(MOON.phase) + ', ' + pct + '% lit.' + (days ? ' Full moon in ' + days + (days === 1 ? ' night' : ' nights') + '.' : '');
+  }
+  document.getElementById('moonLine').textContent = '🌙 The valley follows the real moon. ' + line;
+  document.getElementById('moonBadgeT').textContent = short;
+  const bc = document.getElementById('moonBadgeC').getContext('2d');
+  const face = new Image(); const draw = () => { bc.clearRect(0, 0, 44, 44); MW.drawMoon(bc, 22, 22, 20, MOON.inf, face); };
+  face.onload = draw; face.src = 'moon-face.jpg'; draw();
+  document.getElementById('moonBadge').style.display = 'flex';
+}
 
 // ---------- the rabbit in the stars ----------
 // Not a picture hung in the sky - a constellation, drawn the way people have always drawn
@@ -592,8 +726,90 @@ const trunks = new THREE.InstancedMesh(trunkGeo, new THREE.MeshStandardMaterial(
 const coneGeo = new THREE.ConeGeometry(1.5, 7.5, 6);
 const conifers = new THREE.InstancedMesh(coneGeo, new THREE.MeshStandardMaterial({color:0x16211a, roughness:1}), MAX_TREES);
 trunks.frustumCulled = false; conifers.frustumCulled = false;
+// Each of the eight phases gives the pines its own colour: near-black on the new moon,
+// greening as the moon fills, frosted silver at full, then blue, violet and plum as it wanes.
+{
+  const PINE = {
+    'New Moon':0x10283a, 'Waxing Crescent':0x0f3a3a, 'First Quarter':0x175a3a, 'Waxing Gibbous':0x3a6a3e,
+    'Full Moon':0x8fa8b8, 'Waning Gibbous':0x3d5f7a, 'Last Quarter':0x4a3d70, 'Waning Crescent':0x4a2a55
+  };
+  const c = new THREE.Color(PINE[MOON.phase] || 0x16211a);
+  if (MOON.tint === 'orange') c.lerp(new THREE.Color(0x8a6230), 0.4);
+  if (MOON.tint === 'red') c.lerp(new THREE.Color(0x7a2a24), 0.45);
+  if (MOON.tint === 'blue') c.lerp(new THREE.Color(0x3c6aa0), 0.45);
+  conifers.material.color.copy(c);
+  // a faint glow of the same colour, so it reads in the mist and on the darkest nights
+  conifers.material.emissive = c.clone(); conifers.material.emissiveIntensity = 0.22;
+}
 scene.add(trunks, conifers);
 const dummy = new THREE.Object3D();
+
+// ---------- moonlit ivy ----------
+// Ivy over the ground along both edges of the trail and up the trunks. The leaves glow a
+// little in their own right, so they show through the mist, and take their colour from the
+// moon: emerald and jade while it grows, silver-green at full, teal, violet and plum as it
+// wanes, and a foxfire glow of their own on the dark of the moon.
+const IVY = (function(){
+  const COL = {
+    'New Moon':0x34d39a, 'Waxing Crescent':0x2fbf7f, 'First Quarter':0x22b35c, 'Waxing Gibbous':0x63cf4c,
+    'Full Moon':0xbfe8cf, 'Waning Gibbous':0x31b8b2, 'Last Quarter':0x8d6fe3, 'Waning Crescent':0xb44ca4
+  };
+  let c = COL[MOON.phase] || 0x2fbf7f;
+  if (MOON.tint === 'orange') c = 0xd9822b;            // Harvest and Hunter's: copper and amber
+  if (MOON.tint === 'blue') c = 0x4275f2;              // a blue moon: sapphire
+  if (MOON.tint === 'red') c = 0xc8463a;               // an eclipse: red
+  return { color: new THREE.Color(c), glow: MOON.isNew ? 0.75 : 0.45 + 0.15 * MOON.L, gold: MOON.full };
+})();
+const IVY_TEX = (function(){
+  // one ivy leaf: five pointed lobes, pale veins, drawn white so the moon's colour tints it
+  const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'); g.translate(S/2, S*0.56);
+  g.beginPath();
+  const lobes = [[0,-0.46],[0.36,-0.2],[0.42,0.14],[0.16,0.36],[-0.16,0.36],[-0.42,0.14],[-0.36,-0.2]];
+  g.moveTo(0, 0.2*S);
+  lobes.forEach(([x,y],i)=>{ const nx = lobes[(i+1)%lobes.length]; g.quadraticCurveTo(x*S*1.05, y*S*1.05, (x+nx[0])*S*0.28, (y+nx[1])*S*0.28); });
+  g.closePath(); g.fillStyle = '#ffffff'; g.fill();
+  g.strokeStyle = 'rgba(120,120,120,0.55)'; g.lineWidth = 2.2;
+  [[0,-0.4],[0.33,-0.16],[0.38,0.12],[-0.33,-0.16],[-0.38,0.12]].forEach(([x,y])=>{ g.beginPath(); g.moveTo(0, 0.12*S); g.lineTo(x*S*0.85, y*S*0.85); g.stroke(); });
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+})();
+const ivyMat = new THREE.MeshStandardMaterial({ map: IVY_TEX, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.75,
+  color: IVY.color, emissive: IVY.color, emissiveIntensity: IVY.glow });
+const leafGeo = new THREE.PlaneGeometry(0.72, 0.72);
+const GROUND_IVY = 5200, TRUNK_IVY_PER = 18;
+const groundIvy = new THREE.InstancedMesh(leafGeo, ivyMat, GROUND_IVY);
+const trunkIvy = new THREE.InstancedMesh(leafGeo, ivyMat, MAX_TREES * TRUNK_IVY_PER);
+groundIvy.frustumCulled = false; trunkIvy.frustumCulled = false;
+scene.add(groundIvy, trunkIvy);
+const ivyTint = new THREE.Color(), WHITE = new THREE.Color(1,1,1), GOLD = new THREE.Color(1.0, 0.93, 0.62);
+function leafColour(h){
+  // a little life in it: no two leaves quite the same, and on the full moon some edges go gold
+  ivyTint.copy(WHITE).multiplyScalar(0.72 + h * 0.28);
+  if (IVY.gold && h > 0.78) ivyTint.copy(GOLD);
+  return ivyTint;
+}
+let ivyCell = null;
+function refreshIvy(cz){
+  let n = 0;
+  for (let z = cz + 70; z > cz - 70 && n < GROUND_IVY; z -= 0.4) {
+    for (const side of [-1, 1]) {
+      const patch = hash(Math.floor(z / 6), side, 3);          // ivy grows in patches, with gaps
+      if (patch < 0.22) continue;
+      const leaves = 2 + Math.floor(patch * 4);
+      for (let k = 0; k < leaves && n < GROUND_IVY; k++) {
+        const h = hash(z * 7.3, side * 13 + k, 11);
+        const x = trailX(z) + side * (1.9 + h * 3.8 * (0.5 + patch));       // creeping onto the trail edge
+        const zz = z + (hash(z, k, 21) - 0.5) * 0.5;
+        dummy.position.set(x, heightAt(x, zz) + 0.07 + h * 0.05, zz);
+        dummy.rotation.set(-Math.PI / 2 + 0.45 + (h - 0.5) * 0.6, 0, hash(z, k, 31) * 6.28);   // leaves lift toward you
+        const sc = 0.75 + h * 0.65; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+        groundIvy.setMatrixAt(n, dummy.matrix); groundIvy.setColorAt(n, leafColour(h)); n++;
+      }
+    }
+  }
+  for (let i = n; i < GROUND_IVY; i++) { dummy.position.set(0, -999, 0); dummy.scale.set(0.01, 0.01, 0.01); dummy.updateMatrix(); groundIvy.setMatrixAt(i, dummy.matrix); }
+  groundIvy.instanceMatrix.needsUpdate = true; if (groundIvy.instanceColor) groundIvy.instanceColor.needsUpdate = true;
+}
 const hash = (a,b,s) => { const n = Math.sin(a*127.1 + b*311.7 + s*74.7)*43758.5453; return n - Math.floor(n); };
 let treeCell = null;
 function refreshTrees(ci, cj){
@@ -614,14 +830,28 @@ function refreshTrees(ci, cj){
         trunks.setMatrixAt(n, dummy.matrix);
         dummy.position.set(x, y + 7.6*s, z); dummy.updateMatrix();
         conifers.setMatrixAt(n, dummy.matrix);
+        // about two trees in three carry ivy, wound up the lower trunk
+        const climbs = hash(i,j,k+200) < 0.66, a0 = hash(i,j,k+220)*6.28;
+        for (let m = 0; m < TRUNK_IVY_PER; m++) {
+          const at = n*TRUNK_IVY_PER + m;
+          if (!climbs) { dummy.position.set(0,-999,0); dummy.scale.set(0.01,0.01,0.01); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunkIvy.setMatrixAt(at, dummy.matrix); continue; }
+          const up = (0.2 + m * 0.21) * s, ang = a0 + m * 0.85;
+          const r = (0.26 - (up / (7*s)) * 0.13) * s + 0.07;
+          dummy.position.set(x + Math.cos(ang)*r, y + up, z + Math.sin(ang)*r);
+          dummy.rotation.set(0, -ang + Math.PI/2, (hash(i,j,k+m)-0.5)*0.8);
+          const sc = 0.75 + hash(i,k,m+5)*0.45; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+          trunkIvy.setMatrixAt(at, dummy.matrix); trunkIvy.setColorAt(at, leafColour(hash(i,j,m+300)));
+        }
         n++;
       }
     }
   }
   for(let i=n;i<MAX_TREES;i++){                          // park the spares out of sight
-    dummy.position.set(0,-999,0); dummy.scale.set(0.01,0.01,0.01); dummy.updateMatrix();
+    dummy.position.set(0,-999,0); dummy.scale.set(0.01,0.01,0.01); dummy.rotation.set(0,0,0); dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix); conifers.setMatrixAt(i, dummy.matrix);
+    for (let m = 0; m < TRUNK_IVY_PER; m++) trunkIvy.setMatrixAt(i*TRUNK_IVY_PER + m, dummy.matrix);
   }
+  trunkIvy.instanceMatrix.needsUpdate = true; if (trunkIvy.instanceColor) trunkIvy.instanceColor.needsUpdate = true;
   trunks.count = MAX_TREES; conifers.count = MAX_TREES;
   trunks.instanceMatrix.needsUpdate = true; conifers.instanceMatrix.needsUpdate = true;
 }
@@ -762,7 +992,7 @@ function buildLantern(data){
   flame.position.copy(body.position); grp.add(flame);
 
   const b = brightnessFor(data);
-  const light = new THREE.PointLight(warm, 3.4*b, 17, 2);
+  const light = new THREE.PointLight(warm, 3.4*b*MOON.lantern, MOON.reach, 2);
   light.position.copy(body.position); grp.add(light);
 
   // The point light only reaches a few yards. This is the part you see from up on the
@@ -771,7 +1001,8 @@ function buildLantern(data){
     map: GLOW_TEX, color: warm, transparent: true, blending: THREE.AdditiveBlending,
     depthWrite: false, fog: true,
   }));
-  glow.position.copy(body.position); glow.scale.setScalar(3.4*b);
+  glow.position.copy(body.position); glow.scale.setScalar(3.4*b*MOON.lantern);
+  if (MOON.full) { glow.position.y += 0.25; flame.position.y += 0.06; }   // full moon: the light lifts a little
   grp.add(glow);
 
   const scroll = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.66),
@@ -1742,14 +1973,18 @@ function animate(){
   if(!groundCell || groundCell[0] !== cx || groundCell[1] !== cz){ groundCell=[cx,cz]; refreshGround(cx,cz); }
   const ci = Math.round(camera.position.x/CELL), cj = Math.round(camera.position.z/CELL);
   if(!treeCell || treeCell[0] !== ci || treeCell[1] !== cj){ treeCell=[ci,cj]; refreshTrees(ci,cj); }
+  const iz = Math.round(camera.position.z/20)*20;
+  if(ivyCell !== iz){ ivyCell = iz; refreshIvy(iz); }
+  if (MOON.isNew) ivyMat.emissiveIntensity = IVY.glow + Math.sin(t*0.7)*0.08;
 
   // the horizon travels with you; only the height is fixed, so hills stay hills
   sky.position.set(camera.position.x, 0, camera.position.z);
   ridges.position.set(camera.position.x, 0, camera.position.z);
   rabbitSky.position.set(camera.position.x, 0, camera.position.z);
+  moonSky.position.set(camera.position.x, 0, camera.position.z);
 
   // He burns through as you climb out of the mist, which is the whole reason to go up.
-  const skyClear = Math.min(1, Math.max(0.3, (camera.position.y - 1) / 9));
+  const skyClear = Math.min(1, Math.max(0.3, (camera.position.y - 1) / 9)) * Math.min(1, 0.6 + MOON.stars * 0.5);
   for(const s of rabbitSky.children){
     if(s.isSprite){
       const tw = 0.82 + Math.sin(t*1.4 + s.userData.twinkle)*0.18;
@@ -1765,11 +2000,11 @@ function animate(){
     l.scroll.lookAt(camera.position.x, l.scroll.getWorldPosition(new THREE.Vector3()).y, camera.position.z);
     const b = brightnessFor(l.data);
     const flick = 0.86 + Math.sin(t*7 + l.data.seq)*0.07 + Math.sin(t*13.7 + l.data.seq*2)*0.05;
-    l.light.intensity = 3.4*b*flick;
+    l.light.intensity = 3.4*b*flick*MOON.lantern;
     l.flame.scale.setScalar(0.9 + flick*0.18);
     // seen from far off the flame is too small to register, so the glow grows with distance
     const far = l.grp.position.distanceTo(camera.position);
-    l.glow.scale.setScalar(3.4*b*flick * (1 + Math.min(6, far/45)));
+    l.glow.scale.setScalar(3.4*b*flick*MOON.lantern * (1 + Math.min(6, far/45)));
     // and the scroll fades out with it, so the valley reads as lights rather than paper
     l.scroll.material.opacity = far < 26 ? 1 : Math.max(0.06, 1 - (far-26)/55);
   }
