@@ -467,9 +467,17 @@ moon.position.copy(MOON_DIR).multiplyScalar(100);
     const g = cv.getContext('2d'); g.clearRect(0, 0, S, S);
     const R = S * 0.27, glow = g.createRadialGradient(S/2, S/2, R * 0.9, S/2, S/2, S/2);
     const tintRGB = MOON.tint === 'red' ? '200,90,60' : MOON.tint === 'orange' ? '255,190,120' : MOON.tint === 'blue' ? '170,200,255' : '220,226,245';
-    glow.addColorStop(0, 'rgba(' + tintRGB + ',' + (0.10 + 0.32 * MOON.L) + ')'); glow.addColorStop(1, 'rgba(' + tintRGB + ',0)');
+    glow.addColorStop(0, 'rgba(' + tintRGB + ',' + (MOON.inf.illumination <= 0.02 ? 0.03 : 0.10 + 0.32 * MOON.L) + ')'); glow.addColorStop(1, 'rgba(' + tintRGB + ',0)');
     g.fillStyle = glow; g.fillRect(0, 0, S, S);
-    window.MoonWords.drawMoon(g, S/2, S/2, R, MOON.inf, face);
+    if (MOON.inf.illumination <= 0.02) {
+      // the dark of the moon: no lit face, just the faint ghost of it by earthshine, so nobody
+      // walking the valley that night thinks the moon has gone missing
+      g.save(); g.beginPath(); g.arc(S/2, S/2, R, 0, 7); g.clip();
+      g.fillStyle = 'rgba(16,22,40,0.85)'; g.fillRect(0, 0, S, S);
+      if (face.complete && face.naturalWidth) { g.globalAlpha = 0.07; g.drawImage(face, S/2 - R, S/2 - R, R*2, R*2); }
+      g.restore();
+      g.beginPath(); g.arc(S/2, S/2, R - 1, 0, 7); g.strokeStyle = 'rgba(170,190,235,0.28)'; g.lineWidth = 3; g.stroke();
+    } else window.MoonWords.drawMoon(g, S/2, S/2, R, MOON.inf, face);
     if (MOON.tint) {                                     // the colour sits on the lit face only
       g.save(); g.globalCompositeOperation = 'source-atop';
       g.fillStyle = MOON.tint === 'red' ? 'rgba(170,40,20,0.55)' : MOON.tint === 'orange' ? 'rgba(255,150,60,0.30)' : 'rgba(120,160,255,0.22)';
@@ -481,7 +489,7 @@ moon.position.copy(MOON_DIR).multiplyScalar(100);
   const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, fog: false }));
   disc.position.copy(MOON_DIR).multiplyScalar(1100);
   disc.scale.setScalar(240 * MOON.big);
-  disc.visible = MOON.inf.illumination > 0.02;
+  disc.visible = true;                                       // on the new moon it is only a ghost
   moonSky.add(disc);
 }
 // a field of stars, strong on a dark night and faint under a full moon
