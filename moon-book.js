@@ -393,7 +393,9 @@ module.exports = function mountMoonBook(app, { pool, isReady, requireAuth, hashI
       if (sub && sub.last_mailed_at && Date.now() - new Date(sub.last_mailed_at) < 10 * 60000) {
         return res.json({ ok: true, message: 'We just sent you a confirmation. Check your email (and the spam folder).' });
       }
-      const token = crypto.randomBytes(18).toString('hex');
+      // Keep the code a person already has: every email they were sent stays good, so it does
+      // not matter which of them they open (a new code would quietly break the older ones).
+      const token = (sub && /^[a-f0-9]{36}$/.test(sub.token || '') && sub.token) || crypto.randomBytes(18).toString('hex');
       if (sub) {
         ({ rows: [sub] } = await pool.query(
           `UPDATE moon_book_subscribers SET token=$2, confirmed_at=NULL, unsubscribed_at=NULL, last_mailed_at=now() WHERE id=$1 RETURNING *`, [sub.id, token]));
