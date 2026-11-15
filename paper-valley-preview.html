@@ -744,6 +744,73 @@ trunks.frustumCulled = false; conifers.frustumCulled = false;
 }
 scene.add(trunks, conifers);
 const dummy = new THREE.Object3D();
+
+// ---------- moonlit ivy ----------
+// Ivy over the ground along both edges of the trail and up the trunks. The leaves glow a
+// little in their own right, so they show through the mist, and take their colour from the
+// moon: emerald and jade while it grows, silver-green at full, teal, violet and plum as it
+// wanes, and a foxfire glow of their own on the dark of the moon.
+const IVY = (function(){
+  const COL = {
+    'New Moon':0x34d39a, 'Waxing Crescent':0x2fbf7f, 'First Quarter':0x22b35c, 'Waxing Gibbous':0x63cf4c,
+    'Full Moon':0xbfe8cf, 'Waning Gibbous':0x31b8b2, 'Last Quarter':0x8d6fe3, 'Waning Crescent':0xb44ca4
+  };
+  let c = COL[MOON.phase] || 0x2fbf7f;
+  if (MOON.tint === 'orange') c = 0xd9822b;            // Harvest and Hunter's: copper and amber
+  if (MOON.tint === 'blue') c = 0x4275f2;              // a blue moon: sapphire
+  if (MOON.tint === 'red') c = 0xc8463a;               // an eclipse: red
+  return { color: new THREE.Color(c), glow: MOON.isNew ? 0.75 : 0.45 + 0.15 * MOON.L, gold: MOON.full };
+})();
+const IVY_TEX = (function(){
+  // one ivy leaf: five pointed lobes, pale veins, drawn white so the moon's colour tints it
+  const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S;
+  const g = cv.getContext('2d'); g.translate(S/2, S*0.56);
+  g.beginPath();
+  const lobes = [[0,-0.46],[0.36,-0.2],[0.42,0.14],[0.16,0.36],[-0.16,0.36],[-0.42,0.14],[-0.36,-0.2]];
+  g.moveTo(0, 0.2*S);
+  lobes.forEach(([x,y],i)=>{ const nx = lobes[(i+1)%lobes.length]; g.quadraticCurveTo(x*S*1.05, y*S*1.05, (x+nx[0])*S*0.28, (y+nx[1])*S*0.28); });
+  g.closePath(); g.fillStyle = '#ffffff'; g.fill();
+  g.strokeStyle = 'rgba(120,120,120,0.55)'; g.lineWidth = 2.2;
+  [[0,-0.4],[0.33,-0.16],[0.38,0.12],[-0.33,-0.16],[-0.38,0.12]].forEach(([x,y])=>{ g.beginPath(); g.moveTo(0, 0.12*S); g.lineTo(x*S*0.85, y*S*0.85); g.stroke(); });
+  const tx = new THREE.CanvasTexture(cv); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+})();
+const ivyMat = new THREE.MeshStandardMaterial({ map: IVY_TEX, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.75,
+  color: IVY.color, emissive: IVY.color, emissiveIntensity: IVY.glow });
+const leafGeo = new THREE.PlaneGeometry(0.72, 0.72);
+const GROUND_IVY = 5200, TRUNK_IVY_PER = 18;
+const groundIvy = new THREE.InstancedMesh(leafGeo, ivyMat, GROUND_IVY);
+const trunkIvy = new THREE.InstancedMesh(leafGeo, ivyMat, MAX_TREES * TRUNK_IVY_PER);
+groundIvy.frustumCulled = false; trunkIvy.frustumCulled = false;
+scene.add(groundIvy, trunkIvy);
+const ivyTint = new THREE.Color(), WHITE = new THREE.Color(1,1,1), GOLD = new THREE.Color(1.0, 0.93, 0.62);
+function leafColour(h){
+  // a little life in it: no two leaves quite the same, and on the full moon some edges go gold
+  ivyTint.copy(WHITE).multiplyScalar(0.72 + h * 0.28);
+  if (IVY.gold && h > 0.78) ivyTint.copy(GOLD);
+  return ivyTint;
+}
+let ivyCell = null;
+function refreshIvy(cz){
+  let n = 0;
+  for (let z = cz + 70; z > cz - 70 && n < GROUND_IVY; z -= 0.4) {
+    for (const side of [-1, 1]) {
+      const patch = hash(Math.floor(z / 6), side, 3);          // ivy grows in patches, with gaps
+      if (patch < 0.22) continue;
+      const leaves = 2 + Math.floor(patch * 4);
+      for (let k = 0; k < leaves && n < GROUND_IVY; k++) {
+        const h = hash(z * 7.3, side * 13 + k, 11);
+        const x = trailX(z) + side * (1.9 + h * 3.8 * (0.5 + patch));       // creeping onto the trail edge
+        const zz = z + (hash(z, k, 21) - 0.5) * 0.5;
+        dummy.position.set(x, heightAt(x, zz) + 0.07 + h * 0.05, zz);
+        dummy.rotation.set(-Math.PI / 2 + 0.45 + (h - 0.5) * 0.6, 0, hash(z, k, 31) * 6.28);   // leaves lift toward you
+        const sc = 0.75 + h * 0.65; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+        groundIvy.setMatrixAt(n, dummy.matrix); groundIvy.setColorAt(n, leafColour(h)); n++;
+      }
+    }
+  }
+  for (let i = n; i < GROUND_IVY; i++) { dummy.position.set(0, -999, 0); dummy.scale.set(0.01, 0.01, 0.01); dummy.updateMatrix(); groundIvy.setMatrixAt(i, dummy.matrix); }
+  groundIvy.instanceMatrix.needsUpdate = true; if (groundIvy.instanceColor) groundIvy.instanceColor.needsUpdate = true;
+}
 const hash = (a,b,s) => { const n = Math.sin(a*127.1 + b*311.7 + s*74.7)*43758.5453; return n - Math.floor(n); };
 let treeCell = null;
 function refreshTrees(ci, cj){
@@ -764,14 +831,28 @@ function refreshTrees(ci, cj){
         trunks.setMatrixAt(n, dummy.matrix);
         dummy.position.set(x, y + 7.6*s, z); dummy.updateMatrix();
         conifers.setMatrixAt(n, dummy.matrix);
+        // about two trees in three carry ivy, wound up the lower trunk
+        const climbs = hash(i,j,k+200) < 0.66, a0 = hash(i,j,k+220)*6.28;
+        for (let m = 0; m < TRUNK_IVY_PER; m++) {
+          const at = n*TRUNK_IVY_PER + m;
+          if (!climbs) { dummy.position.set(0,-999,0); dummy.scale.set(0.01,0.01,0.01); dummy.rotation.set(0,0,0); dummy.updateMatrix(); trunkIvy.setMatrixAt(at, dummy.matrix); continue; }
+          const up = (0.2 + m * 0.21) * s, ang = a0 + m * 0.85;
+          const r = (0.26 - (up / (7*s)) * 0.13) * s + 0.07;
+          dummy.position.set(x + Math.cos(ang)*r, y + up, z + Math.sin(ang)*r);
+          dummy.rotation.set(0, -ang + Math.PI/2, (hash(i,j,k+m)-0.5)*0.8);
+          const sc = 0.75 + hash(i,k,m+5)*0.45; dummy.scale.set(sc, sc, sc); dummy.updateMatrix();
+          trunkIvy.setMatrixAt(at, dummy.matrix); trunkIvy.setColorAt(at, leafColour(hash(i,j,m+300)));
+        }
         n++;
       }
     }
   }
   for(let i=n;i<MAX_TREES;i++){                          // park the spares out of sight
-    dummy.position.set(0,-999,0); dummy.scale.set(0.01,0.01,0.01); dummy.updateMatrix();
+    dummy.position.set(0,-999,0); dummy.scale.set(0.01,0.01,0.01); dummy.rotation.set(0,0,0); dummy.updateMatrix();
     trunks.setMatrixAt(i, dummy.matrix); conifers.setMatrixAt(i, dummy.matrix);
+    for (let m = 0; m < TRUNK_IVY_PER; m++) trunkIvy.setMatrixAt(i*TRUNK_IVY_PER + m, dummy.matrix);
   }
+  trunkIvy.instanceMatrix.needsUpdate = true; if (trunkIvy.instanceColor) trunkIvy.instanceColor.needsUpdate = true;
   trunks.count = MAX_TREES; conifers.count = MAX_TREES;
   trunks.instanceMatrix.needsUpdate = true; conifers.instanceMatrix.needsUpdate = true;
 }
@@ -1893,6 +1974,9 @@ function animate(){
   if(!groundCell || groundCell[0] !== cx || groundCell[1] !== cz){ groundCell=[cx,cz]; refreshGround(cx,cz); }
   const ci = Math.round(camera.position.x/CELL), cj = Math.round(camera.position.z/CELL);
   if(!treeCell || treeCell[0] !== ci || treeCell[1] !== cj){ treeCell=[ci,cj]; refreshTrees(ci,cj); }
+  const iz = Math.round(camera.position.z/20)*20;
+  if(ivyCell !== iz){ ivyCell = iz; refreshIvy(iz); }
+  if (MOON.isNew) ivyMat.emissiveIntensity = IVY.glow + Math.sin(t*0.7)*0.08;
 
   // the horizon travels with you; only the height is fixed, so hills stay hills
   sky.position.set(camera.position.x, 0, camera.position.z);
