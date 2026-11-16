@@ -97,6 +97,12 @@
   .one .said{margin:12px auto 0;max-width:460px;font-size:16px;line-height:1.65;color:#d5c4f2}
   .one .piece{margin-top:12px;overflow-wrap:anywhere;font-size:13.5px;color:#9b83c9;font-style:italic}
   .one .state{margin-top:14px;font-size:13px;color:#9b83c9}
+  /* the family's candles for the same person, side by side */
+  .fam{margin:16px 0 4px;text-align:center}
+  .fam .h{font-size:13.5px;color:#e7c26a;margin-bottom:6px}
+  .fam .row{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px}
+  .fam .m{display:flex;flex-direction:column;align-items:center;font-size:12px;color:#c8b6ee;max-width:70px;overflow-wrap:anywhere}
+  .btn.invite{background:linear-gradient(180deg,#e7c26a,#c79a3b);color:#2a1a05;border-color:#e7c26a;font-weight:700}
   .share{margin-top:16px;display:flex;gap:8px}
   .btn.send{background:linear-gradient(180deg,#e0a23c,#a8641a);
             box-shadow:0 10px 26px rgba(224,162,60,.3)}
@@ -183,6 +189,7 @@
   </p>
 </div>
 
+<script src="invite.js"></script>
 <script>
 (function () {
   'use strict';
@@ -270,10 +277,13 @@
   // ---------- lighting one ----------
   var chosen = 'white';
 
-  function lightForm() {
+  var besideId = null;
+  function lightForm(pre) {
+    pre = pre || {}; besideId = pre.beside || null;
+    if (pre.colour && COLOURS[pre.colour]) chosen = pre.colour;
     document.body.classList.remove('showing-one');
     el('panel').innerHTML =
-      '<h2>Light a candle</h2>' +
+      '<h2>' + (besideId ? 'Light one beside it' : 'Light a candle') + '</h2>' +
       '<p class="sub">For one person. It burns five days, then goes out. You will get a link ' +
       'you can send to anyone who knew them.</p>' +
       '<label class="lbl" for="who">Who is it for</label>' +
@@ -297,6 +307,7 @@
       '<div class="err" id="err" style="display:none"></div>' +
       '<div class="note">No account needed. Nothing is charged, now or ever.</div>';
 
+    if (pre.name) el('who').value = pre.name;
     paintMeaning();
     Array.prototype.forEach.call(el('chips').children, function (c) {
       c.addEventListener('click', function () {
@@ -329,10 +340,12 @@
     btn.disabled = true; btn.textContent = 'Lighting it…';
     api('/api/candles', { method:'POST', body: JSON.stringify({
       name: name, colour: chosen, words: el('words').value.trim(),
-      piece: el('piece').value.trim(), lit_by: el('litby').value.trim()
+      piece: el('piece').value.trim(), lit_by: el('litby').value.trim(), beside: besideId
     }) }).then(function (d) {
       history.replaceState(null, '', 'candles.html?c=' + d.candle.id);
       paintOne(d.candle, true);
+      if (besideId) api('/api/candles/' + d.candle.id).then(function (f) { paintOne(f.candle, true, f.family); });
+      besideId = null;
       loadShelf();
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = 'Light it';
@@ -344,19 +357,24 @@
   function show(id) {
     api('/api/candles/' + id).then(function (d) {
       history.replaceState(null, '', 'candles.html?c=' + id);
-      paintOne(d.candle, false);
+      paintOne(d.candle, false, d.family);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }).catch(function () { lightForm(); });
   }
 
-  function paintOne(c, justLit) {
+  var invited = new URLSearchParams(location.search).get('b') === '1';
+  function paintOne(c, justLit, family) {
     document.body.classList.add('showing-one');
     var link = location.origin + '/candle/' + c.id;
+    var inv = window.BSInvite && BSInvite.on;
+    var fam = (family || []).filter(function (f) { return f.burning || f.id === c.id; });
     var days = Math.max(1, Math.round(c.hours_left / 24));
     el('pageTitle').textContent = 'A candle for ' + c.name;
     el('pageLede').textContent = justLit
       ? 'It is lit. Send the link to anyone else who knew them - they can sit with it, and light one of their own.'
-      : 'Somebody lit this for them. You can keep it going, or light one of your own.';
+      : (inv && invited && !justLit)
+        ? 'Someone who loves them lit this, and asked you to light one beside it.'
+        : 'Somebody lit this for them. You can keep it going, or light one of your own.';
 
     el('panel').innerHTML =
       '<div class="one">' +
@@ -373,6 +391,13 @@
           (c.relit ? '<br>Lit again ' + c.relit + (c.relit === 1 ? ' time' : ' times') + '.' : '') +
         '</div>' +
       '</div>' +
+      ((inv && fam.length > 1)
+        ? '<div class="fam"><div class="h">' + fam.length + ' candles for ' + esc(c.name) + ', burning together</div><div class="row">' +
+          fam.map(function (f) { return '<div class="m">' + jarSVG(f.colour, f.burning, 96) + (f.lit_by ? esc(f.lit_by) : 'someone') + '</div>'; }).join('') +
+          '</div></div>'
+        : '') +
+      ((inv && invited && !justLit && c.burning) ? '<button class="btn invite" id="beside">🕯️ Light one beside it</button>' : '') +
+      (inv ? '<button class="btn invite" id="invite">Invite the family to light one too</button>' : '') +
       '<div class="share">' +
         '<input id="link" readonly value="' + esc(link) + '">' +
         '<button id="copy">Copy</button>' +
@@ -406,6 +431,24 @@
       });
     }
 
+    if (inv) {
+      el('invite').addEventListener('click', function () {
+        var n = c.name;
+        BSInvite.open({
+          heading: 'Invite the family', subject: 'A candle for ' + n,
+          link: link + '?b=1',
+          messages: [
+            'I lit a candle for ' + n + ' tonight on Banjo Spirits. If you would like to light one beside it, here is the link. They will burn together.',
+            'Thinking of ' + n + ' today. I lit a candle. Light one too?',
+            'I lit a candle for ' + n + '. Come light one with me, and we will keep it burning together.'
+          ]
+        });
+      });
+      if (el('beside')) el('beside').addEventListener('click', function () {
+        lightForm({ beside: c.id, name: c.name, colour: c.colour });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
     el('copy').addEventListener('click', function () {
       var f = el('link'); f.select(); f.setSelectionRange(0, 999);
       var done = function () { el('copy').textContent = 'Copied'; };

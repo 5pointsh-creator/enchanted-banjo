@@ -878,7 +878,12 @@ app.get('/api/candles/:id', async (req, res) => {
          LEFT JOIN users u ON u.id = c.owner_id WHERE c.id = $1`, [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'That candle is not here.' });
-    res.json({ candle: publicCandle(rows[0]) });
+    // the family's candles for the same person, first lit first
+    const root = rows[0].family_id || rows[0].id;
+    const { rows: fam } = await pool.query(
+      `SELECT c.*, u.display_name AS owner FROM candles c LEFT JOIN users u ON u.id = c.owner_id
+        WHERE c.id = $1 OR c.family_id = $1 ORDER BY c.created_at LIMIT 24`, [root]);
+    res.json({ candle: publicCandle(rows[0]), family: fam.map(publicCandle) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
 });
 
@@ -893,10 +898,17 @@ app.post('/api/candles', async (req, res) => {
   const refusal = refuseContactDetail({ name: f.name, words: f.words, piece: f.piece });
   if (refusal) return res.status(400).json({ error: refusal });
   try {
+    // lit "beside" another candle: it joins that family's row
+    let family = null;
+    const beside = parseInt((req.body || {}).beside, 10);
+    if (beside > 0) {
+      const { rows: b } = await pool.query('SELECT id, family_id FROM candles WHERE id=$1', [beside]);
+      if (b.length) family = b[0].family_id || b[0].id;
+    }
     const { rows } = await pool.query(
-      `INSERT INTO candles (owner_id, lit_by, name, words, colour, piece, burns_until)
-       VALUES ($1,$2,$3,$4,$5,$6, now() + ($7 || ' days')::interval) RETURNING *`,
-      [me ? me.id : null, f.lit_by || null, f.name, f.words || null, f.colour, f.piece || null, String(BURN_DAYS)]
+      `INSERT INTO candles (owner_id, lit_by, name, words, colour, piece, burns_until, family_id)
+       VALUES ($1,$2,$3,$4,$5,$6, now() + ($7 || ' days')::interval, $8) RETURNING *`,
+      [me ? me.id : null, f.lit_by || null, f.name, f.words || null, f.colour, f.piece || null, String(BURN_DAYS), family]
     );
     res.json({ candle: publicCandle(rows[0]) });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Something went wrong.' }); }
@@ -932,7 +944,8 @@ app.get('/candle/:id', async (req, res) => {
       row = rows[0] || null;
     } catch (e) { console.error(e); }
   }
-  const target = `/candles.html?c=${encodeURIComponent(req.params.id)}`;
+  // ?b=1 is an invitation from family: the page offers to light one beside it
+  const target = `/candles.html?c=${encodeURIComponent(req.params.id)}${req.query.b ? '&b=1' : ''}`;
   const meaning = row ? (CANDLE_COLOURS[row.colour] || CANDLE_COLOURS.white) : '';
   const title = row ? `A candle for ${row.name} — Banjo Spirits` : 'Light a candle — Banjo Spirits';
   const bits = row
@@ -1142,7 +1155,7 @@ app.get('/moon-light/:id', async (req, res) => {
       row = rows[0] || null;
     } catch (e) { console.error(e); }
   }
-  const target = `/moon.html?light=${encodeURIComponent(req.params.id)}#lights`;
+  const target = `/moon.html?light=${encodeURIComponent(req.params.id)}${req.query.b ? '&b=1' : ''}#lights`;
   const title = !row ? 'Lights on the moon — Banjo Spirits'
     : row.kind === 'birthday' ? `A birthday candle on the moon for ${row.for_name}`
     : 'Someone left a light on the moon for you';

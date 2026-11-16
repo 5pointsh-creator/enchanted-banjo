@@ -363,6 +363,7 @@
 <script src="moon-calc.js"></script>
 <script src="moon-data.js"></script>
 <script src="moon-words.js"></script>
+<script src="invite.js"></script>
 <script src="bs-api.js"></script>
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
@@ -1251,6 +1252,7 @@ function openReader(d){
     catch(e){ alert(e.message); }
   };
   F('rShare').onclick = ()=> shareLantern(d);
+  if (window.BSInvite && BSInvite.on) F('rShare').textContent = 'Ask others to help find them';
   F('rMe').onclick = (e)=>{ e.preventDefault(); reader.style.display='none'; meForm.style.display='flex'; };
   reader.style.display = 'flex';
 }
@@ -1261,6 +1263,20 @@ F('rClose').onclick = ()=> reader.style.display='none';
 function shareLantern(d){
   const url = `${location.origin}/lantern/${d.id != null ? d.id : ''}`;
   const text = `Looking for ${d.name || 'someone'}${d.lastArea ? ` — last known around ${d.lastArea}` : ''}. If you know anything:`;
+  if (window.BSInvite && BSInvite.on) {
+    // ask the people who might know: their own message, from their own phone
+    const n = d.name || 'someone', where = d.lastArea ? ` They were last known around ${d.lastArea}.` : '';
+    BSInvite.open({
+      heading: 'Ask others to help find them', subject: `Looking for ${n}`, link: url,
+      intro: 'Pick a message, change any word, and send it to anyone who might know something - family, old friends, a local group.',
+      messages: [
+        `I hung a lantern in Paper Valley for ${n}, someone I am still looking for.${where} If you know anything, or know someone who might, please take a look.`,
+        `Still looking for ${n}.${where} Could you share this? Somebody out there might know.`,
+        `Do you remember ${n}? I am trying to find them.${where} Anything at all helps.`
+      ]
+    });
+    return;
+  }
   if(navigator.share){ navigator.share({ title:`Looking for ${d.name||'someone'}`, text, url }).catch(()=>{}); return; }
   navigator.clipboard.writeText(`${text} ${url}`).then(
     ()=> showHint('Link copied - paste it wherever people are searching.'),

@@ -206,6 +206,12 @@ async function migrate() {
     );
     CREATE INDEX IF NOT EXISTS candles_burning_idx ON candles (burns_until DESC);
   `);
+  // A family's candles for one person stand together: a candle lit "beside" another keeps
+  // the id of the first one lit, so the whole row can be shown side by side.
+  await pool.query(`
+    ALTER TABLE candles ADD COLUMN IF NOT EXISTS family_id INTEGER;
+    CREATE INDEX IF NOT EXISTS candles_family_idx ON candles (family_id);
+  `);
 
   // ---- lights on the moon ----
   // For luck, not for mourning - the candles stay the place for that. Every light goes out

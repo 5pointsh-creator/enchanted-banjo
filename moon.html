@@ -278,6 +278,7 @@
     <a href="/">‹ Back to the front page</a></p>
 </div>
 
+<script src="invite.js"></script>
 <script src="moon-calc.js"></script>
 <script src="moon-data.js"></script>
 <script>
@@ -909,11 +910,27 @@
     var sh = box.querySelector('[data-share]');
     if (sh) sh.onclick = function(){ navigator.share({ title: 'A light on the moon', text: sh.getAttribute('data-line'), url: sh.getAttribute('data-share') }).catch(function(){}); };
   }
+  // the invitation: the visitor's own message, sent from their own phone (invite.js)
+  function inviteFor(l){
+    var who = l.kind === 'birthday' ? l.for_name : l.words, link = location.origin + '/moon-light/' + l.id + '?b=1';
+    BSInvite.open({
+      heading: 'Invite the family', subject: l.kind === 'birthday' ? 'A birthday candle on the moon' : 'A light on the moon', link: link,
+      messages: l.kind === 'birthday'
+        ? ['I lit a birthday candle on the moon for ' + who + '. Leave one beside it?',
+           'Happy birthday, ' + who + '. There is a candle on the moon for you tonight. Come add yours.']
+        : ['I left a light on the moon tonight: "' + who + '". If you would like to leave one beside it, here is the link.',
+           'Look up tonight. I put a light on the moon for "' + who + '". Put one next to it?',
+           'I left a light on the moon. Come leave one with me, and they will shine together until the full moon.']
+    });
+  }
   function showDone(l){
-    var box = $('mlDone');
+    var box = $('mlDone'), inv = window.BSInvite && BSInvite.on;
     box.innerHTML = '<p class="ml-big serif">' + (l.kind === 'birthday' ? 'Your birthday candle is on the moon.' : 'Your light is on the moon.') + '</p>' +
-      '<p class="ml-until">It shines until the full moon, ' + untilText(l) + '. Send it to someone:</p>' + shareBlock(l);
+      '<p class="ml-until">It shines until the full moon, ' + untilText(l) + '. Send it to someone:</p>' +
+      (inv ? '<button class="ml-btn" id="mlInvite" type="button" style="background:linear-gradient(180deg,#e7c26a,#c79a3b);color:#2a1a05">Invite the family to leave one too</button>' : '') +
+      shareBlock(l);
     box.style.display = 'block'; wireShare(box);
+    if (inv) $('mlInvite').onclick = function(){ inviteFor(l); };
     $('mlStart').style.display = 'block'; $('mlNote').style.display = 'block';
   }
 
@@ -945,7 +962,24 @@
       var s = M.sizeCanvas($('mlBornMoon')); M.drawMoon(s.c, s.W / 2, s.H / 2, s.W / 2 - 2, w.inf, true);
       $('mlBornTxt').textContent = 'The night ' + l.for_name + ' was born, ' + born.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ', the moon was ' + w.words;
     }
-    $('mlBack').onclick = startPlacing;
+    var invited = window.BSInvite && BSInvite.on && /[?&]b=1\b/.test(location.search) && l.shining;
+    if (invited) {
+      $('mlBack').textContent = '✨ Leave a light beside it';
+      $('mlBack').onclick = function(){
+        startPlacing();
+        // the same colour, and a spot already chosen right next to it (they can still tap elsewhere)
+        var btn = document.querySelector('.ml-col[data-c="' + (l.kind === 'birthday' ? 'birthday' : l.colour) + '"]'); if (btn) btn.click();
+        if (l.kind === 'birthday') $('mlFor').value = l.for_name || '';
+        for (var k = 0; k < 12; k++) {
+          var a = k * Math.PI / 6, x = l.x + Math.cos(a) * 0.09, y = l.y + Math.sin(a) * 0.09;
+          if (Math.hypot(x, y) > 0.92) continue;
+          if (state.lights.some(function(o){ return Math.hypot(o.x - x, o.y - y) < 0.075; })) continue;
+          state.spot = { x: x, y: y }; break;
+        }
+        if (state.spot) $('mlStep').innerHTML = 'Your spot is <b>right beside their light</b> (tap the moon if you would like it somewhere else). Write your words, then press <b>Place it on the moon</b>.';
+        draw();
+      };
+    } else $('mlBack').onclick = startPlacing;
     $('mlAll').onclick = function(){ state.mode = 'all'; state.single = null; box.style.display = 'none'; $('mlStart').style.display = 'block'; $('mlNote').style.display = 'block'; $('mlCount').innerHTML = countText(); draw(); };
     draw();
   }
