@@ -397,7 +397,7 @@
           '</div></div>'
         : '') +
       ((inv && invited && !justLit && c.burning) ? '<button class="btn invite" id="beside">🕯️ Light one beside it</button>' : '') +
-      (inv ? '<button class="btn invite" id="invite">Invite the family to light one too</button>' : '') +
+      ((inv && c.burning) ? '<button class="btn invite" id="invite">Invite the family to light one too</button>' : '') +
       '<div class="share">' +
         '<input id="link" readonly value="' + esc(link) + '">' +
         '<button id="copy">Copy</button>' +
@@ -432,7 +432,7 @@
     }
 
     if (inv) {
-      el('invite').addEventListener('click', function () {
+      if (el('invite')) el('invite').addEventListener('click', function () {
         var n = c.name;
         BSInvite.open({
           heading: 'Invite the family', subject: 'A candle for ' + n,
